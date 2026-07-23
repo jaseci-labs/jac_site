@@ -1,8 +1,10 @@
+import from "@jac/runtime" { Link }
+
 glob _COLS: list[dict] = [
     {
         "title": "Language",
         "links": [
-            {"label": "Documentation", "href": "https://docs.jaseci.org"},
+            {"label": "Documentation", "href": "/docs/latest"},
             {"label": "Playground", "href": "https://playground.jaseci.org"},
             {"label": "First-app tutorial", "href": "https://docs.jaseci.org/tutorials/first-app/build-ai-day-planner/"},
             {"label": "Install guide", "href": "https://docs.jaseci.org/quick-guide/install/"},
@@ -50,10 +52,17 @@ def:pub Footer() -> JsxElement {
                         <ul className="flex flex-col gap-2.5">
                             {for (li, lk) in enumerate(col["links"] as list[dict]) {
                                 <li key={str(li)}>
-                                    <a href={lk["href"]} target="_blank" rel="noreferrer"
-                                        className="text-sm text-muted-foreground transition-colors hover:text-foreground">
-                                        {lk["label"]}
-                                    </a>
+                                    {if (lk["href"] as str).startswith("/") {
+                                        <Link to={lk["href"]}
+                                            className="text-sm text-muted-foreground transition-colors hover:text-foreground">
+                                            {lk["label"]}
+                                        </Link>
+                                    } else {
+                                        <a href={lk["href"]} target="_blank" rel="noreferrer"
+                                            className="text-sm text-muted-foreground transition-colors hover:text-foreground">
+                                            {lk["label"]}
+                                        </a>
+                                    }}
                                 </li>
                             }}
                         </ul>
