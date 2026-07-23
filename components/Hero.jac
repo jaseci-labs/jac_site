@@ -2,7 +2,7 @@ import from .ui.button { buttonVariants }
 import from .ui.badge { Badge }
 import from "..lib.utils" { cn }
 import from .GraphBackdrop { GraphBackdrop }
-import from .TerminalDemo { TerminalDemo }
+import from .SourceBrowser { SourceBrowser }
 import from .CopyCommand { CopyCommand }
 import from "@hugeicons/react" { HugeiconsIcon }
 import from "@hugeicons/core-free-icons" { ArrowRight01Icon, ArrowUpRight01Icon }
@@ -53,8 +53,11 @@ def:pub Hero() -> JsxElement {
                         One self-contained binary. No Python, Node, or C toolchain required.
                     </p>
                 </div>
-                <div className="anim-fade-up anim-d3 hidden lg:block">
-                    <TerminalDemo />
+                <div className="anim-fade-up anim-d3 hidden min-w-0 lg:block">
+                    <SourceBrowser />
+                    <p className="mt-3 text-center font-mono text-xs text-muted-foreground">
+                        the actual codebase serving this page — click around
+                    </p>
                 </div>
             </div>
         </div>

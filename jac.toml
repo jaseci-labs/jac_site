@@ -34,6 +34,12 @@ lib_imports = ["import tailwindcss from '@tailwindcss/vite'"]
 [serve]
 base_route_app = "app"
 
+# Keep the source service in-process: without this, services/source.jac being
+# sv-imported from the client makes `jac start` auto-enter local microservice
+# mode (whose spawner passes a --no_client flag the CLI no longer accepts).
+[scale.microservices]
+enabled = false
+
 [client.app_meta_data]
 title = "The Jac Programming Language"
 description = "One language, one compiler, the whole stack. No glue. AI, graphs, persistence, APIs, UIs, and cloud deployment as language features."
