@@ -17,11 +17,11 @@ def:pub page() -> JsxPage {
         <WasmGame />
         <WhyJac />
         <FirstOnly />
-        <BookSection />
         <Showcase />
         <Pillars />
         <BuildGrid />
         <OneBinary />
         <Agents />
+        <BookSection />
     </>;
 }

@@ -11,14 +11,16 @@ glob _NOTATIONS: list[str] = [
     "JSON", "TOML", "YAML", "Dockerfile", "HCL", "dotenv",
 ];
 
-"""One slide's frame: eyebrow, headline, content."""
-def:pub WhySlide(eyebrow: str, heading: str, children: any = None) -> JsxElement {
+"""One slide's frame: big title, small mono subline, content."""
+def:pub WhySlide(title: str, sub: str = "", children: any = None) -> JsxElement {
     return <div className="flex h-full flex-col rounded-2xl border border-border/70 bg-card/30 pt-8 pb-8 pl-6 pr-6 sm:pl-12 sm:pr-12">
         <div className="mb-6 text-center">
-            <p className="font-mono text-xs uppercase tracking-widest text-primary">{eyebrow}</p>
-            <h3 className="mt-2 text-balance text-2xl font-bold tracking-tight sm:text-3xl">{heading}</h3>
+            <h3 className="text-balance text-2xl font-bold tracking-tight sm:text-3xl">{title}</h3>
+            {if sub != "" {
+                <p className="mt-3 font-mono text-xs uppercase tracking-widest text-primary">{sub}</p>
+            }}
         </div>
-        <div className="min-w-0 flex-1">{children}</div>
+        <div className="flex min-w-0 flex-1 flex-col justify-center">{children}</div>
     </div>;
 }
 
@@ -29,9 +31,9 @@ def:pub WhyJac() -> JsxElement {
                 <div className="mx-auto max-w-2xl text-center">
                     <Badge variant="outline" className="mb-4">Why Jac exists</Badge>
                     <h2 className="text-balance text-3xl font-bold tracking-tight sm:text-4xl">
-                        Your stack is twelve notations.
+                        No compiler can see across your stack...
                         <br />
-                        Nobody chose that.
+                        until now.
                     </h2>
                 </div>
             </Reveal>
@@ -40,14 +42,8 @@ def:pub WhyJac() -> JsxElement {
                     <Carousel className="w-full" opts={{"loop": True}}>
                         <CarouselContent>
                             <CarouselItem>
-                                <WhySlide eyebrow="The problem" heading="No compiler can see across your stack.">
-                                    <p className="mx-auto max-w-2xl text-center text-base leading-relaxed text-muted-foreground">
-                                        Open the repository of any well-built product and count
-                                        what a maintainer must read. Every architectural boundary
-                                        is also a change of language, type system, package
-                                        manager, and serialization format.
-                                    </p>
-                                    <div className="mx-auto mt-8 flex max-w-3xl flex-wrap justify-center gap-2">
+                                <WhySlide title="The problem">
+                                    <div className="mx-auto flex max-w-3xl flex-wrap justify-center gap-2">
                                         {for (i, nt) in enumerate(_NOTATIONS) {
                                             <span key={str(i)}
                                                 className="rounded-full border border-border bg-card/60 pl-3 pr-3 pt-1 pb-1 font-mono text-xs text-muted-foreground">
@@ -68,12 +64,12 @@ def:pub WhyJac() -> JsxElement {
                                 </WhySlide>
                             </CarouselItem>
                             <CarouselItem>
-                                <WhySlide eyebrow="Bet one — Jac is synechic" heading="One continuous, checked medium">
+                                <WhySlide title="Bet one — Jac is synechic" sub="One continuous, checked medium">
                                     <SynechicDiagram />
                                 </WhySlide>
                             </CarouselItem>
                             <CarouselItem>
-                                <WhySlide eyebrow="Bet two — Jac is topokinetic" heading="Computation moves to data">
+                                <WhySlide title="Bet two — Jac is topokinetic" sub="Computation moves to data with Object Spatial Programming">
                                     <TopokineticDiagram />
                                 </WhySlide>
                             </CarouselItem>

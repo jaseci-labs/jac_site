@@ -25,11 +25,11 @@ def:pub FirstOnly() -> JsxElement {
         <div className="mx-auto max-w-7xl pl-4 pr-4 sm:pl-6 sm:pr-6 lg:pl-8 lg:pr-8">
             <Reveal>
                 <div className="mx-auto max-w-2xl text-center">
-                    <Badge variant="outline" className="mb-4">The claim</Badge>
+                    <Badge variant="outline" className="mb-4">Learned helplessness for 70 years</Badge>
                     <h2 className="text-balance text-3xl font-bold tracking-tight sm:text-5xl">
                         Every language chose neither.
                         <br />
-                        <span className="text-gradient">Jac is the first — and only — that is both.</span>
+                        <span className="text-gradient">Jac is the first, and only, that is both.</span>
                     </h2>
                 </div>
             </Reveal>
