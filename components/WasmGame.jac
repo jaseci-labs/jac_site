@@ -46,7 +46,7 @@ def:pub WasmGame() -> JsxElement {
                             <span className="size-2.5 rounded-full bg-white/15"></span>
                             <span className="size-2.5 rounded-full bg-white/15"></span>
                             <span className="size-2.5 rounded-full bg-white/15"></span>
-                            <span className="ml-2 font-mono text-xs text-white/45">jac cube shooter — /static/main.wasm</span>
+                            <span className="ml-2 font-mono text-xs text-white/45">the shooter in main.jac → /static/main.wasm</span>
                             <span className="ml-auto font-mono text-[10px] uppercase tracking-widest text-orange-400/80">na → wasm</span>
                         </div>
                         <div className="relative mx-auto" style={{"aspectRatio": "960 / 600", "maxWidth": "960px"}}>
@@ -83,7 +83,7 @@ def:pub WasmGame() -> JsxElement {
                         <b className="text-foreground">WASD</b> move ·
                         mouse / arrows aim ·{" "}
                         <b className="text-foreground">Space</b> fire ·{" "}
-                        <b className="text-foreground">Tab</b> release
+                        <b className="text-foreground">Tab</b> / <b className="text-foreground">Esc</b> release
                     </p>
                 </div>
             </Reveal>

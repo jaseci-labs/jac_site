@@ -259,7 +259,7 @@ def draw_floor(half: int, step: float) {
     ext = float(half) * step;
     rlSetLineWidth(1.0);
     rlBegin(RL_LINES);
-    rlColor4ub(55, 60, 75, 255);
+    rlColor4ub(52, 52, 58, 255);
     i = -half;
     while i <= half {
         f = float(i) * step;
@@ -565,7 +565,7 @@ def frame -> bool {
         t.y = t.base_y + 0.4 * jsin(world_t * 1.5 + t.phase);
         ti += 1;
     }
-    begin_frame(15, 18, 28);
+    begin_frame(16, 16, 18);
     set_camera(px, py, pz, yaw, pitch, 1.6);
     draw_floor(20, 1.5);
     ti = 0;

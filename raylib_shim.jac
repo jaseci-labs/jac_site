@@ -425,7 +425,16 @@ def _install_input(sh: any) {
     );
     document.addEventListener(
         "pointerlockchange",
-        lambda (e: any) { sh.locked = document.pointerLockElement == sh.canvas; }
+        lambda (e: any) {
+            was = sh.locked;
+            sh.locked = document.pointerLockElement == sh.canvas;
+            # Browser-initiated release (Esc exits pointer lock natively):
+            # synthesize a Tab edge so the game's own release logic runs and
+            # its captured-state stays in sync.
+            if was and not sh.locked {
+                sh.pressed[258] = 1;
+            }
+        }
     );
 }
 
