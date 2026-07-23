@@ -2,7 +2,7 @@ import from .Reveal { Reveal }
 
 glob _STATS: list[dict] = [
     {"n": "1", "label": "binary", "sub": "replaces your whole toolchain"},
-    {"n": "3", "label": "targets", "sub": "Python bytecode · JS · native"},
+    {"n": "3", "label": "ecosystems", "sub": "Python, JSX, and native binary"},
     {"n": "~5×", "label": "less code", "sub": "the compiler writes the glue"},
     {"n": "0", "label": "glue artifacts", "sub": "no ORM, routes, YAML, serializers"},
 ];

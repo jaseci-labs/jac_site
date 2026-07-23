@@ -15,14 +15,14 @@ def:pub Hero() -> JsxElement {
         <div className="dot-grid absolute inset-0"></div>
         <GraphBackdrop />
         <div className="relative mx-auto max-w-7xl pl-4 pr-4 sm:pl-6 sm:pr-6 lg:pl-8 lg:pr-8">
-            <div className="grid grid-cols-1 items-center gap-14 lg:grid-cols-[1.1fr_1fr]">
+            <div className="grid grid-cols-1 items-center gap-14 lg:gap-10 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] xl:grid-cols-[minmax(0,3fr)_minmax(0,5fr)]">
                 <div className="text-center lg:text-left">
                     <div className="anim-fade-up">
                         <Badge variant="outline" className="mb-6 border-primary/40 bg-primary/5 pl-3 pr-3 pt-1 pb-1 text-primary">
                             The first synechic + topokinetic programming language
                         </Badge>
                     </div>
-                    <h1 className="anim-fade-up anim-d1 text-balance text-5xl font-bold tracking-tight sm:text-6xl lg:text-7xl">
+                    <h1 className="anim-fade-up anim-d1 text-balance text-5xl font-bold tracking-tight sm:text-6xl lg:text-5xl">
                         One language.
                         <br />
                         The whole stack.
