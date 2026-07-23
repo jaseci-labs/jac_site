@@ -24,7 +24,7 @@ glob _COLS: list[dict] = [
         "links": [
             {"label": "Object-Spatial Programming", "href": "https://arxiv.org/abs/2503.15812"},
             {"label": "Meaning-Typed Programming", "href": "https://arxiv.org/abs/2405.08965"},
-            {"label": "The ninja book", "href": "https://zenodo.org/records/21498692"},
+            {"label": "The ninja book", "href": "https://doi.org/10.5281/zenodo.21464040"},
             {"label": "Research & papers", "href": "https://docs.jaseci.org/community/research/"},
         ],
     },

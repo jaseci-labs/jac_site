@@ -32,15 +32,11 @@ def:pub WasmGame() -> JsxElement {
         <div className="mx-auto max-w-7xl pl-4 pr-4 sm:pl-6 sm:pr-6 lg:pl-8 lg:pr-8">
             <Reveal>
                 <div className="mx-auto max-w-2xl text-center">
-                    <Badge variant="outline" className="mb-4">WebAssembly</Badge>
+                    <Badge variant="outline" className="mb-4">LLVM Backend</Badge>
                     <h2 className="text-balance text-3xl font-bold tracking-tight sm:text-4xl">
-                        This page ships a native game.
+                        Natively compiled using the same backend
+                        Rust, Zig, Swift &amp; Mojo use.
                     </h2>
-                    <p className="mt-4 text-balance text-lg text-muted-foreground">
-                        The same Jac module compiles to a desktop binary — and, unchanged,
-                        to the WebAssembly running here, through Jac's own wasm linker.
-                        No emscripten, no plugin.
-                    </p>
                 </div>
             </Reveal>
             <Reveal delay={120}>

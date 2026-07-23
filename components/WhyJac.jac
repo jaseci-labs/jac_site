@@ -1,14 +1,26 @@
 import from .ui.badge { Badge }
+import from .ui.carousel {
+    Carousel, CarouselContent, CarouselItem, CarouselPrevious, CarouselNext
+}
 import from .Reveal { Reveal }
 import from .SynechicDiagram { SynechicDiagram }
 import from .TopokineticDiagram { TopokineticDiagram }
-import from "@hugeicons/react" { HugeiconsIcon }
-import from "@hugeicons/core-free-icons" { ArrowUpRight01Icon }
 
 glob _NOTATIONS: list[str] = [
     "TypeScript", "Python", "SQL", "Shell", "JSX", "CSS",
     "JSON", "TOML", "YAML", "Dockerfile", "HCL", "dotenv",
 ];
+
+"""One slide's frame: eyebrow, headline, content."""
+def:pub WhySlide(eyebrow: str, heading: str, children: any = None) -> JsxElement {
+    return <div className="flex h-full flex-col rounded-2xl border border-border/70 bg-card/30 pt-8 pb-8 pl-6 pr-6 sm:pl-12 sm:pr-12">
+        <div className="mb-6 text-center">
+            <p className="font-mono text-xs uppercase tracking-widest text-primary">{eyebrow}</p>
+            <h3 className="mt-2 text-balance text-2xl font-bold tracking-tight sm:text-3xl">{heading}</h3>
+        </div>
+        <div className="min-w-0 flex-1">{children}</div>
+    </div>;
+}
 
 def:pub WhyJac() -> JsxElement {
     return <section id="why" className="pt-16 pb-16 sm:pt-24 sm:pb-24">
@@ -24,69 +36,54 @@ def:pub WhyJac() -> JsxElement {
                 </div>
             </Reveal>
             <Reveal delay={100}>
-                <div className="mx-auto mt-8 flex max-w-3xl flex-wrap justify-center gap-2">
-                    {for (i, nt) in enumerate(_NOTATIONS) {
-                        <span key={str(i)}
-                            className="rounded-full border border-border bg-card/60 pl-3 pr-3 pt-1 pb-1 font-mono text-xs text-muted-foreground">
-                            {nt}
-                        </span>
-                    }}
-                </div>
-            </Reveal>
-            <Reveal delay={150}>
-                <figure className="mx-auto mt-12 max-w-3xl text-center">
-                    <blockquote className="text-balance text-2xl font-semibold tracking-tight sm:text-3xl">
-                        {"“The whole-program type checker of the modern stack is "}
-                        <span className="text-gradient font-mono">grep</span>
-                        {".”"}
-                    </blockquote>
-                    <figcaption className="mt-3 text-sm text-muted-foreground">
-                        Jac is one bet against each of the two assumptions that made it so.
-                    </figcaption>
-                </figure>
-            </Reveal>
-            <div className="mt-24">
-                <Reveal>
-                    <div className="mb-8 flex flex-col items-center gap-2 text-center">
-                        <span className="font-mono text-xs uppercase tracking-widest text-primary">
-                            Bet one — Jac is synechic
-                        </span>
-                        <h3 className="text-balance text-2xl font-bold tracking-tight sm:text-3xl">
-                            One continuous, checked medium
-                        </h3>
-                    </div>
-                </Reveal>
-                <Reveal delay={100}>
-                    <SynechicDiagram />
-                </Reveal>
-            </div>
-            <div className="mt-24">
-                <Reveal>
-                    <div className="mb-8 flex flex-col items-center gap-2 text-center">
-                        <span className="font-mono text-xs uppercase tracking-widest text-primary">
-                            Bet two — Jac is topokinetic
-                        </span>
-                        <h3 className="text-balance text-2xl font-bold tracking-tight sm:text-3xl">
-                            Computation moves to data
-                        </h3>
-                    </div>
-                </Reveal>
-                <Reveal delay={100}>
-                    <TopokineticDiagram />
-                </Reveal>
-            </div>
-            <Reveal delay={100}>
-                <div className="mx-auto mt-24 max-w-4xl rounded-2xl border border-primary/25 bg-primary/5 pt-10 pb-10 pl-6 pr-6 text-center sm:pl-12 sm:pr-12">
-                    <p className="text-balance text-xl font-semibold leading-relaxed tracking-tight sm:text-2xl">
-                        Anything derivable from the meaning of a program
-                        {" "}<span className="text-gradient">should be derived</span> —
-                        by the compiler and runtime, not the developer.
+                <div className="relative mt-12">
+                    <Carousel className="w-full" opts={{"loop": True}}>
+                        <CarouselContent>
+                            <CarouselItem>
+                                <WhySlide eyebrow="The problem" heading="No compiler can see across your stack.">
+                                    <p className="mx-auto max-w-2xl text-center text-base leading-relaxed text-muted-foreground">
+                                        Open the repository of any well-built product and count
+                                        what a maintainer must read. Every architectural boundary
+                                        is also a change of language, type system, package
+                                        manager, and serialization format.
+                                    </p>
+                                    <div className="mx-auto mt-8 flex max-w-3xl flex-wrap justify-center gap-2">
+                                        {for (i, nt) in enumerate(_NOTATIONS) {
+                                            <span key={str(i)}
+                                                className="rounded-full border border-border bg-card/60 pl-3 pr-3 pt-1 pb-1 font-mono text-xs text-muted-foreground">
+                                                {nt}
+                                            </span>
+                                        }}
+                                    </div>
+                                    <figure className="mx-auto mt-12 max-w-3xl text-center">
+                                        <blockquote className="text-balance text-2xl font-semibold tracking-tight sm:text-3xl">
+                                            {"“The whole-program type checker of the modern stack is "}
+                                            <span className="text-gradient font-mono">grep</span>
+                                            {".”"}
+                                        </blockquote>
+                                        <figcaption className="mt-3 text-sm text-muted-foreground">
+                                            Jac is one bet against each of the two assumptions that made it so.
+                                        </figcaption>
+                                    </figure>
+                                </WhySlide>
+                            </CarouselItem>
+                            <CarouselItem>
+                                <WhySlide eyebrow="Bet one — Jac is synechic" heading="One continuous, checked medium">
+                                    <SynechicDiagram />
+                                </WhySlide>
+                            </CarouselItem>
+                            <CarouselItem>
+                                <WhySlide eyebrow="Bet two — Jac is topokinetic" heading="Computation moves to data">
+                                    <TopokineticDiagram />
+                                </WhySlide>
+                            </CarouselItem>
+                        </CarouselContent>
+                        <CarouselPrevious className="left-3" />
+                        <CarouselNext className="right-3" />
+                    </Carousel>
+                    <p className="mt-4 text-center font-mono text-xs text-muted-foreground">
+                        the problem · bet one · bet two
                     </p>
-                    <a href="https://zenodo.org/records/21498692" target="_blank" rel="noreferrer"
-                        className="mt-5 inline-flex items-center gap-1 text-sm font-medium text-primary hover:underline">
-                        The full argument, in the ninja book
-                        <HugeiconsIcon icon={ArrowUpRight01Icon} strokeWidth={2} className="size-3.5" />
-                    </a>
                 </div>
             </Reveal>
         </div>

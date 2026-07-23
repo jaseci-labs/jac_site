@@ -13,6 +13,7 @@ menuAccent = "subtle"
 menuColor = "default"
 [dependencies]
 [dependencies.npm]
+embla-carousel-react = "*"
 "@hugeicons/core-free-icons" = "*"
 "@hugeicons/react" = "*"
 radix-ui = "*"

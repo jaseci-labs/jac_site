@@ -6,7 +6,7 @@ import from .GraphBackdrop { GraphBackdrop }
 import from .SourceBrowser { SourceBrowser }
 import from .CopyCommand { CopyCommand }
 import from "@hugeicons/react" { HugeiconsIcon }
-import from "@hugeicons/core-free-icons" { ArrowRight01Icon, BookOpen01Icon }
+import from "@hugeicons/core-free-icons" { StarIcon, BookOpen01Icon }
 
 glob INSTALL_CMD: str = "curl -fsSL https://raw.githubusercontent.com/jaseci-labs/jaseci/main/scripts/install.sh | bash";
 
@@ -36,10 +36,10 @@ def:pub Hero() -> JsxElement {
                         bytecode, JavaScript, and native machine code.
                     </p>
                     <div className="anim-fade-up anim-d3 mt-8 flex flex-col items-center gap-3 sm:flex-row sm:flex-wrap lg:items-start">
-                        <a href="https://docs.jaseci.org" target="_blank" rel="noreferrer"
+                        <a href="https://github.com/jaseci-labs/jaseci" target="_blank" rel="noreferrer"
                             className={buttonVariants().call(None, {"size": "lg"})}>
-                            Get started
-                            <HugeiconsIcon icon={ArrowRight01Icon} strokeWidth={2} className="size-4" />
+                            <HugeiconsIcon icon={StarIcon} strokeWidth={2} className="size-4" />
+                            Star the repo
                         </a>
                         <Link to="/docs/latest"
                             className={buttonVariants().call(None, {"variant": "outline", "size": "lg"})}>

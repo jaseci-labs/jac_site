@@ -3,7 +3,7 @@ import from "..lib.utils" { cn }
 import from "@jac/runtime" { Link }
 import from "@hugeicons/react" { HugeiconsIcon }
 import from "@hugeicons/core-free-icons" {
-    GithubIcon, Moon01Icon, Sun01Icon, ArrowRight01Icon
+    GithubIcon, Moon01Icon, Sun01Icon, DiscordIcon
 }
 
 def:pub Navbar() -> JsxElement {
@@ -48,9 +48,10 @@ def:pub Navbar() -> JsxElement {
                     className={buttonVariants().call(None, {"variant": "ghost", "size": "icon"})}>
                     <HugeiconsIcon icon={GithubIcon} strokeWidth={2} className="size-4" />
                 </a>
-                <a href="/#get-started" className={cn(buttonVariants().call(None, {"size": "sm"}), "hidden sm:inline-flex")}>
-                    Get started
-                    <HugeiconsIcon icon={ArrowRight01Icon} strokeWidth={2} className="size-4" />
+                <a href="https://discord.gg/6j3QNdtcN6" target="_blank" rel="noreferrer"
+                    className={cn(buttonVariants().call(None, {"size": "sm"}), "hidden sm:inline-flex")}>
+                    <HugeiconsIcon icon={DiscordIcon} strokeWidth={2} className="size-4" />
+                    Join the Discord
                 </a>
             </div>
         </div>
