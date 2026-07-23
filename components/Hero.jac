@@ -1,11 +1,12 @@
 import from .ui.button { buttonVariants }
 import from .ui.badge { Badge }
 import from "..lib.utils" { cn }
+import from "@jac/runtime" { Link }
 import from .GraphBackdrop { GraphBackdrop }
 import from .SourceBrowser { SourceBrowser }
 import from .CopyCommand { CopyCommand }
 import from "@hugeicons/react" { HugeiconsIcon }
-import from "@hugeicons/core-free-icons" { ArrowRight01Icon, ArrowUpRight01Icon }
+import from "@hugeicons/core-free-icons" { ArrowRight01Icon, BookOpen01Icon }
 
 glob INSTALL_CMD: str = "curl -fsSL https://raw.githubusercontent.com/jaseci-labs/jaseci/main/scripts/install.sh | bash";
 
@@ -40,11 +41,11 @@ def:pub Hero() -> JsxElement {
                             Get started
                             <HugeiconsIcon icon={ArrowRight01Icon} strokeWidth={2} className="size-4" />
                         </a>
-                        <a href="https://playground.jaseci.org" target="_blank" rel="noreferrer"
+                        <Link to="/docs/latest"
                             className={buttonVariants().call(None, {"variant": "outline", "size": "lg"})}>
-                            Open the playground
-                            <HugeiconsIcon icon={ArrowUpRight01Icon} strokeWidth={2} className="size-4" />
-                        </a>
+                            <HugeiconsIcon icon={BookOpen01Icon} strokeWidth={2} className="size-4" />
+                            Read the docs
+                        </Link>
                     </div>
                     <div className="anim-fade-up anim-d4 mt-6 flex justify-center lg:justify-start">
                         <CopyCommand command={INSTALL_CMD} className="max-w-full sm:max-w-xl" />

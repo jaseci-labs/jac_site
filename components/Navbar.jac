@@ -61,10 +61,6 @@ def:pub Navbar() -> JsxElement {
                     className="hidden rounded-md pl-3 pr-3 pt-1.5 pb-1.5 text-sm text-muted-foreground transition-colors hover:bg-accent hover:text-foreground sm:block">
                     Docs
                 </Link>
-                <a href="https://playground.jaseci.org" target="_blank" rel="noreferrer"
-                    className="hidden rounded-md pl-3 pr-3 pt-1.5 pb-1.5 text-sm text-muted-foreground transition-colors hover:bg-accent hover:text-foreground sm:block">
-                    Playground
-                </a>
                 <button onClick={toggle_theme} title="Toggle theme"
                     className={buttonVariants().call(None, {"variant": "ghost", "size": "icon"})}>
                     {if dark {
@@ -104,10 +100,6 @@ def:pub Navbar() -> JsxElement {
                         className="rounded-md pl-3 pr-3 pt-2 pb-2 text-sm text-muted-foreground hover:bg-accent hover:text-foreground">
                         Docs
                     </Link>
-                    <a href="https://playground.jaseci.org" target="_blank" rel="noreferrer"
-                        className="rounded-md pl-3 pr-3 pt-2 pb-2 text-sm text-muted-foreground hover:bg-accent hover:text-foreground">
-                        Playground
-                    </a>
                 </div>
             </nav>
         }}
