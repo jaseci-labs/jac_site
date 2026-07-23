@@ -1,0 +1,92 @@
+import from .ui.badge { Badge }
+import from .ui.button { Button }
+import from .Reveal { Reveal }
+import from ..raylib_shim { run_game }
+import from "@hugeicons/react" { HugeiconsIcon }
+import from "@hugeicons/core-free-icons" { GameController01Icon, PlayIcon }
+
+def:pub WasmGame() -> JsxElement {
+    has launched: bool = False;
+    has canvasRef: Ref[HTMLCanvasElement] = Ref();
+
+    def launch(_e: MouseEvent) {
+        launched = True;
+        if canvasRef.current {
+            run_game(
+                canvasRef.current,
+                lambda (exports: any, fps: int) {
+                    score_el: any = document.getElementById("game-hud-score");
+                    fps_el: any = document.getElementById("game-hud-fps");
+                    if score_el { score_el.textContent = exports.get_score(); }
+                    if fps_el { fps_el.textContent = fps; }
+                },
+            );
+        }
+    }
+
+    return <section id="game" className="border-t border-border/60 bg-card/30 pt-16 pb-16 sm:pt-24 sm:pb-24">
+        <div className="mx-auto max-w-7xl pl-4 pr-4 sm:pl-6 sm:pr-6 lg:pl-8 lg:pr-8">
+            <Reveal>
+                <div className="mx-auto max-w-2xl text-center">
+                    <Badge variant="outline" className="mb-4">WebAssembly</Badge>
+                    <h2 className="text-balance text-3xl font-bold tracking-tight sm:text-4xl">
+                        This page ships a native game.
+                    </h2>
+                    <p className="mt-4 text-balance text-lg text-muted-foreground">
+                        The same Jac module compiles to a desktop binary — and, unchanged,
+                        to the WebAssembly running here, through Jac's own wasm linker.
+                        No emscripten, no plugin.
+                    </p>
+                </div>
+            </Reveal>
+            <Reveal delay={120}>
+                <div className="mx-auto mt-12 max-w-4xl">
+                    <div className="code-window overflow-hidden rounded-xl">
+                        <div className="code-titlebar flex items-center gap-2 pl-4 pr-4 pt-2.5 pb-2.5">
+                            <span className="size-2.5 rounded-full bg-white/15"></span>
+                            <span className="size-2.5 rounded-full bg-white/15"></span>
+                            <span className="size-2.5 rounded-full bg-white/15"></span>
+                            <span className="ml-2 font-mono text-xs text-white/45">jac cube shooter — /static/main.wasm</span>
+                            <span className="ml-auto font-mono text-[10px] uppercase tracking-widest text-orange-400/80">na → wasm</span>
+                        </div>
+                        <div className="relative mx-auto" style={{"aspectRatio": "960 / 600", "maxWidth": "960px"}}>
+                            <canvas ref={canvasRef} width={960} height={600}
+                                className="h-full w-full"
+                                style={{"display": "block", "cursor": "crosshair"}} />
+                            <div className="pointer-events-none absolute left-4 top-3 font-mono text-sm text-white/80"
+                                style={{"textShadow": "0 1px 2px #000"}}>
+                                score <b id="game-hud-score" className="text-primary">0</b>
+                                {" · "}
+                                <b id="game-hud-fps" className="text-primary">0</b> fps
+                            </div>
+                            {if not launched {
+                                <div className="absolute inset-0 flex flex-col items-center justify-center gap-5 bg-[#060607]/95 backdrop-blur-sm">
+                                    <div className="flex size-16 items-center justify-center rounded-2xl bg-primary/15 text-primary">
+                                        <HugeiconsIcon icon={GameController01Icon} strokeWidth={2} className="size-8" />
+                                    </div>
+                                    <div className="text-center">
+                                        <p className="text-lg font-bold text-white">Jac Cube Shooter</p>
+                                        <p className="mt-1 text-sm text-white/50">
+                                            WebAssembly + WebGL, compiled from the Jac in this page's own <span className="font-mono">main.jac</span>
+                                        </p>
+                                    </div>
+                                    <Button size="lg" onClick={launch}>
+                                        <HugeiconsIcon icon={PlayIcon} strokeWidth={2} className="size-4" />
+                                        Launch
+                                    </Button>
+                                </div>
+                            }}
+                        </div>
+                    </div>
+                    <p className="mt-4 text-center text-sm text-muted-foreground">
+                        Click the canvas to capture the mouse ·{" "}
+                        <b className="text-foreground">WASD</b> move ·
+                        mouse / arrows aim ·{" "}
+                        <b className="text-foreground">Space</b> fire ·{" "}
+                        <b className="text-foreground">Tab</b> release
+                    </p>
+                </div>
+            </Reveal>
+        </div>
+    </section>;
+}
