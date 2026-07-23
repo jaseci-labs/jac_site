@@ -327,25 +327,6 @@ glob KEY_W: int = 87,
      mouse_sens: float = 0.12,
      mouse_captured: bool = False;
 
-obj Target {
-    has x: float,
-        y: float,
-        z: float,
-        base_y: float,
-        phase: float,
-        alive: bool;
-}
-
-obj Bullet {
-    has x: float,
-        y: float,
-        z: float,
-        vx: float,
-        vy: float,
-        vz: float,
-        life: float;
-}
-
 """cos via range-reduced Taylor series (good to ~1e-4 on the reduced range)."""
 def jcos(a: float) -> float {
     twopi = 6.283185307179586;
@@ -370,6 +351,20 @@ def jsin(a: float) -> float {
     return jcos(a - 1.5707963267948796);
 }
 
+"""sqrt via Newton's method (plenty for gameplay distances)."""
+def jsqrt(v: float) -> float {
+    if v <= 0.0 {
+        return 0.0;
+    }
+    g = v if v > 1.0 else 1.0;
+    i = 0;
+    while i < 9 {
+        g = 0.5 * (g + v / g);
+        i += 1;
+    }
+    return g;
+}
+
 """Uniform pseudo-random float in [0, 1) via a 31-bit LCG."""
 def rand01 -> float {
     rng = (rng * 1103515245 + 12345) % 2147483648;
@@ -381,72 +376,387 @@ def rand_range(lo: float, hi: float) -> float {
     return lo + rand01() * (hi - lo);
 }
 
-"""(Re)place a target somewhere in the arena in front of the player."""
-def respawn(t: Target) {
-    t.x = rand_range(-14.0, 14.0);
-    t.base_y = rand_range(1.0, 5.0);
-    t.z = rand_range(-16.0, 2.0);
-    t.phase = rand_range(0.0, 6.28);
-    t.y = t.base_y;
-    t.alive = True;
+# ─── The cast ────────────────────────────────────────────────────────────────
+
+"""A hovering hunter drone. It strafes, keeps its distance, telegraphs its
+shot with a charge glow, and fires back."""
+obj Enemy {
+    has x: float,
+        y: float,
+        z: float,
+        base_y: float,
+        phase: float,
+        strafe_dir: float,
+        strafe_t: float,
+        fire_t: float,
+        charge: float,
+        respawn_t: float,
+        alive: bool;
 }
 
-"""Fire a bullet from the eye along the current aim, reusing a dead pool slot."""
-def fire(bullets: list[Bullet]) -> None {
+"""A player rocket in flight."""
+obj Rocket {
+    has x: float,
+        y: float,
+        z: float,
+        vx: float,
+        vy: float,
+        vz: float,
+        life: float;
+}
+
+"""An enemy plasma bolt."""
+obj Shot {
+    has x: float,
+        y: float,
+        z: float,
+        vx: float,
+        vy: float,
+        vz: float,
+        life: float;
+}
+
+"""Debris, sparks, and smoke. `fade` remembers the starting life so the
+cube can shrink as it burns out; `grav` lets smoke rise while debris falls."""
+obj Particle {
+    has x: float,
+        y: float,
+        z: float,
+        vx: float,
+        vy: float,
+        vz: float,
+        life: float,
+        fade: float,
+        size: float,
+        grav: float,
+        r: int,
+        g: int,
+        b: int;
+}
+
+glob enemies: list[Enemy] = [],
+     rockets: list[Rocket] = [],
+     shots: list[Shot] = [],
+     sparks: list[Particle] = [];
+
+# ─── Player state ────────────────────────────────────────────────────────────
+
+glob HP_MAX: float = 100.0,
+     CHARGE_T: float = 0.95,
+     hp: float = 100.0,
+     hurt_t: float = 0.0,
+     safe_t: float = 10.0,
+     invuln_t: float = 0.0,
+     deaths: int = 0,
+     kick_t: float = 0.0,
+     muzzle_t: float = 0.0;
+
+# ─── Particles ───────────────────────────────────────────────────────────────
+
+"""Claim a dead pool slot for one particle (drops it if the pool is full)."""
+def spawn_particle(
+    x: float, y: float, z: float,
+    vx: float, vy: float, vz: float,
+    life: float, size: float, grav: float,
+    r: int, g: int, b: int
+) {
+    for i in range(len(sparks)) {
+        p = sparks[i];
+        if p.life <= 0.0 {
+            p.x = x;
+            p.y = y;
+            p.z = z;
+            p.vx = vx;
+            p.vy = vy;
+            p.vz = vz;
+            p.life = life;
+            p.fade = life;
+            p.size = size;
+            p.grav = grav;
+            p.r = r;
+            p.g = g;
+            p.b = b;
+            return;
+        }
+    }
+}
+
+"""Radial burst of debris cubes at (x, y, z)."""
+def burst(x: float, y: float, z: float, n: int, speed: float, r: int, g: int, b: int) {
+    for i in range(n) {
+        a = rand_range(0.0, 6.283);
+        up = rand_range(0.2, 1.0);
+        s = rand_range(0.3, 1.0) * speed;
+        spawn_particle(
+            x, y, z,
+            jcos(a) * s, up * s, jsin(a) * s,
+            rand_range(0.35, 0.8), rand_range(0.08, 0.22), 9.0,
+            r, g, b
+        );
+    }
+}
+
+"""Advance every live particle: integrate, apply gravity, burn down."""
+def update_particles(step: float) {
+    for i in range(len(sparks)) {
+        p = sparks[i];
+        if p.life > 0.0 {
+            p.x += p.vx * step;
+            p.y += p.vy * step;
+            p.z += p.vz * step;
+            p.vy -= p.grav * step;
+            if p.y < 0.05 and p.grav > 0.0 {
+                p.y = 0.05;
+                p.vy = -p.vy * 0.35;
+                p.vx = p.vx * 0.7;
+                p.vz = p.vz * 0.7;
+            }
+            p.life -= step;
+        }
+    }
+}
+
+# ─── Enemies ─────────────────────────────────────────────────────────────────
+
+"""(Re)place a drone somewhere in the arena in front of the player."""
+def respawn_enemy(e: Enemy) {
+    e.x = rand_range(-14.0, 14.0);
+    e.base_y = rand_range(1.2, 5.0);
+    e.z = rand_range(-16.0, 0.0);
+    e.phase = rand_range(0.0, 6.28);
+    e.y = e.base_y;
+    e.strafe_dir = 1.0 if rand01() < 0.5 else -1.0;
+    e.strafe_t = rand_range(1.0, 2.6);
+    e.fire_t = rand_range(2.0, 5.0);
+    e.charge = 0.0;
+    e.respawn_t = 0.0;
+    e.alive = True;
+}
+
+"""Loose a plasma bolt at the player's current position, with a little spread."""
+def enemy_fire(e: Enemy) {
+    tx = px + rand_range(-1.4, 1.4);
+    ty = py + rand_range(-0.7, 0.7);
+    tz = pz + rand_range(-1.4, 1.4);
+    dx = tx - e.x;
+    dy = ty - e.y;
+    dz = tz - e.z;
+    d = jsqrt(dx * dx + dy * dy + dz * dz);
+    if d < 0.01 {
+        return;
+    }
+    v = 12.0;
+    for i in range(len(shots)) {
+        s = shots[i];
+        if s.life <= 0.0 {
+            s.x = e.x;
+            s.y = e.y;
+            s.z = e.z;
+            s.vx = dx / d * v;
+            s.vy = dy / d * v;
+            s.vz = dz / d * v;
+            s.life = 4.0;
+            return;
+        }
+    }
+}
+
+"""Drone brain: bob, strafe around the player, hold a comfortable range,
+telegraph with a charge glow, then shoot. Dead drones wait out respawn_t."""
+def update_enemies(step: float) {
+    for i in range(len(enemies)) {
+        e = enemies[i];
+        if e.alive {
+            e.y = e.base_y + 0.4 * jsin(world_t * 1.5 + e.phase);
+
+            dx = px - e.x;
+            dz = pz - e.z;
+            dist = jsqrt(dx * dx + dz * dz);
+            if dist > 0.5 {
+                nx = dx / dist;
+                nz = dz / dist;
+
+                e.strafe_t -= step;
+                if e.strafe_t <= 0.0 {
+                    e.strafe_dir = 1.0 if rand01() < 0.5 else -1.0;
+                    e.strafe_t = rand_range(1.0, 2.6);
+                }
+                e.x += -nz * e.strafe_dir * 3.0 * step;
+                e.z += nx * e.strafe_dir * 3.0 * step;
+
+                if dist > 17.0 {
+                    e.x += nx * 2.8 * step;
+                    e.z += nz * 2.8 * step;
+                } elif dist < 8.0 {
+                    e.x -= nx * 3.4 * step;
+                    e.z -= nz * 3.4 * step;
+                }
+            }
+
+            if e.x > 16.0 { e.x = 16.0; }
+            if e.x < -16.0 { e.x = -16.0; }
+            if e.z > 8.0 { e.z = 8.0; }
+            if e.z < -18.0 { e.z = -18.0; }
+
+            e.fire_t -= step;
+            if e.fire_t <= 0.0 and dist < 28.0 {
+                e.charge += step;
+                if e.charge >= CHARGE_T {
+                    enemy_fire(e);
+                    e.charge = 0.0;
+                    e.fire_t = rand_range(2.8, 5.4);
+                }
+            }
+        } else {
+            e.respawn_t -= step;
+            if e.respawn_t <= 0.0 {
+                respawn_enemy(e);
+            }
+        }
+    }
+}
+
+"""Kill a drone: score it, scrap it, schedule its replacement."""
+def kill_enemy(e: Enemy) {
+    e.alive = False;
+    e.respawn_t = rand_range(1.2, 2.6);
+    score += 1;
+    burst(e.x, e.y, e.z, 12, 7.0, 235, 90, 60);
+    burst(e.x, e.y, e.z, 5, 4.0, 255, 210, 110);
+}
+
+# ─── Player damage ───────────────────────────────────────────────────────────
+
+"""Take a hit: flash, interrupt regen, and respawn on zero."""
+def damage_player(amount: float) {
+    if invuln_t > 0.0 {
+        return;
+    }
+    hp -= amount;
+    hurt_t = 0.45;
+    safe_t = 0.0;
+    if hp <= 0.0 {
+        deaths += 1;
+        hp = HP_MAX;
+        invuln_t = 2.5;
+        px = 0.0;
+        py = 2.0;
+        pz = 12.0;
+    }
+}
+
+# ─── Rockets ─────────────────────────────────────────────────────────────────
+
+"""Fire a rocket from the eye along the current aim, reusing a dead pool slot."""
+def fire_rocket {
     yaw_r = yaw * DEG2RAD;
     pitch_r = pitch * DEG2RAD;
     cp = jcos(pitch_r);
     dx = -jsin(yaw_r) * cp;
     dy = jsin(pitch_r);
     dz = -jcos(yaw_r) * cp;
-    speed = 40.0;
-    i = 0;
-    while i < len(bullets) {
-        b = bullets[i];
-        if b.life <= 0.0 {
-            b.x = px;
-            b.y = py;
-            b.z = pz;
-            b.vx = dx * speed;
-            b.vy = dy * speed;
-            b.vz = dz * speed;
-            b.life = 2.0;
+    speed = 30.0;
+    for i in range(len(rockets)) {
+        r = rockets[i];
+        if r.life <= 0.0 {
+            r.x = px + dx * 1.2;
+            r.y = py - 0.25 + dy * 1.2;
+            r.z = pz + dz * 1.2;
+            r.vx = dx * speed;
+            r.vy = dy * speed;
+            r.vz = dz * speed;
+            r.life = 3.0;
+            kick_t = 0.22;
+            muzzle_t = 0.07;
             return;
         }
-        i += 1;
     }
 }
 
-"""Advance bullets, resolve hits against targets, and tally score."""
-def update_bullets(bullets: list[Bullet], targets: list[Target], step: float) {
-    bi = 0;
-    while bi < len(bullets) {
-        b = bullets[bi];
-        if b.life > 0.0 {
-            b.x += b.vx * step;
-            b.y += b.vy * step;
-            b.z += b.vz * step;
-            b.life -= step;
-            ti = 0;
-            while ti < len(targets) {
-                t = targets[ti];
-                if t.alive {
-                    ddx = b.x - t.x;
-                    ddy = b.y - t.y;
-                    ddz = b.z - t.z;
-                    if ddx * ddx + ddy * ddy + ddz * ddz < 1.4 {
-                        t.alive = False;
-                        b.life = 0.0;
-                        score += 1;
-                        respawn(t);
-                    }
-                }
-                ti += 1;
+"""Splash damage: scrap every drone near the blast, then throw debris."""
+def explode(x: float, y: float, z: float) {
+    for i in range(len(enemies)) {
+        e = enemies[i];
+        if e.alive {
+            ddx = e.x - x;
+            ddy = e.y - y;
+            ddz = e.z - z;
+            if ddx * ddx + ddy * ddy + ddz * ddz < 7.3 {
+                kill_enemy(e);
             }
         }
-        bi += 1;
+    }
+    burst(x, y, z, 10, 6.0, 255, 150, 60);
+    burst(x, y, z, 6, 3.5, 255, 220, 120);
+    spawn_particle(x, y, z, 0.0, 0.6, 0.0, 0.28, 0.9, -0.5, 255, 235, 160);
+}
+
+"""Advance rockets, trail smoke, and detonate on drones or the floor."""
+def update_rockets(step: float) {
+    for i in range(len(rockets)) {
+        r = rockets[i];
+        if r.life > 0.0 {
+            r.x += r.vx * step;
+            r.y += r.vy * step;
+            r.z += r.vz * step;
+            r.life -= step;
+            spawn_particle(
+                r.x, r.y, r.z,
+                rand_range(-0.4, 0.4), rand_range(0.1, 0.6), rand_range(-0.4, 0.4),
+                0.35, 0.1, -0.6, 120, 122, 130
+            );
+            boom = False;
+            if r.y <= 0.1 {
+                boom = True;
+            }
+            for ti in range(len(enemies)) {
+                e = enemies[ti];
+                if e.alive and not boom {
+                    ddx = r.x - e.x;
+                    ddy = r.y - e.y;
+                    ddz = r.z - e.z;
+                    if ddx * ddx + ddy * ddy + ddz * ddz < 2.1 {
+                        boom = True;
+                    }
+                }
+            }
+            if r.life <= 0.0 {
+                boom = True;
+            }
+            if boom {
+                explode(r.x, r.y, r.z);
+                r.life = 0.0;
+            }
+        }
     }
 }
+
+"""Advance plasma bolts and resolve hits on the player."""
+def update_shots(step: float) {
+    for i in range(len(shots)) {
+        s = shots[i];
+        if s.life > 0.0 {
+            s.x += s.vx * step;
+            s.y += s.vy * step;
+            s.z += s.vz * step;
+            s.life -= step;
+            if s.y < 0.05 {
+                s.life = 0.0;
+                burst(s.x, 0.1, s.z, 3, 2.0, 150, 90, 200);
+            } else {
+                ddx = s.x - px;
+                ddy = s.y - py;
+                ddz = s.z - pz;
+                if ddx * ddx + ddy * ddy + ddz * ddz < 1.2 {
+                    s.life = 0.0;
+                    damage_player(9.0);
+                }
+            }
+        }
+    }
+}
+
+# ─── Input (mouse-look, WASD, capture toggle) ────────────────────────────────
 
 """Read keyboard + mouse and update camera orientation + position this frame."""
 def handle_input(step: float) {
@@ -529,21 +839,141 @@ def handle_input(step: float) {
     }
 }
 
-glob targets: list[Target] = [],
-     bullets: list[Bullet] = [];
+# ─── Drawing ─────────────────────────────────────────────────────────────────
+
+"""Draw one drone: hull, top fin, side pods — glowing through its charge-up."""
+def draw_enemy(e: Enemy) {
+    k = e.charge / CHARGE_T;
+    r = 200;
+    g = 60;
+    b = 50;
+    if k > 0.66 {
+        r = 255;
+        g = 215;
+        b = 90;
+    } elif k > 0.33 {
+        r = 240;
+        g = 140;
+        b = 70;
+    }
+    s = 1.3 + 0.18 * k;
+    draw_box(e.x, e.y, e.z, s, s, s, r, g, b);
+    draw_box(e.x, e.y + 0.75, e.z, 0.28, 0.42, 0.9, r, g, b);
+    draw_box(e.x - 0.85, e.y, e.z, 0.34, 0.34, 0.34, 150, 45, 40);
+    draw_box(e.x + 0.85, e.y, e.z, 0.34, 0.34, 0.34, 150, 45, 40);
+}
+
+"""Draw the first-person rocket launcher, bobbing, kicking, and flashing.
+
+The trick: translate to the camera and undo its rotations, so every box is
+laid out in view space (x right, y up, -z forward) with plain axis-aligned
+geometry."""
+def draw_weapon {
+    rlPushMatrix();
+    rlTranslatef(px, py, pz);
+    rlRotatef(yaw, 0.0, 1.0, 0.0);
+    rlRotatef(pitch, 1.0, 0.0, 0.0);
+
+    wob = jsin(world_t * 2.1) * 0.008;
+    kz = kick_t * 0.5;
+
+    draw_box(0.34, -0.27 + wob, -0.94 + kz, 0.10, 0.10, 0.60, 66, 68, 78);
+    draw_box(0.34, -0.27 + wob, -1.27 + kz, 0.14, 0.14, 0.08, 42, 43, 50);
+    draw_box(0.34, -0.27 + wob, -1.32 + kz, 0.07, 0.07, 0.07, 255, 140, 60);
+    draw_box(0.34, -0.37 + wob, -0.74 + kz, 0.045, 0.13, 0.075, 48, 48, 55);
+    draw_box(0.34, -0.195 + wob, -1.05 + kz, 0.02, 0.04, 0.028, 90, 92, 102);
+
+    if muzzle_t > 0.0 {
+        fs = 0.34 * (muzzle_t / 0.07);
+        draw_box(0.34, -0.27 + wob, -1.45 + kz, fs, fs, fs, 255, 235, 140);
+    }
+    rlPopMatrix();
+}
+
+"""Axis-aligned filled rectangle in the 2D overlay (pixel space)."""
+def draw_rect2d(x: float, y: float, w: float, h: float, r: int, g: int, b: int) {
+    rlBegin(RL_TRIANGLES);
+    rlColor4ub(r, g, b, 255);
+    rlVertex3f(x, y, 0.0);
+    rlVertex3f(x, y + h, 0.0);
+    rlVertex3f(x + w, y + h, 0.0);
+    rlVertex3f(x, y, 0.0);
+    rlVertex3f(x + w, y + h, 0.0);
+    rlVertex3f(x + w, y, 0.0);
+    rlEnd();
+}
+
+"""Crosshair, health bar, hit flash — the pixel-space HUD pass."""
+def draw_hud {
+    gap = 6.0 + kick_t * 40.0;
+    draw_rect2d(480.0 - gap - 10.0, 299.0, 10.0, 2.0, 215, 220, 230);
+    draw_rect2d(480.0 + gap, 299.0, 10.0, 2.0, 215, 220, 230);
+    draw_rect2d(479.0, 300.0 - gap - 10.0, 2.0, 10.0, 215, 220, 230);
+    draw_rect2d(479.0, 300.0 + gap, 2.0, 10.0, 215, 220, 230);
+
+    if fire_cd > 0.0 {
+        draw_rect2d(460.0, 318.0, 40.0 * (1.0 - fire_cd / 0.55), 3.0, 255, 150, 60);
+    }
+
+    draw_rect2d(24.0, 560.0, 244.0, 20.0, 26, 28, 34);
+    hpk = hp / HP_MAX;
+    fr = 90;
+    fg = 220;
+    fb = 120;
+    if hpk < 0.25 {
+        fr = 240;
+        fg = 80;
+        fb = 70;
+    } elif hpk < 0.5 {
+        fr = 250;
+        fg = 200;
+        fb = 80;
+    }
+    if invuln_t > 0.0 and jsin(world_t * 18.0) > 0.0 {
+        fr = 160;
+        fg = 170;
+        fb = 190;
+    }
+    draw_rect2d(27.0, 563.0, 238.0 * hpk, 14.0, fr, fg, fb);
+
+    if hurt_t > 0.0 {
+        draw_rect2d(0.0, 0.0, 960.0, 6.0, 205, 60, 50);
+        draw_rect2d(0.0, 594.0, 960.0, 6.0, 205, 60, 50);
+        draw_rect2d(0.0, 0.0, 6.0, 600.0, 205, 60, 50);
+        draw_rect2d(954.0, 0.0, 6.0, 600.0, 205, 60, 50);
+    }
+}
 
 # ─── Browser entry points (replace the native `with entry` loop) ─────────────
+
 """Set up the window and object pools. Call once before the first frame()."""
 def init {
-    open_window(960, 600, "Jac Cube Shooter");
-    for n in range(7) {
-        t = Target(x=0.0, y=0.0, z=0.0, base_y=0.0, phase=0.0, alive=False);
-        respawn(t);
-        targets.append(t);
+    open_window(960, 600, "Jac Rocket Arena");
+    for n in range(8) {
+        e = Enemy(
+            x=0.0, y=0.0, z=0.0, base_y=0.0, phase=0.0,
+            strafe_dir=1.0, strafe_t=0.0, fire_t=0.0, charge=0.0,
+            respawn_t=0.0, alive=False
+        );
+        respawn_enemy(e);
+        enemies.append(e);
+    }
+    for n in range(10) {
+        rockets.append(
+            Rocket(x=0.0, y=0.0, z=0.0, vx=0.0, vy=0.0, vz=0.0, life=0.0)
+        );
     }
     for n in range(24) {
-        bullets.append(
-            Bullet(x=0.0, y=0.0, z=0.0, vx=0.0, vy=0.0, vz=0.0, life=0.0)
+        shots.append(
+            Shot(x=0.0, y=0.0, z=0.0, vx=0.0, vy=0.0, vz=0.0, life=0.0)
+        );
+    }
+    for n in range(90) {
+        sparks.append(
+            Particle(
+                x=0.0, y=0.0, z=0.0, vx=0.0, vy=0.0, vz=0.0,
+                life=0.0, fade=1.0, size=0.1, grav=9.0, r=255, g=255, b=255
+            )
         );
     }
 }
@@ -552,45 +982,82 @@ def init {
 def frame -> bool {
     step = dt();
     world_t += step;
+
+    if hurt_t > 0.0 { hurt_t -= step; }
+    if invuln_t > 0.0 { invuln_t -= step; }
+    if kick_t > 0.0 { kick_t -= step; }
+    if muzzle_t > 0.0 { muzzle_t -= step; }
+    safe_t += step;
+    if safe_t > 4.0 and hp < HP_MAX {
+        hp += 7.0 * step;
+        if hp > HP_MAX { hp = HP_MAX; }
+    }
+
     handle_input(step);
     fire_cd -= step;
-    if key_held(KEY_SPACE) and fire_cd <= 0.0 {
-        fire(bullets);
-        fire_cd = 0.14;
+    want_fire = key_held(KEY_SPACE) or (mouse_captured and mouse_pressed(MOUSE_LEFT));
+    if want_fire and fire_cd <= 0.0 {
+        fire_rocket();
+        fire_cd = 0.55;
     }
-    update_bullets(bullets, targets, step);
-    ti = 0;
-    while ti < len(targets) {
-        t = targets[ti];
-        t.y = t.base_y + 0.4 * jsin(world_t * 1.5 + t.phase);
-        ti += 1;
-    }
+
+    update_enemies(step);
+    update_rockets(step);
+    update_shots(step);
+    update_particles(step);
+
     begin_frame(16, 16, 18);
     set_camera(px, py, pz, yaw, pitch, 1.6);
     draw_floor(20, 1.5);
-    ti = 0;
-    while ti < len(targets) {
-        t = targets[ti];
-        if t.alive {
-            draw_box(t.x, t.y, t.z, 1.4, 1.4, 1.4, 235, 80, 60);
+
+    for i in range(len(enemies)) {
+        e = enemies[i];
+        if e.alive {
+            draw_enemy(e);
         }
-        ti += 1;
     }
-    bi = 0;
-    while bi < len(bullets) {
-        b = bullets[bi];
-        if b.life > 0.0 {
-            draw_box(b.x, b.y, b.z, 0.22, 0.22, 0.22, 250, 220, 90);
+    for i in range(len(rockets)) {
+        r = rockets[i];
+        if r.life > 0.0 {
+            draw_box(r.x, r.y, r.z, 0.16, 0.16, 0.42, 205, 206, 212);
+            draw_box(r.x, r.y, r.z - 0.26, 0.11, 0.11, 0.12, 255, 140, 60);
         }
-        bi += 1;
     }
+    for i in range(len(shots)) {
+        s = shots[i];
+        if s.life > 0.0 {
+            w = 0.26 + 0.06 * jsin(world_t * 22.0 + float(i));
+            draw_box(s.x, s.y, s.z, w, w, w, 190, 90, 255);
+        }
+    }
+    for i in range(len(sparks)) {
+        p = sparks[i];
+        if p.life > 0.0 {
+            ps = p.size * (p.life / p.fade);
+            draw_box(p.x, p.y, p.z, ps, ps, ps, p.r, p.g, p.b);
+        }
+    }
+    draw_weapon();
+
     end_camera(960.0, 600.0);
+    rlDisableDepthTest();
+    draw_hud();
     draw_fps(10, 10);
     end_frame();
     return should_close();
 }
 
-"""Current score (targets destroyed) - for an HTML/`sv` HUD."""
+"""Current score (drones destroyed) - for the HTML HUD."""
 def get_score -> int {
     return score;
+}
+
+"""Current health in [0, 100] - for the HTML HUD."""
+def get_hp -> float {
+    return hp;
+}
+
+"""Times the player has been destroyed - for the HTML HUD."""
+def get_deaths -> int {
+    return deaths;
 }

@@ -16,8 +16,12 @@ def:pub WasmGame() -> JsxElement {
                 canvasRef.current,
                 lambda (exports: any, fps: int) {
                     score_el: any = document.getElementById("game-hud-score");
+                    hp_el: any = document.getElementById("game-hud-hp");
+                    deaths_el: any = document.getElementById("game-hud-deaths");
                     fps_el: any = document.getElementById("game-hud-fps");
                     if score_el { score_el.textContent = exports.get_score(); }
+                    if hp_el { hp_el.textContent = Math.round(exports.get_hp()); }
+                    if deaths_el { deaths_el.textContent = exports.get_deaths(); }
                     if fps_el { fps_el.textContent = fps; }
                 },
             );
@@ -55,7 +59,11 @@ def:pub WasmGame() -> JsxElement {
                                 style={{"display": "block", "cursor": "crosshair"}} />
                             <div className="pointer-events-none absolute left-4 top-3 font-mono text-sm text-white/80"
                                 style={{"textShadow": "0 1px 2px #000"}}>
-                                score <b id="game-hud-score" className="text-primary">0</b>
+                                hp <b id="game-hud-hp" className="text-primary">100</b>
+                                {" · "}
+                                kills <b id="game-hud-score" className="text-primary">0</b>
+                                {" · "}
+                                deaths <b id="game-hud-deaths" className="text-primary">0</b>
                                 {" · "}
                                 <b id="game-hud-fps" className="text-primary">0</b> fps
                             </div>
@@ -65,9 +73,10 @@ def:pub WasmGame() -> JsxElement {
                                         <HugeiconsIcon icon={GameController01Icon} strokeWidth={2} className="size-8" />
                                     </div>
                                     <div className="text-center">
-                                        <p className="text-lg font-bold text-white">Jac Cube Shooter</p>
+                                        <p className="text-lg font-bold text-white">Jac Rocket Arena</p>
                                         <p className="mt-1 text-sm text-white/50">
-                                            WebAssembly + WebGL, compiled from the Jac in this page's own <span className="font-mono">main.jac</span>
+                                            The drones shoot back. WebAssembly + WebGL, compiled from
+                                            the Jac in this page's own <span className="font-mono">main.jac</span>
                                         </p>
                                     </div>
                                     <Button size="lg" onClick={launch}>
