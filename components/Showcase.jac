@@ -1,0 +1,183 @@
+import from .ui.badge { Badge }
+import from .ui.tabs { Tabs, TabsList, TabsTrigger, TabsContent }
+import from .CodeBlock { CodeBlock }
+import from .Reveal { Reveal }
+import from "@hugeicons/react" { HugeiconsIcon }
+import from "@hugeicons/core-free-icons" { CheckmarkCircle01Icon, ArrowUpRight01Icon }
+
+glob _AI_LINES: list[str] = [
+    "enum Priority { LOW, MEDIUM, HIGH, URGENT }",
+    "",
+    'sem assess = "Assess the priority of a support ticket.";',
+    "",
+    "def assess(ticket: str) -> Priority by llm();",
+    "",
+    "with entry {",
+    '    print(assess("Checkout is down and customers are leaving!"));',
+    "    # Priority.URGENT",
+    "}",
+];
+
+glob _GRAPH_LINES: list[str] = [
+    "node Task {",
+    "    has title: str;",
+    "    has done: bool = False;",
+    "}",
+    "",
+    "walker:pub add_task {",
+    "    has title: str;",
+    "    can create with Root entry {",
+    "        task = Task(title=self.title);",
+    "        root ++> task;",
+    '        report {"id": jid(task)};',
+    "    }",
+    "}",
+    "",
+    "walker:pub list_tasks {",
+    "    can fetch with Root entry {",
+    "        report [t.title for t in [-->][?:Task]];",
+    "    }",
+    "}",
+    "",
+    "# jac start api.jac  →  POST /walker/add_task",
+];
+
+glob _FULL_LINES: list[str] = [
+    "node Todo { has title: str; }",
+    "",
+    "def:pub add_todo(title: str) -> Todo {",
+    "    todo = Todo(title=title);",
+    "    root ++> todo;",
+    "    return todo;",
+    "}",
+    "",
+    "def:pub get_todos -> list[Todo] {",
+    "    return [root-->][?:Todo];",
+    "}",
+    "",
+    "cl def:pub app -> JsxElement {",
+    "    has todos: list[Todo] = [];",
+    "    async can with entry { todos = await get_todos(); }",
+    "    return <ul>",
+    "        {[<li key={jid(t)}>{t.title}</li> for t in todos]}",
+    "    </ul>;",
+    "}",
+];
+
+glob _NATIVE_LINES: list[str] = [
+    "obj Buffer { has n: int = 0; }",
+    "",
+    "with entry {",
+    "    a: own Buffer = Buffer();   # opt in, one declaration",
+    "    v: &Buffer = &a;            # shared borrow of the owner",
+    "    a.n = 5;    # error[E1303]: cannot mutate while borrowed",
+    "    b = a;      # moves the value out of 'a'",
+    "    print(a);   # error[E1301]: use of 'a' after move",
+    "}",
+    "",
+    "# jac build --as native  →  zero-RC machine code",
+];
+
+def:pub ShowcasePanel(lines: list[str], file: str, heading: str, blurb: str,
+                      points: list[str], link_label: str, link_href: str) -> JsxElement {
+    return <div className="grid grid-cols-1 items-start gap-8 lg:grid-cols-[1.15fr_1fr]">
+        <CodeBlock lines={lines} title={file} />
+        <div className="pt-2">
+            <h3 className="text-xl font-semibold tracking-tight">{heading}</h3>
+            <p className="mt-3 text-base leading-relaxed text-muted-foreground">{blurb}</p>
+            <ul className="mt-6 flex flex-col gap-4">
+                {for (i, pt) in enumerate(points) {
+                    <li key={str(i)} className="flex items-start gap-3">
+                        <HugeiconsIcon icon={CheckmarkCircle01Icon} strokeWidth={2}
+                            className="mt-0.5 size-4 shrink-0 text-primary" />
+                        <span className="text-sm leading-relaxed text-muted-foreground">{pt}</span>
+                    </li>
+                }}
+            </ul>
+            <a href={link_href} target="_blank" rel="noreferrer"
+                className="mt-6 inline-flex items-center gap-1 text-sm font-medium text-primary hover:underline">
+                {link_label}
+                <HugeiconsIcon icon={ArrowUpRight01Icon} strokeWidth={2} className="size-3.5" />
+            </a>
+        </div>
+    </div>;
+}
+
+def:pub Showcase() -> JsxElement {
+    return <section id="language" className="pt-16 pb-16 sm:pt-24 sm:pb-24">
+        <div className="mx-auto max-w-7xl pl-4 pr-4 sm:pl-6 sm:pr-6 lg:pl-8 lg:pr-8">
+            <Reveal>
+                <div className="mx-auto max-w-2xl text-center">
+                    <Badge variant="outline" className="mb-4">The language</Badge>
+                    <h2 className="text-balance text-3xl font-bold tracking-tight sm:text-4xl">
+                        AI, graphs, and UIs are language features
+                    </h2>
+                    <p className="mt-4 text-balance text-lg text-muted-foreground">
+                        Not frameworks you assemble around it. The things every real
+                        application needs are compiler-generated and type-checked.
+                    </p>
+                </div>
+            </Reveal>
+            <Reveal delay={100}>
+                <div className="mt-12">
+                    <Tabs defaultValue="ai">
+                        <TabsList className="mx-auto mb-8 flex h-auto w-fit max-w-full flex-wrap justify-center">
+                            <TabsTrigger value="ai" className="pl-4 pr-4 pt-2 pb-2">AI · by llm()</TabsTrigger>
+                            <TabsTrigger value="graph" className="pl-4 pr-4 pt-2 pb-2">Graphs · walkers</TabsTrigger>
+                            <TabsTrigger value="full" className="pl-4 pr-4 pt-2 pb-2">Full-stack · one file</TabsTrigger>
+                            <TabsTrigger value="native" className="pl-4 pr-4 pt-2 pb-2">Native · own &amp; borrow</TabsTrigger>
+                        </TabsList>
+                        <TabsContent value="ai">
+                            <ShowcasePanel lines={_AI_LINES} file="triage.jac"
+                                heading="There is no prompt to write."
+                                blurb="Delegate a function body to a model with two words. These are meaning types — the constructs of Meaning-Typed Programming."
+                                points={[
+                                    "The compiler builds the prompt from your function's name, arguments, types, and optional sem annotations.",
+                                    "The return type is an enforced output schema: typed, validated values — never loose text to parse.",
+                                    "Declare your model once in jac.toml. Any LiteLLM-compatible provider, or fully local weights.",
+                                ]}
+                                link_label="Meaning-Typed Programming"
+                                link_href="https://docs.jaseci.org/reference/plugins/byllm/" />
+                        </TabsContent>
+                        <TabsContent value="graph">
+                            <ShowcasePanel lines={_GRAPH_LINES} file="api.jac"
+                                heading="Your graph is your API."
+                                blurb="Model the domain as nodes and edges, then send walkers — mobile computation, dispatched by arrival — to traverse it. This is Object-Spatial Programming."
+                                points={[
+                                    "Mark a walker :pub and jac start serves it as a REST endpoint: request bodies map onto its fields, report becomes the JSON response, Swagger docs at /docs.",
+                                    "Whatever is reachable from root persists. Connecting a node is the write to the database — there is no other API.",
+                                    "Every authenticated user is a graph root: isolation is a property of which graph you were handed, not a WHERE clause.",
+                                ]}
+                                link_label="Object-Spatial Programming"
+                                link_href="https://docs.jaseci.org/tutorials/language/osp/" />
+                        </TabsContent>
+                        <TabsContent value="full">
+                            <ShowcasePanel lines={_FULL_LINES} file="app.jac"
+                                heading="Frontend and backend in one file."
+                                blurb="Code in the cl codespace compiles to a React bundle for the browser. Everything else compiles to Python for the server. One program, one type checker."
+                                points={[
+                                    "That await add_todo(...) is a real RPC: the compiler generates the HTTP call, serialization, and shared types across the boundary.",
+                                    "Rename a field and every stale use — server or client — is a compile error, not a production surprise.",
+                                    "jac start serves it; jac start --dev adds hot reload.",
+                                ]}
+                                link_label="Full-stack tutorial"
+                                link_href="https://docs.jaseci.org/build/fullstack-web/" />
+                        </TabsContent>
+                        <TabsContent value="native">
+                            <ShowcasePanel lines={_NATIVE_LINES} file="buffer.jac"
+                                heading="Systems code, by degrees."
+                                blurb="Gradual borrow checking replaces the managed-vs-systems divide with a gradient. Opt in one declaration at a time; the compiler enforces moves, borrows, and deterministic destruction."
+                                points={[
+                                    "Unannotated code keeps fully managed semantics — node, edge, and walker never fight the borrow checker.",
+                                    "Full adoption reaches native artifacts with no reference counting and no garbage collector.",
+                                    "The same source compiles to standalone binaries and in-browser WebAssembly with Jac's own linkers — no gcc, no emscripten.",
+                                ]}
+                                link_label="Gradual borrow checking"
+                                link_href="https://docs.jaseci.org/reference/language/ownership-borrowing/" />
+                        </TabsContent>
+                    </Tabs>
+                </div>
+            </Reveal>
+        </div>
+    </section>;
+}

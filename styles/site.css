@@ -1,0 +1,133 @@
+/* jaclang.org custom layer — sits on top of the generated shadcn global.css.
+   Safe from `jac retheme` (which only overwrites global.css). */
+
+code, pre, kbd, .font-mono {
+    font-family: "Geist Mono Variable", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+
+html { scroll-behavior: smooth; }
+section[id] { scroll-margin-top: 4.5rem; }
+
+/* ---- brand gradient text ---- */
+.text-gradient {
+    background: linear-gradient(100deg, #f7931e 0%, #ff6b35 55%, #e8442c 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    color: transparent;
+}
+
+/* ---- hero atmosphere ---- */
+.hero-glow {
+    background:
+        radial-gradient(ellipse 60% 45% at 50% 0%, oklch(0.705 0.213 47.604 / 0.16), transparent 70%),
+        radial-gradient(ellipse 40% 35% at 80% 20%, oklch(0.646 0.222 41.116 / 0.08), transparent 70%);
+}
+.dot-grid {
+    background-image: radial-gradient(oklch(0.985 0 0 / 0.055) 1px, transparent 1px);
+    background-size: 28px 28px;
+    mask-image: radial-gradient(ellipse 75% 65% at 50% 35%, black 30%, transparent 75%);
+    -webkit-mask-image: radial-gradient(ellipse 75% 65% at 50% 35%, black 30%, transparent 75%);
+}
+:root:not(.dark) .dot-grid {
+    background-image: radial-gradient(oklch(0.145 0 0 / 0.08) 1px, transparent 1px);
+}
+
+/* ---- entrance animations (hero, on load) ---- */
+@keyframes fade-up {
+    from { opacity: 0; transform: translateY(26px); }
+    to   { opacity: 1; transform: none; }
+}
+.anim-fade-up { animation: fade-up 0.9s cubic-bezier(0.16, 1, 0.3, 1) both; }
+.anim-d1 { animation-delay: 0.08s; }
+.anim-d2 { animation-delay: 0.18s; }
+.anim-d3 { animation-delay: 0.28s; }
+.anim-d4 { animation-delay: 0.38s; }
+.anim-d5 { animation-delay: 0.5s; }
+
+/* ---- scroll reveal ---- */
+.reveal {
+    opacity: 0;
+    transform: translateY(30px);
+    transition: opacity 0.7s ease, transform 0.7s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.reveal-shown { opacity: 1; transform: none; }
+
+/* ---- graph backdrop (SVG constellation) ---- */
+@keyframes node-pulse {
+    0%, 100% { opacity: 0.5; }
+    50% { opacity: 1; }
+}
+.g-node { animation: node-pulse 4s ease-in-out infinite; }
+@keyframes edge-flow { to { stroke-dashoffset: -22; } }
+.g-edge {
+    stroke-dasharray: 3 8;
+    animation: edge-flow 2.6s linear infinite;
+}
+.g-walker { filter: drop-shadow(0 0 6px #ff6b35) drop-shadow(0 0 14px #ff6b35); }
+
+/* ---- terminal / code windows (always dark, both themes) ---- */
+.code-window {
+    background: #0d1117;
+    border: 1px solid oklch(1 0 0 / 0.09);
+    box-shadow: 0 16px 48px -16px rgb(0 0 0 / 0.55), 0 0 0 1px rgb(0 0 0 / 0.2);
+}
+.code-window .code-titlebar {
+    background: oklch(1 0 0 / 0.04);
+    border-bottom: 1px solid oklch(1 0 0 / 0.07);
+}
+.code-scroll { overflow-x: auto; }
+
+/* caret blink */
+@keyframes caret-blink { 50% { opacity: 0; } }
+.caret {
+    display: inline-block;
+    width: 8px;
+    height: 1.05em;
+    vertical-align: text-bottom;
+    background: #ff6b35;
+    animation: caret-blink 1s step-end infinite;
+}
+
+/* ---- Jac syntax tokens (on the dark code window) ---- */
+.tok-kw  { color: #ff7b72; }
+.tok-ty  { color: #ffa657; }
+.tok-fn  { color: #d2a8ff; }
+.tok-str { color: #a5d6ff; }
+.tok-num { color: #79c0ff; }
+.tok-lit { color: #79c0ff; }
+.tok-var { color: #ffa198; font-style: italic; }
+.tok-com { color: #7d8590; font-style: italic; }
+.tok-op  { color: #ff9e64; font-weight: 600; }
+.tok-dec { color: #ffa657; }
+.code-plain { color: #e6edf3; }
+
+/* shell snippets */
+.sh-prompt { color: #ff6b35; }
+.sh-cmd { color: #e6edf3; }
+.sh-out { color: #8b949e; }
+.sh-ok { color: #56d364; }
+
+/* ---- misc ---- */
+.strike-chip { position: relative; }
+.strike-chip::after {
+    content: "";
+    position: absolute;
+    left: 8%;
+    right: 8%;
+    top: 50%;
+    height: 2px;
+    border-radius: 1px;
+    background: linear-gradient(90deg, #f7931e, #e8442c);
+    transform: rotate(-4deg);
+}
+
+.footer-hex-fade {
+    mask-image: linear-gradient(to bottom, black, transparent);
+    -webkit-mask-image: linear-gradient(to bottom, black, transparent);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .anim-fade-up, .g-node, .g-edge, .caret { animation: none !important; }
+    .reveal { opacity: 1; transform: none; transition: none; }
+}

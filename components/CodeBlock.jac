@@ -1,0 +1,141 @@
+import from "..lib.utils" { cn }
+
+glob _KEYWORDS: list[str] = [
+    "node", "edge", "walker", "obj", "enum", "class", "def", "can", "with",
+    "entry", "exit", "has", "glob", "import", "from", "by", "async", "await",
+    "return", "if", "else", "elif", "for", "while", "in", "not", "and", "or",
+    "report", "visit", "spawn", "disengage", "skip", "del", "try", "except",
+    "finally", "raise", "match", "case", "impl", "sem", "test", "own", "lambda",
+    "cl", "sv", "na", "print", "yield", "as", "new", "pub", "priv",
+];
+
+glob _TYPES: list[str] = [
+    "int", "str", "bool", "float", "list", "dict", "tuple", "set", "any", "bytes",
+];
+
+glob _LITERALS: list[str] = ["True", "False", "None"];
+
+glob _SPECIALS: list[str] = ["root", "self", "here", "visitor", "super", "llm"];
+
+def _is_alpha(c: str) -> bool {
+    return ("a" <= c and c <= "z") or ("A" <= c and c <= "Z") or c == "_";
+}
+
+def _is_word_char(c: str) -> bool {
+    return _is_alpha(c) or ("0" <= c and c <= "9");
+}
+
+def _is_digit(c: str) -> bool {
+    return "0" <= c and c <= "9";
+}
+
+def _classify(w: str, next_c: str) -> str {
+    if w in _KEYWORDS { return "kw"; }
+    if w in _LITERALS { return "lit"; }
+    if w in _SPECIALS { return "var"; }
+    if w in _TYPES { return "ty"; }
+    if len(w) > 0 and ("A" <= w[0] and w[0] <= "Z") { return "ty"; }
+    if next_c == "(" { return "fn"; }
+    return "plain";
+}
+
+def tokenize_line(line: str) -> list[dict] {
+    toks: list[dict] = [];
+    n = len(line);
+    i = 0;
+    while i < n {
+        c = line[i];
+        if c == "#" {
+            rest = "";
+            j = i;
+            while j < n { rest = rest + line[j]; j = j + 1; }
+            toks.append({"t": rest, "c": "com"});
+            break;
+        }
+        if c == "\"" or c == "'" {
+            s = c;
+            j = i + 1;
+            while j < n and line[j] != c {
+                s = s + line[j];
+                j = j + 1;
+            }
+            if j < n { s = s + c; j = j + 1; }
+            toks.append({"t": s, "c": "str"});
+            i = j;
+            continue;
+        }
+        if _is_alpha(c) {
+            w = "";
+            j = i;
+            while j < n and _is_word_char(line[j]) {
+                w = w + line[j];
+                j = j + 1;
+            }
+            nxt = line[j] if j < n else "";
+            toks.append({"t": w, "c": _classify(w, nxt)});
+            i = j;
+            continue;
+        }
+        if _is_digit(c) {
+            num = "";
+            j = i;
+            while j < n and (_is_digit(line[j]) or line[j] == ".") {
+                num = num + line[j];
+                j = j + 1;
+            }
+            toks.append({"t": num, "c": "num"});
+            i = j;
+            continue;
+        }
+        if c == "@" {
+            w = c;
+            j = i + 1;
+            while j < n and _is_word_char(line[j]) {
+                w = w + line[j];
+                j = j + 1;
+            }
+            toks.append({"t": w, "c": "dec"});
+            i = j;
+            continue;
+        }
+        if c == "+" or c == "-" or c == "<" or c == ">" or c == "&" {
+            op = "";
+            j = i;
+            while j < n and (line[j] == "+" or line[j] == "-" or line[j] == "<"
+                             or line[j] == ">" or line[j] == "&" or line[j] == "=") {
+                op = op + line[j];
+                j = j + 1;
+            }
+            cls = "op" if (len(op) >= 2 or op == "&") else "plain";
+            toks.append({"t": op, "c": cls});
+            i = j;
+            continue;
+        }
+        toks.append({"t": c, "c": "plain"});
+        i = i + 1;
+    }
+    return toks;
+}
+
+def:pub CodeBlock(lines: list[str], title: str = "", className: str = "") -> JsxElement {
+    return <div className={cn("code-window rounded-xl overflow-hidden text-left", className)}>
+        {if title != "" {
+            <div className="code-titlebar flex items-center gap-2 pl-4 pr-4 pt-2.5 pb-2.5">
+                <span className="size-2.5 rounded-full bg-white/15"></span>
+                <span className="size-2.5 rounded-full bg-white/15"></span>
+                <span className="size-2.5 rounded-full bg-white/15"></span>
+                <span className="ml-2 font-mono text-xs text-white/45">{title}</span>
+                <span className="ml-auto font-mono text-[10px] uppercase tracking-widest text-orange-400/80">jac</span>
+            </div>
+        }}
+        <pre className="code-scroll code-plain pt-4 pb-4 pl-5 pr-5 text-[13px] leading-relaxed">
+            {for (li, ln) in enumerate(lines) {
+                <div key={str(li)} className="min-h-[1.45em] whitespace-pre">
+                    {for (ti, tk) in enumerate(tokenize_line(ln)) {
+                        <span key={str(ti)} className={("tok-" + (tk["c"] as str)) if tk["c"] != "plain" else ""}>{tk["t"]}</span>
+                    }}
+                </div>
+            }}
+        </pre>
+    </div>;
+}

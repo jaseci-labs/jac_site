@@ -1,0 +1,63 @@
+import from .ui.button { buttonVariants }
+import from .ui.badge { Badge }
+import from "..lib.utils" { cn }
+import from .GraphBackdrop { GraphBackdrop }
+import from .TerminalDemo { TerminalDemo }
+import from .CopyCommand { CopyCommand }
+import from "@hugeicons/react" { HugeiconsIcon }
+import from "@hugeicons/core-free-icons" { ArrowRight01Icon, ArrowUpRight01Icon }
+
+glob INSTALL_CMD: str = "curl -fsSL https://raw.githubusercontent.com/jaseci-labs/jaseci/main/scripts/install.sh | bash";
+
+def:pub Hero() -> JsxElement {
+    return <section id="top" className="relative overflow-hidden pt-36 pb-24 sm:pt-44 sm:pb-32">
+        <div className="hero-glow absolute inset-0"></div>
+        <div className="dot-grid absolute inset-0"></div>
+        <GraphBackdrop />
+        <div className="relative mx-auto max-w-7xl pl-4 pr-4 sm:pl-6 sm:pr-6 lg:pl-8 lg:pr-8">
+            <div className="grid grid-cols-1 items-center gap-14 lg:grid-cols-[1.1fr_1fr]">
+                <div className="text-center lg:text-left">
+                    <div className="anim-fade-up">
+                        <Badge variant="outline" className="mb-6 border-primary/40 bg-primary/5 pl-3 pr-3 pt-1 pb-1 text-primary">
+                            The first synechic + topokinetic programming language
+                        </Badge>
+                    </div>
+                    <h1 className="anim-fade-up anim-d1 text-balance text-5xl font-bold tracking-tight sm:text-6xl lg:text-7xl">
+                        One language.
+                        <br />
+                        The whole stack.
+                        <br />
+                        <span className="text-gradient">No glue.</span>
+                    </h1>
+                    <p className="anim-fade-up anim-d2 mx-auto mt-6 max-w-xl text-balance text-lg leading-8 text-muted-foreground lg:mx-0">
+                        Jac is a Python-like language where AI, graphs, persistence,
+                        APIs, UIs, and cloud deployment are language features — compiled
+                        to Python bytecode, JavaScript, and native machine code by one
+                        compiler that sees your entire program.
+                    </p>
+                    <div className="anim-fade-up anim-d3 mt-8 flex flex-col items-center gap-3 sm:flex-row lg:items-start">
+                        <a href="https://docs.jaseci.org" target="_blank" rel="noreferrer"
+                            className={buttonVariants().call(None, {"size": "lg"})}>
+                            Get started
+                            <HugeiconsIcon icon={ArrowRight01Icon} strokeWidth={2} className="size-4" />
+                        </a>
+                        <a href="https://playground.jaseci.org" target="_blank" rel="noreferrer"
+                            className={buttonVariants().call(None, {"variant": "outline", "size": "lg"})}>
+                            Open the playground
+                            <HugeiconsIcon icon={ArrowUpRight01Icon} strokeWidth={2} className="size-4" />
+                        </a>
+                    </div>
+                    <div className="anim-fade-up anim-d4 mt-6 flex justify-center lg:justify-start">
+                        <CopyCommand command={INSTALL_CMD} className="max-w-full sm:max-w-xl" />
+                    </div>
+                    <p className="anim-fade-up anim-d5 mt-4 text-sm text-muted-foreground">
+                        One self-contained binary. No Python, Node, or C toolchain required.
+                    </p>
+                </div>
+                <div className="anim-fade-up anim-d3 hidden lg:block">
+                    <TerminalDemo />
+                </div>
+            </div>
+        </div>
+    </section>;
+}
