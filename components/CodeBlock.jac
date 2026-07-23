@@ -122,7 +122,7 @@ def:pub CodeLines(lines: list[str], lang: str = "jac", numbers: bool = False) ->
         {for (li, ln) in enumerate(lines) {
             <div key={str(li)} className="flex min-h-[1.45em]">
                 {if numbers {
-                    <span className="sticky left-0 w-10 shrink-0 select-none border-r border-white/5 bg-[#0d1117] pr-3 text-right text-white/25">{str(li + 1)}</span>
+                    <span className="sticky left-0 w-10 shrink-0 select-none border-r border-white/5 bg-[#060607] pr-3 text-right text-white/25">{str(li + 1)}</span>
                 }}
                 <span className="whitespace-pre pl-3 pr-4">
                     {if lang == "jac" or lang == "toml" {

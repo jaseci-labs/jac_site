@@ -105,7 +105,7 @@ section[id] { scroll-margin-top: 4.5rem; }
 
 /* ---- terminal / code windows (always dark, both themes) ---- */
 .code-window {
-    background: #0d1117;
+    background: #060607;
     border: 1px solid oklch(1 0 0 / 0.09);
     box-shadow: 0 16px 48px -16px rgb(0 0 0 / 0.55), 0 0 0 1px rgb(0 0 0 / 0.2);
 }
