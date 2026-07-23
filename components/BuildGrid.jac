@@ -29,7 +29,6 @@ def:pub BuildGrid() -> JsxElement {
                     </h2>
                     <p className="mt-4 text-balance text-lg text-muted-foreground">
                         The deliverable is a build target, not an architecture decision.
-                        Each of these is one command away from the same language.
                     </p>
                 </div>
             </Reveal>

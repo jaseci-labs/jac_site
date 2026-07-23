@@ -37,22 +37,22 @@ def:pub Pillars() -> JsxElement {
             <div className="mt-14 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
                 <PillarCard icon={FlashIcon} delay={0}
                     title="One binary, your whole toolchain"
-                    body="One download replaces the Python interpreter, the JS runtime, the C compilers and linkers, and the package managers. Nothing else to install — ever." />
+                    body="One download replaces Python, Node, the C compilers, and every package manager." />
                 <PillarCard icon={SourceCodeIcon} delay={60}
                     title="~5× less code"
-                    body="API endpoints, route tables, ORM models, validation, serializers, and migrations are compiler-generated. You never write, review, or debug them." />
+                    body="Endpoints, ORMs, serializers, and migrations are compiler-generated — never written." />
                 <PillarCard icon={SparklesIcon} delay={120}
                     title="AI is a typed function call"
-                    body="The compiler owns the prompt: it builds it from your signature and enforces the return type as the output schema. Nondeterminism, contained at a typed boundary." />
+                    body="The signature is the prompt. The return type is the enforced schema." />
                 <PillarCard icon={DatabaseIcon} delay={0}
                     title="Persistence built in"
-                    body="Objects reachable from root just persist — persistence is a predicate, not an event. No database to run, no ORM to map, no migration scripts to babysit." />
+                    body="Whatever root reaches, persists. No database, no ORM, no migrations." />
                 <PillarCard icon={CloudServerIcon} delay={60}
                     title="Laptop to Kubernetes"
-                    body="jac start --scale builds the images, provisions Redis and MongoDB, and deploys with health checks. Your program text never changes shape with its deployment." />
+                    body="jac start --scale. No Dockerfile, no YAML, no changed code." />
                 <PillarCard icon={CheckmarkCircle01Icon} delay={120}
                     title="One type checker, end to end"
-                    body="Frontend, backend, data model, and prompts are one program under one compiler. A cross-tier mistake is a compile error, not a 2 a.m. incident." />
+                    body="A cross-tier mistake is a compile error, not a 2 a.m. incident." />
             </div>
         </div>
     </section>;

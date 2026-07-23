@@ -30,10 +30,9 @@ def:pub Hero() -> JsxElement {
                         <span className="text-gradient">No glue.</span>
                     </h1>
                     <p className="anim-fade-up anim-d2 mx-auto mt-6 max-w-xl text-balance text-lg leading-8 text-muted-foreground lg:mx-0">
-                        Jac is a Python-like language where AI, graphs, persistence,
-                        APIs, UIs, and cloud deployment are language features — compiled
-                        to Python bytecode, JavaScript, and native machine code by one
-                        compiler that sees your entire program.
+                        A Python-like language where AI, graphs, persistence, APIs, UIs,
+                        and deployment are language features — compiled to Python
+                        bytecode, JavaScript, and native machine code.
                     </p>
                     <div className="anim-fade-up anim-d3 mt-8 flex flex-col items-center gap-3 sm:flex-row lg:items-start">
                         <a href="https://docs.jaseci.org" target="_blank" rel="noreferrer"

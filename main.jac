@@ -4,6 +4,7 @@ cl import from ".components.Navbar" { Navbar }
 cl import from ".components.Hero" { Hero }
 cl import from ".components.StatsBand" { StatsBand }
 cl import from ".components.WhyJac" { WhyJac }
+cl import from ".components.FirstOnly" { FirstOnly }
 cl import from ".components.Showcase" { Showcase }
 cl import from ".components.Pillars" { Pillars }
 cl import from ".components.BuildGrid" { BuildGrid }
@@ -31,6 +32,7 @@ cl {
                 <Hero />
                 <StatsBand />
                 <WhyJac />
+                <FirstOnly />
                 <Showcase />
                 <Pillars />
                 <BuildGrid />

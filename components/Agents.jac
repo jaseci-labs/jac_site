@@ -17,9 +17,8 @@ def:pub Agents() -> JsxElement {
                         Designed for humans and AI to build together
                     </h2>
                     <p className="mt-4 text-balance text-lg text-muted-foreground">
-                        Glue code is most of what coding models emit, and it is exactly
-                        the code no tool can verify. In Jac those categories don't exist —
-                        and one compiler checks everything your agent writes.
+                        Glue is most of what models emit — and exactly what no tool can
+                        verify. In Jac it doesn't exist.
                     </p>
                 </div>
             </Reveal>
@@ -45,13 +44,10 @@ def:pub Agents() -> JsxElement {
                             display="claude mcp add jac -- jac mcp" className="w-full" />
                     </div>
                     <p className="mt-6 text-center text-sm leading-relaxed text-muted-foreground">
-                        The binary is self-documenting: <code className="rounded bg-muted pl-1.5 pr-1.5 text-foreground">jac guide</code>{" "}
-                        prints curated references your agent can load as skills, and{" "}
-                        <code className="rounded bg-muted pl-1.5 pr-1.5 text-foreground">jac mcp</code>{" "}
-                        ships an MCP server with validation, formatting, docs, and examples
-                        built in. A whole full-stack app fits in one file that fits in a
-                        context window — and a cross-tier mistake is a compile error, not a
-                        production surprise.
+                        <code className="rounded bg-muted pl-1.5 pr-1.5 text-foreground">jac guide</code>{" "}
+                        prints agent-loadable skills; <code className="rounded bg-muted pl-1.5 pr-1.5 text-foreground">jac mcp</code>{" "}
+                        is a full MCP server. A whole app fits in one file that fits in a
+                        context window.
                     </p>
                 </div>
             </Reveal>

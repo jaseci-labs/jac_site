@@ -108,6 +108,26 @@ section[id] { scroll-margin-top: 4.5rem; }
 .sh-out { color: #8b949e; }
 .sh-ok { color: #56d364; }
 
+/* ---- diagram animations ---- */
+@keyframes dash-drift { to { stroke-dashoffset: -24; } }
+.dash-drift { animation: dash-drift 2.8s linear infinite; }
+
+@keyframes x-pulse {
+    0%, 100% { opacity: 0.3; }
+    50% { opacity: 1; }
+}
+.x-pulse { animation: x-pulse 2.2s ease-in-out infinite; }
+
+@keyframes pulse-ring {
+    0%, 100% { transform: scale(1); opacity: 0.8; }
+    50% { transform: scale(1.16); opacity: 0.3; }
+}
+.pulse-ring {
+    transform-box: fill-box;
+    transform-origin: center;
+    animation: pulse-ring 3s ease-in-out infinite;
+}
+
 /* ---- misc ---- */
 .strike-chip { position: relative; }
 .strike-chip::after {
@@ -128,6 +148,6 @@ section[id] { scroll-margin-top: 4.5rem; }
 }
 
 @media (prefers-reduced-motion: reduce) {
-    .anim-fade-up, .g-node, .g-edge, .caret { animation: none !important; }
+    .anim-fade-up, .g-node, .g-edge, .caret, .dash-drift, .x-pulse, .pulse-ring { animation: none !important; }
     .reveal { opacity: 1; transform: none; transition: none; }
 }

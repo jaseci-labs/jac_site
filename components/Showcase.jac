@@ -130,11 +130,11 @@ def:pub Showcase() -> JsxElement {
                         <TabsContent value="ai">
                             <ShowcasePanel lines={_AI_LINES} file="triage.jac"
                                 heading="There is no prompt to write."
-                                blurb="Delegate a function body to a model with two words. These are meaning types — the constructs of Meaning-Typed Programming."
+                                blurb="Delegate a function body to a model with two words."
                                 points={[
-                                    "The compiler builds the prompt from your function's name, arguments, types, and optional sem annotations.",
-                                    "The return type is an enforced output schema: typed, validated values — never loose text to parse.",
-                                    "Declare your model once in jac.toml. Any LiteLLM-compatible provider, or fully local weights.",
+                                    "The compiler builds the prompt from your signature and sem annotations.",
+                                    "The return type is the enforced output schema — typed values, never loose text.",
+                                    "Any LiteLLM provider, or fully local weights. One line in jac.toml.",
                                 ]}
                                 link_label="Meaning-Typed Programming"
                                 link_href="https://docs.jaseci.org/reference/plugins/byllm/" />
@@ -142,11 +142,11 @@ def:pub Showcase() -> JsxElement {
                         <TabsContent value="graph">
                             <ShowcasePanel lines={_GRAPH_LINES} file="api.jac"
                                 heading="Your graph is your API."
-                                blurb="Model the domain as nodes and edges, then send walkers — mobile computation, dispatched by arrival — to traverse it. This is Object-Spatial Programming."
+                                blurb="Nodes and edges are the data model. Walkers — mobile computation — are the endpoints."
                                 points={[
-                                    "Mark a walker :pub and jac start serves it as a REST endpoint: request bodies map onto its fields, report becomes the JSON response, Swagger docs at /docs.",
-                                    "Whatever is reachable from root persists. Connecting a node is the write to the database — there is no other API.",
-                                    "Every authenticated user is a graph root: isolation is a property of which graph you were handed, not a WHERE clause.",
+                                    "walker:pub is a REST endpoint: fields are the request body, report is the JSON response, Swagger included.",
+                                    "Connecting a node is the write to the database — there is no other API.",
+                                    "Every user is a graph root. Isolation is topology, not a WHERE clause.",
                                 ]}
                                 link_label="Object-Spatial Programming"
                                 link_href="https://docs.jaseci.org/tutorials/language/osp/" />
@@ -154,11 +154,11 @@ def:pub Showcase() -> JsxElement {
                         <TabsContent value="full">
                             <ShowcasePanel lines={_FULL_LINES} file="app.jac"
                                 heading="Frontend and backend in one file."
-                                blurb="Code in the cl codespace compiles to a React bundle for the browser. Everything else compiles to Python for the server. One program, one type checker."
+                                blurb="cl code compiles to React for the browser. Everything else compiles to Python for the server."
                                 points={[
-                                    "That await add_todo(...) is a real RPC: the compiler generates the HTTP call, serialization, and shared types across the boundary.",
-                                    "Rename a field and every stale use — server or client — is a compile error, not a production surprise.",
-                                    "jac start serves it; jac start --dev adds hot reload.",
+                                    "await add_todo(...) is a real RPC — HTTP call, serialization, and shared types, all generated.",
+                                    "Rename a field: every stale use on either side is a compile error.",
+                                    "jac start serves it. jac start --dev adds hot reload.",
                                 ]}
                                 link_label="Full-stack tutorial"
                                 link_href="https://docs.jaseci.org/build/fullstack-web/" />
@@ -166,11 +166,11 @@ def:pub Showcase() -> JsxElement {
                         <TabsContent value="native">
                             <ShowcasePanel lines={_NATIVE_LINES} file="buffer.jac"
                                 heading="Systems code, by degrees."
-                                blurb="Gradual borrow checking replaces the managed-vs-systems divide with a gradient. Opt in one declaration at a time; the compiler enforces moves, borrows, and deterministic destruction."
+                                blurb="Gradual borrow checking turns the managed-vs-systems divide into a gradient."
                                 points={[
-                                    "Unannotated code keeps fully managed semantics — node, edge, and walker never fight the borrow checker.",
-                                    "Full adoption reaches native artifacts with no reference counting and no garbage collector.",
-                                    "The same source compiles to standalone binaries and in-browser WebAssembly with Jac's own linkers — no gcc, no emscripten.",
+                                    "Unannotated code stays fully managed. own and & opt in one declaration at a time.",
+                                    "Full adoption: native artifacts with no refcounting and no garbage collector.",
+                                    "The same source targets standalone binaries and in-browser wasm — no gcc, no emscripten.",
                                 ]}
                                 link_label="Gradual borrow checking"
                                 link_href="https://docs.jaseci.org/reference/language/ownership-borrowing/" />
