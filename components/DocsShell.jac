@@ -1,7 +1,8 @@
 """The docs reading experience: version switcher, nav tree, rendered page,
 on-page TOC. All data comes from walkers over the persistent docs graph."""
-sv import from ..services.docs { ensure_docs, doc_tree, doc_page }
+sv import from ..services.docs { ensure_docs, docs_status, doc_tree, doc_page }
 import from "@jac/runtime" { Link, Navigate, useLocation, useNavigate }
+import from .GraphBackdrop { GraphBackdrop }
 import from .ui.select {
     Select, SelectTrigger, SelectContent, SelectGroup, SelectItem, SelectValue
 }
@@ -16,6 +17,13 @@ import from "@hugeicons/core-free-icons" {
 
 def _title_matches(t: any, q: str) -> bool {
     return q == "" or q.lower() in (t as str).lower();
+}
+
+"""Await a delay (Promise + setTimeout, per the js-interop idiom)."""
+async def _sleep(ms: int) {
+    await new(Promise, lambda (resolve: any, _reject: any) {  # jac:ignore[E1053]
+        _ = setTimeout(lambda { resolve.call(None, True); }, ms);
+    });
 }
 
 """One level of the sidebar tree (recursive)."""
@@ -56,12 +64,43 @@ def:pub DocTreeLevel(
     </div>;
 }
 
+"""Shown while the graph ingests: first visit ever, or when the clone's
+main has moved past the ingested `latest`."""
+def:pub DocsSyncScreen() -> JsxElement {
+    return <div className="relative flex min-h-[80vh] items-center justify-center overflow-hidden">
+        <div className="hero-glow absolute inset-0"></div>
+        <GraphBackdrop />
+        <div className="relative flex flex-col items-center gap-6 pl-6 pr-6 text-center">
+            <div className="relative flex size-24 items-center justify-center">
+                <span className="pulse-ring absolute inset-0 rounded-full bg-primary/10"></span>
+                <img src="/static/assets/jac-logo.png" alt="" className="size-14" />
+            </div>
+            <div>
+                <p className="text-balance text-xl font-semibold tracking-tight sm:text-2xl">
+                    Fetching the latest docs from the repo — just for you.
+                </p>
+                <p className="mt-2 text-balance text-sm text-muted-foreground">
+                    Walking the git tree into the graph. This happens once —
+                    then it persists.
+                </p>
+            </div>
+            <div className="h-1 w-64 overflow-hidden rounded-full bg-muted">
+                <span className="sync-bar-fill block h-full w-1/3 rounded-full bg-primary"></span>
+            </div>
+            <p className="font-mono text-[11px] text-muted-foreground/70">
+                {"root.shared ++> DocsHub ++> DocVersion × 4"}
+            </p>
+        </div>
+    </div>;
+}
+
 def:pub DocsShell() -> JsxElement {
     has versions: list[dict] = [];
     has tree: list[dict] = [];
     has tree_version: str = "";
     has page: dict | None = None;
     has loading: bool = True;
+    has syncing: bool = False;
     has q: str = "";
     has closed: list[str] = [];
 
@@ -74,9 +113,39 @@ def:pub DocsShell() -> JsxElement {
     async def load {
         loading = True;
         if len(versions) == 0 {
-            e = root spawn ensure_docs();
-            if e.reports {
-                versions = e.reports[0]["versions"] as list[dict];
+            # Cheap probe first: only show the sync screen when the graph is
+            # actually missing or behind the clone's main.
+            s = root spawn docs_status();
+            st = (s.reports[0] if s.reports else None) as dict | None;
+            fresh = False;
+            if st is not None {
+                if (st["ready"] as bool) and not (st["stale"] as bool) {
+                    versions = st["versions"] as list[dict];
+                    fresh = True;
+                }
+            }
+            if not fresh {
+                syncing = True;
+                got: list[dict] = [];
+                tries = 0;
+                # First call does the ingest (single-flight on the server);
+                # if another visitor is already building, ours returns
+                # building=True with no graph yet — poll until it lands.
+                while len(got) == 0 and tries < 60 {
+                    if tries > 0 {
+                        await _sleep(600);
+                    }
+                    e = root spawn ensure_docs();
+                    if e.reports {
+                        rep = e.reports[0] as dict;
+                        if rep["ready"] as bool {
+                            got = (rep["versions"] or []) as list[dict];
+                        }
+                    }
+                    tries = tries + 1;
+                }
+                versions = got;
+                syncing = False;
             }
         }
         t = root spawn doc_tree(version=version);
@@ -107,6 +176,9 @@ def:pub DocsShell() -> JsxElement {
 
     if len(parts) <= 1 {
         return <Navigate to="/docs/latest" replace={True} />;
+    }
+    if syncing {
+        return <DocsSyncScreen />;
     }
 
     return <div className="mx-auto max-w-7xl pl-4 pr-4 pt-24 pb-16 sm:pl-6 sm:pr-6 lg:pl-8 lg:pr-8">

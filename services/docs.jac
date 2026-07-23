@@ -25,6 +25,11 @@ glob DOC_VERSIONS: list[dict] = [
     {"label": "v0.31", "ref": "v0.31.3"},
 ];
 
+# Single-flight guard: only one request ingests; concurrent visitors see
+# "building" and poll. (Per-process state — a multi-pod deploy would want the
+# runtime's distributed lock instead.)
+glob _ingesting: bool = False;
+
 glob _DIR_TITLES: dict = {
     "js": "JS", "cli": "CLI", "osp": "OSP", "api": "API",
     "quick-guide": "Quick Guide",
@@ -38,6 +43,7 @@ node DocVersion {
     has label: str = "",
         git_ref: str = "",
         fetched_at: str = "",
+        sha: str = "",
         pages: int = 0;
 }
 
@@ -75,6 +81,21 @@ def _repo_root -> str {
         return cand;
     }
     return "";
+}
+
+"""Commit sha a ref currently points at in the local clone."""
+def _head_sha(ref: str) -> str {
+    rootp = _repo_root();
+    if not rootp {
+        return "";
+    }
+    out = subprocess.run(
+        ["git", "-C", rootp, "rev-parse", ref], capture_output=True
+    );
+    if out.returncode != 0 {
+        return "";
+    }
+    return out.stdout.decode("utf-8", errors="replace").strip();
 }
 
 """All .md files under docs/docs at a ref, via one `git archive` call."""
@@ -305,7 +326,8 @@ def _build_version(hub: DocsHub, label: str, ref: str) {
     files = _read_tree(ref);
     nav = _read_nav(ref);
     ver = hub +>: HasVersion() :+> DocVersion(
-        label=label, git_ref=ref, fetched_at=_now(), pages=len(files)
+        label=label, git_ref=ref, fetched_at=_now(), pages=len(files),
+        sha=_head_sha(ref)
     );
     grant(ver, level=ReadPerm);
 
@@ -380,6 +402,28 @@ def _ingest_all {
     }
 }
 
+"""Is the `latest` subtree behind the local clone's main?"""
+def _latest_stale(hub: DocsHub) -> bool {
+    vers = [hub-->[?:DocVersion, label == "latest"]];
+    if not vers {
+        return True;
+    }
+    head = _head_sha("main");
+    return head != "" and head != vers[0].sha;
+}
+
+"""Rebuild only the `latest` subtree (pinned tags never change). Build the
+new subtree BEFORE dropping the old one so concurrent readers never see a
+gap — they get the old graph or the new one, never neither."""
+def _refresh_latest(hub: DocsHub) {
+    olds = [hub-->[?:DocVersion, label == "latest"]];
+    _build_version(hub, "latest", "main");
+    for v in olds {
+        del v;
+    }
+    hub.built_at = _now();
+}
+
 def _version_list(hub: DocsHub) -> list[dict] {
     out: list[dict] = [];
     for v in [hub-->[?:DocVersion]] {
@@ -423,20 +467,61 @@ def _flatten(tree: list[dict], acc: list[dict]) {
 
 # ─── Walkers: the API ────────────────────────────────────────────────────────
 
-"""First-visit bootstrap: ingest if the graph is empty, report the versions."""
+"""Cheap freshness probe: graph present? is `latest` behind the clone's
+main? Never ingests — the client uses this to decide whether to show the
+sync screen before calling ensure_docs."""
+walker:pub docs_status {
+    # A field-less walker registers GET-only while the client stub POSTs, so
+    # keep one field to make it a POST endpoint on both sides.
+    has probe: bool = True;
+
+    can run with Root entry {
+        hub = _get_hub();
+        if hub is None {
+            report {"ready": False, "stale": True, "building": _ingesting, "versions": []};
+        } else {
+            report {
+                "ready": True,
+                "stale": _latest_stale(hub),
+                "building": _ingesting,
+                "versions": _version_list(hub),
+                "built_at": hub.built_at,
+            };
+        }
+    }
+}
+
+"""Bootstrap + freshness: full ingest when the graph is empty (or forced);
+otherwise re-ingest just `latest` when the clone's main has moved."""
 walker:pub ensure_docs {
     has force: bool = False;
 
     can run with Root entry {
         hub = _get_hub();
-        if hub is None or self.force {
-            _ingest_all();
+        needs_full = hub is None or self.force;
+        needs_latest = (not needs_full) and hub is not None and _latest_stale(hub);
+        if (needs_full or needs_latest) and not _ingesting {
+            _ingesting = True;
+            try {
+                if needs_full {
+                    _ingest_all();
+                } elif hub is not None {
+                    _refresh_latest(hub);
+                }
+            } finally {
+                _ingesting = False;
+            }
             hub = _get_hub();
         }
         if hub is None {
-            report {"ready": False, "versions": []};
+            report {"ready": False, "building": _ingesting, "versions": []};
         } else {
-            report {"ready": True, "versions": _version_list(hub), "built_at": hub.built_at};
+            report {
+                "ready": True,
+                "building": _ingesting,
+                "versions": _version_list(hub),
+                "built_at": hub.built_at,
+            };
         }
     }
 }
