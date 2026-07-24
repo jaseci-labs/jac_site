@@ -70,7 +70,7 @@ def:pub WhyJac() -> JsxElement {
                                 </WhySlide>
                             </CarouselItem>
                             <CarouselItem>
-                                <WhySlide title="Jac has" accent="gradual borrow checking" sub="From fully managed to zero-RC native, one declaration at a time">
+                                <WhySlide title="Jac introduces" accent="gradual borrow checking" sub="From fully managed to zero-RC native, one declaration at a time">
                                     <GradualBorrowDiagram />
                                 </WhySlide>
                             </CarouselItem>
