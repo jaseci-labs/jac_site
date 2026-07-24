@@ -11,6 +11,7 @@ import from "@hugeicons/react" { HugeiconsIcon }
 import from "@hugeicons/core-free-icons" { StarIcon, BookOpen01Icon }
 
 glob INSTALL_CMD: str = "curl -fsSL https://jaclang.org/install.sh | bash";
+glob CLONE_CMD: str = "git clone https://github.com/jaseci-labs/jac_site && cd jac_site && jac install && jac start";
 
 def:pub Hero() -> JsxElement {
     # Every landing-page visit keeps the hosted installer fresh — the same
@@ -40,15 +41,15 @@ def:pub Hero() -> JsxElement {
                     <h1 className="anim-fade-up anim-d1 text-balance text-5xl font-bold tracking-tight sm:text-6xl lg:text-5xl xl:text-4xl">
                         One language.
                         <br />
-                        The whole stack.
+                        Every stack.
                         <br />
                         <span className="text-gradient">No glue.</span>
                     </h1>
                     <p className="anim-fade-up anim-d2 mx-auto mt-6 max-w-xl text-balance text-lg leading-8 text-muted-foreground lg:mx-0 xl:text-base xl:leading-7">
-                        A Python-like language where AI, graphs, persistence, APIs, UIs,
-                        and deployment are language features —{" "}
-                        <span className="text-gradient font-medium">synechic</span>{" "}
-                        across Python bytecode, JavaScript, and native machine code.
+                        Jac is to Python/Typescript/Rust/Zig/C++/C, what C is to
+                        X86/Arm/RISC-V/MIPS. With C you don&apos;t code ASM, with
+                        Jac you don&apos;t code the Polyglot. Jac is{" "}
+                        <span className="text-gradient font-medium">synechic</span>.
                     </p>
                     <div className="anim-fade-up anim-d3 mt-8 flex flex-col items-center gap-3 sm:flex-row sm:flex-wrap lg:items-start">
                         <a href="https://github.com/jaseci-labs/jaseci" target="_blank" rel="noreferrer"
@@ -64,6 +65,9 @@ def:pub Hero() -> JsxElement {
                     </div>
                     <div className="anim-fade-up anim-d4 mt-6 flex justify-center lg:justify-start">
                         <CopyCommand command={INSTALL_CMD} className="max-w-full sm:max-w-xl" />
+                    </div>
+                    <div className="anim-fade-up anim-d4 mt-3 flex justify-center lg:justify-start">
+                        <CopyCommand command={CLONE_CMD} className="max-w-full sm:max-w-xl" />
                     </div>
                     <p className="anim-fade-up anim-d5 mt-4 text-sm text-muted-foreground">
                         One self-contained binary. No Python, Node, or C toolchain required.
