@@ -28,7 +28,7 @@ def:pub DocsShell -> JsxElement {
         loading: bool = True,
         syncing: bool = False,
         sync_error: bool = False,
-        progress: JobProgress = JobProgress(),
+        progress: JobProgress | None = None,
         q: str = "",
         closed: list[str] = [];
 
@@ -48,7 +48,7 @@ def:pub DocsShell -> JsxElement {
 
     def retry_sync(_e: MouseEvent) {
         sync_error = False;
-        progress = JobProgress();
+        progress = None;
         load(version, cur_path);
     }
 

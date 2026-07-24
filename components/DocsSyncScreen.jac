@@ -63,10 +63,12 @@ def:pub SyncRow(step: JobStep) -> JsxElement {
 }
 
 def:pub DocsSyncScreen(
-    progress: JobProgress, error: bool = False, onRetry: any = None
+    progress: JobProgress | None = None, error: bool = False, onRetry: any = None
 ) -> JsxElement {
-    detail = progress.detail or "reaching github.com…";
-    tail_start = len(progress.log) - 3 if len(progress.log) > 3 else 0;
+    steps = progress.steps if progress else [];
+    log = progress.log if progress else [];
+    detail = (progress.detail if progress else "") or "reaching github.com…";
+    tail_start = len(log) - 3 if len(log) > 3 else 0;
     return
         <div
             className="relative flex min-h-[80vh] items-center justify-center overflow-hidden"
@@ -103,11 +105,11 @@ def:pub DocsSyncScreen(
                         ></span>
                     </div>
                 }}
-                {if len(progress.steps) > 0 {
+                {if len(steps) > 0 {
                     <div
                         className="w-full rounded-xl border border-border/60 bg-card/50 pl-4 pr-4 pt-1 pb-1 text-left backdrop-blur-sm"
                     >
-                        {for (i, step) in enumerate(progress.steps) {
+                        {for (i, step) in enumerate(steps) {
                             <SyncRow key={str(i)} step={step}/>
                         }}
                     </div>
@@ -136,7 +138,7 @@ def:pub DocsSyncScreen(
                         <p className="font-mono text-[11px] text-primary/90">
                             {detail}
                         </p>
-                        {for (i, ln) in enumerate(progress.log[tail_start:]) {
+                        {for (i, ln) in enumerate(log[tail_start:]) {
                             <p
                                 key={str(i)}
                                 className="font-mono text-[10px] text-muted-foreground/45"

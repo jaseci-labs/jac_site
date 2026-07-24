@@ -98,7 +98,7 @@ def _is_digit(c: str) -> bool {
     return "0" <= c and c <= "9";
 }
 
-def classify(w: str, next_c: str) -> str {
+def:pub classify(w: str, next_c: str) -> str {
     if w in KEYWORDS {
         return "kw";
     }
@@ -120,7 +120,7 @@ def classify(w: str, next_c: str) -> str {
     return "plain";
 }
 
-def scan_line(line: str, mode: str = "") -> LineScan {
+def:pub scan_line(line: str, mode: str = "") -> LineScan {
     toks: list[Token] = [];
     n = len(line);
     i = 0;
@@ -306,7 +306,7 @@ def scan_line(line: str, mode: str = "") -> LineScan {
     return LineScan(tokens=toks, mode=mode);
 }
 
-def tokenize_lines(lines: list[str], lang: str = "jac") -> list[list[Token]] {
+def:pub tokenize_lines(lines: list[str], lang: str = "jac") -> list[list[Token]] {
     out: list[list[Token]] = [];
     if lang not in HIGHLIGHTED {
         for ln in lines {

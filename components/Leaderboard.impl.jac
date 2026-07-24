@@ -34,7 +34,7 @@ impl Leaderboard.do_submit -> None {
     sub_error = "";
     sub_note = "";
     reveal = None;
-    progress = JobProgress();
+    progress = None;
     _ = poll_progress();
     r = root spawn submit_repo(url=url);
     res = (r.reports[0] if r.reports else None) as SubmitResult | None;

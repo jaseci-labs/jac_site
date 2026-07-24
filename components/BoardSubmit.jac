@@ -60,7 +60,7 @@ def:pub BoardSubmit(
     submitting: bool,
     error: str,
     note: str,
-    progress: JobProgress,
+    progress: JobProgress | None,
     reveal: BoardEntry | None,
     reveal_score: int,
     reveal_rank: int,
@@ -126,7 +126,7 @@ def:pub BoardSubmit(
                         <span
                             className="size-3 animate-spin rounded-full border-2 border-primary border-t-transparent"
                         ></span>
-                        {progress.detail or "contacting github…"}
+                        {(progress.detail if progress else "") or "contacting github…"}
                     </p>
                 </div>
             }}

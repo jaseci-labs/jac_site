@@ -1,3 +1,3 @@
 impl Showcase.load_samples -> None {
-    samples = await examples();
+    samples = await example_sources();
 }

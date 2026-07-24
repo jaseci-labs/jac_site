@@ -38,7 +38,7 @@ def:pub Leaderboard -> JsxElement {
         loading: bool = True,
         url: str = "",
         submitting: bool = False,
-        progress: JobProgress = JobProgress(),
+        progress: JobProgress | None = None,
         sub_error: str = "",
         sub_note: str = "",
         reveal: BoardEntry | None = None,

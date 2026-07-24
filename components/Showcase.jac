@@ -1,4 +1,4 @@
-sv import from ..services.source { SourceView, examples }
+sv import from ..services.source { SourceView, example_sources }
 import from .ui.badge { Badge }
 import from .ui.tabs { Tabs, TabsList, TabsTrigger, TabsContent }
 import from .CodeBlock { CodeBlock }
@@ -87,13 +87,18 @@ def:pub ShowcasePanel(
 }
 
 def:pub Showcase -> JsxElement {
-    has samples: dict[str, SourceView] = {};
+    has samples: list[SourceView] = [];
 
     async def load_samples -> None;
 
     def sample_lines(name: str) -> list[str] {
-        view = samples.get(name);
-        return view.raw_lines if view is not None else [];
+        want = "examples/" + name + ".jac";
+        for v in samples {
+            if v.path == want {
+                return v.raw_lines;
+            }
+        }
+        return [];
     }
 
     can with entry {

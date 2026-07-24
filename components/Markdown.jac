@@ -37,6 +37,10 @@ glob _ICON_MAP: dict = {
 
      };
 
+def _is_alnum(c: str) -> bool {
+    return ("a" <= c and c <= "z") or ("0" <= c and c <= "9");
+}
+
 def _count_hashes(s: str) -> int {
     k = 0;
     while k < len(s) and s[k] == "#" {

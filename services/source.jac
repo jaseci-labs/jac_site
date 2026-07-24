@@ -93,13 +93,13 @@ def:pub source_file(path: str) -> SourceView | None {
     );
 }
 
-def:pub examples -> dict[str, SourceView] {
-    out: dict[str, SourceView] = {};
+def:pub example_sources -> list[SourceView] {
+    out: list[SourceView] = [];
     for f in _walk_sources() {
         if f.dir == EXAMPLES_DIR {
             view = source_file(f.path);
             if view is not None {
-                out[f.name[:-4]] = view;
+                out.append(view);
             }
         }
     }
