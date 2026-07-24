@@ -1,10 +1,16 @@
 """Versioned docs as an object-spatial graph.
 
-Ingests the monorepo's docs/docs markdown tree at four pinned git refs into
-the PUBLIC ROOT GRAPH (root.shared): DocsHub -> DocVersion -> DocDir/DocPage,
-with Contains edges mirroring the directory hierarchy exactly. Persistence is
-reachability — the corpus survives restarts because it hangs off the shared
-root, not because anything was written to a database.
+Downloads the jac repo's docs/docs markdown tree straight from GitHub
+(codeload tarballs — no local checkout, no git binary) at four pinned refs
+and ingests it into the PUBLIC ROOT GRAPH (root.shared): DocsHub ->
+DocVersion -> DocDir/DocPage, with Contains edges mirroring the directory
+hierarchy exactly. Persistence is reachability — the corpus survives
+restarts because it hangs off the shared root, not because anything was
+written to a database.
+
+While an ingest runs, `_progress` narrates every step (per-version state,
+bytes downloaded, pages built) — docs_status reports it so the client can
+show a live sync screen.
 
 Reads are walkers: doc_page literally walks the URL path, edge by edge, from
 the hub to the page. Links are rewritten at ingest so nothing points at
@@ -13,10 +19,11 @@ docs.jaseci.org — the site renders everything itself.
 import os;
 import io;
 import re;
-import shutil;
+import json;
+import time;
 import datetime;
 import tarfile;
-import subprocess;
+import urllib.request;
 
 glob DOC_VERSIONS: list[dict] = [
     {"label": "latest", "ref": "main"},
@@ -29,6 +36,24 @@ glob DOC_VERSIONS: list[dict] = [
 # "building" and poll. (Per-process state — a multi-pod deploy would want the
 # runtime's distributed lock instead.)
 glob _ingesting: bool = False;
+
+# GitHub repo the docs come from (owner/name), env-overridable for forks.
+glob GH_REPO: str = os.environ.get("JAC_DOCS_GH_REPO", "jaseci-labs/jaseci");
+
+# Live narration of the current ingest, reported by docs_status so the
+# client sync screen can show what's happening in real time.
+glob _progress: dict = {
+    "active": False,
+    "phase": "idle",
+    "detail": "",
+    "versions": [],
+    "log": [],
+    "updated_at": "",
+};
+
+# ref -> {"at": epoch, "sha": str}; keeps docs_status from hammering the
+# GitHub API (unauthenticated limit is 60/hr) — one check per ~10 min.
+glob _head_cache: dict = {};
 
 glob _DIR_TITLES: dict = {
     "js": "JS", "cli": "CLI", "osp": "OSP", "api": "API",
@@ -70,72 +95,128 @@ def _now -> str {
     return datetime.datetime.now(datetime.UTC).replace(tzinfo=None).isoformat() + "Z";
 }
 
-"""The monorepo root that carries docs/mkdocs.yml (env-overridable for deploys)."""
-def _repo_root -> str {
-    envp = os.environ.get("JAC_DOCS_REPO", "");
-    if envp and os.path.isdir(os.path.join(envp, "docs")) {
-        return envp;
+"""Append to the live narration (detail line + capped log feed)."""
+def _pstep(detail: str) {
+    _progress["detail"] = detail;
+    lg = _progress["log"] as list;
+    lg.append(detail);
+    if len(lg) > 6 {
+        _progress["log"] = lg[-6:];
     }
-    cand = os.path.abspath(os.path.join(os.getcwd(), "..", ".."));
-    if os.path.isfile(os.path.join(cand, "docs", "mkdocs.yml")) {
-        return cand;
-    }
-    return "";
+    _progress["updated_at"] = _now();
 }
 
-"""Commit sha a ref currently points at in the local clone."""
-def _head_sha(ref: str) -> str {
-    rootp = _repo_root();
-    if not rootp {
-        return "";
+"""Set one version's row on the sync screen: state + right-hand detail."""
+def _pver(label: str, state: str, detail: str) {
+    vers = _progress["versions"] as list;
+    for v in vers {
+        if v["label"] == label {
+            v["state"] = state;
+            v["detail"] = detail;
+            _progress["updated_at"] = _now();
+            return;
+        }
     }
-    out = subprocess.run(
-        ["git", "-C", rootp, "rev-parse", ref], capture_output=True
-    );
-    if out.returncode != 0 {
-        return "";
-    }
-    return out.stdout.decode("utf-8", errors="replace").strip();
+    vers.append({"label": label, "state": state, "detail": detail});
+    _progress["updated_at"] = _now();
 }
 
-"""All .md files under docs/docs at a ref, via one `git archive` call."""
-def _read_tree(ref: str) -> dict {
-    rootp = _repo_root();
-    if not rootp {
-        return {};
+"""Commit sha a ref points at on GitHub, cached ~10 min so status probes
+never burn through the unauthenticated API budget. "" on any failure."""
+def _gh_head_sha(ref: str) -> str {
+    now = time.time();
+    ent = _head_cache.get(ref);
+    if ent is not None and (now - (ent["at"] as float)) < 600.0 {
+        return ent["sha"] as str;
     }
-    out = subprocess.run(
-        ["git", "-C", rootp, "archive", ref, "--", "docs/docs"],
-        capture_output=True
-    );
-    if out.returncode != 0 {
-        return {};
+    sha = "";
+    try {
+        req = urllib.request.Request(
+            "https://api.github.com/repos/" + GH_REPO + "/commits/" + ref,
+            headers={
+                "User-Agent": "jaclang.org docs sync",
+                "Accept": "application/vnd.github+json",
+            },
+        );
+        resp = urllib.request.urlopen(req, timeout=10);
+        try {
+            data = resp.read();
+        } finally {
+            resp.close();
+        }
+        sha = (json.loads(data).get("sha") or "") as str;
+    } except Exception {
+        sha = "";
     }
+    if sha != "" {
+        _head_cache[ref] = {"at": now, "sha": sha};
+    }
+    return sha;
+}
+
+"""One codeload tarball download per version: markdown tree + mkdocs.yml
+nav + doc assets, extracted in memory. Narrates bytes as they arrive."""
+def _fetch_bundle(ref: str, label: str) -> dict {
+    url = "https://codeload.github.com/" + GH_REPO + "/tar.gz/" + ref;
+    _pver(label, "download", "connecting");
+    _pstep("downloading " + label + " (" + ref + ") from github.com/" + GH_REPO);
+    req = urllib.request.Request(url, headers={"User-Agent": "jaclang.org docs sync"});
+    resp = urllib.request.urlopen(req, timeout=60);
+    chunks: list = [];
+    got = 0;
+    try {
+        while True {
+            chunk = resp.read(262144);
+            if not chunk {
+                break;
+            }
+            chunks.append(chunk);
+            got += len(chunk);
+            _pver(label, "download", str(round(got / 1048576.0, 1)) + " MB");
+        }
+    } finally {
+        resp.close();
+    }
+    _pver(label, "extract", "unpacking " + str(round(got / 1048576.0, 1)) + " MB");
+    _pstep("unpacking " + label + " · " + str(round(got / 1048576.0, 1)) + " MB");
     files: dict = {};
-    tf = tarfile.open(fileobj=io.BytesIO(out.stdout));
+    assets: dict = {};
+    nav_text = "";
+    tf = tarfile.open(fileobj=io.BytesIO(bytes().join(chunks)), mode="r:gz");
     for m in tf.getmembers() {
-        if m.isfile() and m.name.endswith(".md") {
-            rel = m.name[len("docs/docs/"):];
+        if not m.isfile() {
+            continue;
+        }
+        segs = m.name.split("/", 1);
+        if len(segs) < 2 {
+            continue;
+        }
+        rel = segs[1] as str;
+        if rel == "docs/mkdocs.yml" {
             fh = tf.extractfile(m);
             if fh is not None {
-                files[rel] = fh.read().decode("utf-8", errors="replace");
+                nav_text = fh.read().decode("utf-8", errors="replace");
+            }
+        } elif rel.startswith("docs/docs/") {
+            sub = rel[len("docs/docs/"):];
+            if sub.endswith(".md") {
+                fh = tf.extractfile(m);
+                if fh is not None {
+                    files[sub] = fh.read().decode("utf-8", errors="replace");
+                }
+            } elif sub.startswith("assets/") {
+                fh = tf.extractfile(m);
+                if fh is not None {
+                    assets[sub[len("assets/"):]] = fh.read();
+                }
             }
         }
     }
-    return files;
+    return {"files": files, "nav_text": nav_text, "assets": assets};
 }
 
-"""Page order + titles from that ref's mkdocs.yml nav (hand-parsed, no yaml dep)."""
-def _read_nav(ref: str) -> dict {
-    rootp = _repo_root();
-    out = subprocess.run(
-        ["git", "-C", rootp, "show", f"{ref}:docs/mkdocs.yml"],
-        capture_output=True
-    );
-    if out.returncode != 0 {
-        return {};
-    }
-    text = out.stdout.decode("utf-8", errors="replace");
+"""Page order + titles from mkdocs.yml nav text (hand-parsed, no yaml dep)."""
+def _parse_nav(text: str) -> dict {
     nav: dict = {};
     in_nav = False;
     order = 0;
@@ -307,12 +388,16 @@ def _rewrite_links(text: str, version: str, rel: str) -> str {
     return text;
 }
 
-"""Copy the docs asset tree into the site's static dir (served at /static/assets)."""
-def _ensure_assets {
-    src = os.path.join(_repo_root(), "docs", "docs", "assets");
-    dst = os.path.join(os.getcwd(), "assets", "docsmedia");
-    if os.path.isdir(src) and not os.path.isdir(dst) {
-        shutil.copytree(src, dst);
+"""Write the docs asset tree into the site's static dir (served at
+/static/assets/docsmedia) from an in-memory bundle."""
+def _write_assets(assets: dict) {
+    dst_root = os.path.join(os.getcwd(), "assets", "docsmedia");
+    for rel in assets.keys() {
+        dst = os.path.join(dst_root, rel as str);
+        os.makedirs(os.path.dirname(dst), exist_ok=True);
+        with open(dst, "wb") as f {
+            f.write(assets[rel]);
+        }
     }
 }
 
@@ -321,13 +406,20 @@ def _get_hub -> DocsHub | None {
     return hubs[0] if hubs else None;
 }
 
-"""Build one version's subtree: dirs and pages, Contains edges = dir hierarchy."""
-def _build_version(hub: DocsHub, label: str, ref: str) {
-    files = _read_tree(ref);
-    nav = _read_nav(ref);
+"""Build one version's subtree: dirs and pages, Contains edges = dir
+hierarchy. Downloads the version from GitHub; `latest` is pinned to the
+exact sha the API reported so content and staleness marker always agree.
+Returns the fetched bundle (the caller reuses latest's assets)."""
+def _build_version(hub: DocsHub, label: str, ref: str) -> dict {
+    sha = _gh_head_sha(ref) if ref == "main" else "";
+    bundle = _fetch_bundle(sha if sha != "" else ref, label);
+    files = bundle["files"] as dict;
+    nav = _parse_nav(bundle["nav_text"] as str);
+    _pver(label, "build", "0 of " + str(len(files)) + " pages");
+    _pstep("growing the " + label + " graph · " + str(len(files)) + " pages");
     ver = hub +>: HasVersion() :+> DocVersion(
         label=label, git_ref=ref, fetched_at=_now(), pages=len(files),
-        sha=_head_sha(ref)
+        sha=sha
     );
     grant(ver, level=ReadPerm);
 
@@ -335,6 +427,7 @@ def _build_version(hub: DocsHub, label: str, ref: str) {
     made_dirs: list[DocDir] = [];
     names = sorted([k as str for k in files.keys()]);
     fallback = 9000;
+    built_ct = 0;
     for rel in names {
         parts = rel.split("/");
         acc = "";
@@ -369,6 +462,10 @@ def _build_version(hub: DocsHub, label: str, ref: str) {
             toc=_toc_of(raw)
         );
         grant(pg, level=ReadPerm);
+        built_ct += 1;
+        if built_ct % 25 == 0 {
+            _pver(label, "build", str(built_ct) + " of " + str(len(files)) + " pages");
+        }
     }
     # a dir sorts where its earliest child sorts (children settle before parents)
     for i in range(len(made_dirs)) {
@@ -386,29 +483,49 @@ def _build_version(hub: DocsHub, label: str, ref: str) {
         }
         d.order = lo;
     }
+    _pver(label, "done", str(len(files)) + " pages");
+    return bundle;
 }
 
-"""Drop any existing hub and rebuild all pinned versions from git."""
+"""Drop any existing hub and rebuild all pinned versions from GitHub."""
 def _ingest_all {
-    _ensure_assets();
+    _progress["active"] = True;
+    _progress["phase"] = "sync";
+    _progress["log"] = [];
+    _progress["versions"] = [];
+    for spec in DOC_VERSIONS {
+        _pver(spec["label"] as str, "wait", "queued");
+    }
+    _pstep("contacting github.com/" + GH_REPO);
     old = _get_hub();
     if old is not None {
         del old;
     }
     hub = (root.shared ++> DocsHub(built_at=_now())) as DocsHub;
     grant(hub, level=ReadPerm);
+    latest_bundle: dict | None = None;
     for spec in DOC_VERSIONS {
-        _build_version(hub, spec["label"] as str, spec["ref"] as str);
+        b = _build_version(hub, spec["label"] as str, spec["ref"] as str);
+        if spec["label"] == "latest" {
+            latest_bundle = b;
+        }
     }
+    if latest_bundle is not None {
+        _pstep("placing doc images and assets");
+        _write_assets(latest_bundle["assets"] as dict);
+    }
+    _progress["phase"] = "done";
+    _progress["active"] = False;
+    _pstep("docs graph ready — persists from here");
 }
 
-"""Is the `latest` subtree behind the local clone's main?"""
+"""Is the `latest` subtree behind the repo's main on GitHub?"""
 def _latest_stale(hub: DocsHub) -> bool {
     vers = [hub-->[?:DocVersion, label == "latest"]];
     if not vers {
         return True;
     }
-    head = _head_sha("main");
+    head = _gh_head_sha("main");
     return head != "" and head != vers[0].sha;
 }
 
@@ -416,12 +533,22 @@ def _latest_stale(hub: DocsHub) -> bool {
 new subtree BEFORE dropping the old one so concurrent readers never see a
 gap — they get the old graph or the new one, never neither."""
 def _refresh_latest(hub: DocsHub) {
+    _progress["active"] = True;
+    _progress["phase"] = "sync";
+    _progress["log"] = [];
+    _progress["versions"] = [];
+    _pver("latest", "wait", "queued");
+    _pstep("main moved — refreshing latest");
     olds = [hub-->[?:DocVersion, label == "latest"]];
-    _build_version(hub, "latest", "main");
+    b = _build_version(hub, "latest", "main");
+    _write_assets(b["assets"] as dict);
     for v in olds {
         del v;
     }
     hub.built_at = _now();
+    _progress["phase"] = "done";
+    _progress["active"] = False;
+    _pstep("latest refreshed");
 }
 
 def _version_list(hub: DocsHub) -> list[dict] {
@@ -478,7 +605,10 @@ walker:pub docs_status {
     can run with Root entry {
         hub = _get_hub();
         if hub is None {
-            report {"ready": False, "stale": True, "building": _ingesting, "versions": []};
+            report {
+                "ready": False, "stale": True, "building": _ingesting,
+                "versions": [], "progress": _progress,
+            };
         } else {
             report {
                 "ready": True,
@@ -486,6 +616,7 @@ walker:pub docs_status {
                 "building": _ingesting,
                 "versions": _version_list(hub),
                 "built_at": hub.built_at,
+                "progress": _progress,
             };
         }
     }
@@ -508,19 +639,29 @@ walker:pub ensure_docs {
                 } elif hub is not None {
                     _refresh_latest(hub);
                 }
+            } except Exception as e {
+                # Fail soft: keep whatever graph exists, tell the sync
+                # screen, and let the next visit retry.
+                _progress["phase"] = "error";
+                _progress["active"] = False;
+                _pstep("sync failed — " + str(e));
             } finally {
                 _ingesting = False;
             }
             hub = _get_hub();
         }
         if hub is None {
-            report {"ready": False, "building": _ingesting, "versions": []};
+            report {
+                "ready": False, "building": _ingesting,
+                "versions": [], "progress": _progress,
+            };
         } else {
             report {
                 "ready": True,
                 "building": _ingesting,
                 "versions": _version_list(hub),
                 "built_at": hub.built_at,
+                "progress": _progress,
             };
         }
     }

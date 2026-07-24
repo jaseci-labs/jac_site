@@ -13,7 +13,8 @@ import from .Markdown { Markdown }
 import from "..lib.utils" { cn }
 import from "@hugeicons/react" { HugeiconsIcon }
 import from "@hugeicons/core-free-icons" {
-    ArrowRight01Icon, ArrowLeft01Icon, BookOpen01Icon, Alert01Icon
+    ArrowRight01Icon, ArrowLeft01Icon, BookOpen01Icon, Alert01Icon,
+    CheckmarkCircle01Icon, Download01Icon, CircleIcon, Refresh01Icon
 }
 
 def _title_matches(t: any, q: str) -> bool {
@@ -65,32 +66,84 @@ def:pub DocTreeLevel(
     </div>;
 }
 
-"""Shown while the graph ingests: first visit ever, or when the clone's
-main has moved past the ingested `latest`."""
-def:pub DocsSyncScreen() -> JsxElement {
+"""One version's row on the sync screen: state icon, label, live detail."""
+def:pub SyncRow(label: str, state: str, detail: str) -> JsxElement {
+    return <div className="flex items-center gap-3 border-b border-border/40 pt-2.5 pb-2.5 last:border-b-0">
+        {if state == "done" {
+            <HugeiconsIcon icon={CheckmarkCircle01Icon} strokeWidth={2} className="size-4 shrink-0 text-green-500" />
+        } elif state == "download" {
+            <HugeiconsIcon icon={Download01Icon} strokeWidth={2} className="size-4 shrink-0 animate-pulse text-primary" />
+        } elif state == "extract" or state == "build" {
+            <span className="size-4 shrink-0 animate-spin rounded-full border-2 border-primary border-t-transparent"></span>
+        } elif state == "error" {
+            <HugeiconsIcon icon={Alert01Icon} strokeWidth={2} className="size-4 shrink-0 text-destructive" />
+        } else {
+            <HugeiconsIcon icon={CircleIcon} strokeWidth={2} className="size-4 shrink-0 text-muted-foreground/40" />
+        }}
+        <span className={cn("w-14 text-left font-mono text-xs",
+            "text-muted-foreground/60" if state == "wait" else "text-foreground")}>{label}</span>
+        <span className="ml-auto truncate pl-3 font-mono text-[11px] text-muted-foreground">{detail}</span>
+    </div>;
+}
+
+"""Shown while the graph ingests: first visit ever, or when the repo's main
+has moved past the ingested `latest`. Narrates the server's progress live —
+per-version download/build states, plus a dimmed feed of recent steps."""
+def:pub DocsSyncScreen(progress: dict = {}, error: bool = False, onRetry: any = None) -> JsxElement {
+    vers = (progress["versions"] or []) as list[dict];
+    lg = (progress["log"] or []) as list[str];
+    detail = (progress["detail"] or "reaching github.com…") as str;
+    lg_start = len(lg) - 3 if len(lg) > 3 else 0;
     return <div className="relative flex min-h-[80vh] items-center justify-center overflow-hidden">
         <div className="hero-glow absolute inset-0"></div>
         <GraphBackdrop />
-        <div className="relative flex flex-col items-center gap-6 pl-6 pr-6 text-center">
+        <div className="relative flex w-full max-w-md flex-col items-center gap-6 pl-6 pr-6 text-center">
             <div className="relative flex size-24 items-center justify-center">
                 <span className="pulse-ring absolute inset-0 rounded-full bg-primary/10"></span>
                 <img src="/static/assets/jac-logo.png" alt="" className="size-14" />
             </div>
             <div>
                 <p className="text-balance text-xl font-semibold tracking-tight sm:text-2xl">
-                    Fetching the latest docs from the repo — just for you.
+                    {"The docs sync hit a snag." if error
+                        else "Fetching the docs straight from GitHub — just for you."}
                 </p>
                 <p className="mt-2 text-balance text-sm text-muted-foreground">
-                    Walking the git tree into the graph. This happens once —
-                    then it persists.
+                    {"The graph kept whatever it had. One click retries the sync." if error
+                        else "Pulling every version into the graph. This happens once — then it persists."}
                 </p>
             </div>
-            <div className="h-1 w-64 overflow-hidden rounded-full bg-muted">
-                <span className="sync-bar-fill block h-full w-1/3 rounded-full bg-primary"></span>
-            </div>
-            <p className="font-mono text-[11px] text-muted-foreground/70">
-                {"root.shared ++> DocsHub ++> DocVersion × 4"}
-            </p>
+            {if not error {
+                <div className="h-1 w-64 overflow-hidden rounded-full bg-muted">
+                    <span className="sync-bar-fill block h-full w-1/3 rounded-full bg-primary"></span>
+                </div>
+            }}
+            {if len(vers) > 0 {
+                <div className="w-full rounded-xl border border-border/60 bg-card/50 pl-4 pr-4 pt-1 pb-1 text-left backdrop-blur-sm">
+                    {for (i, v) in enumerate(vers) {
+                        <SyncRow key={str(i)} label={v["label"] as str}
+                            state={v["state"] as str} detail={v["detail"] as str} />
+                    }}
+                </div>
+            } else {
+                <p className="font-mono text-[11px] text-muted-foreground/70">
+                    {"root.shared ++> DocsHub ++> DocVersion × 4"}
+                </p>
+            }}
+            {if error {
+                <button onClick={onRetry}
+                    className="flex cursor-pointer items-center gap-2 rounded-lg bg-primary pl-4 pr-4 pt-2 pb-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90">
+                    <HugeiconsIcon icon={Refresh01Icon} strokeWidth={2} className="size-4" />
+                    Try again
+                </button>
+                <p className="font-mono text-[11px] text-destructive/80">{detail}</p>
+            } else {
+                <div className="flex min-h-12 flex-col gap-0.5">
+                    <p className="font-mono text-[11px] text-primary/90">{detail}</p>
+                    {for (i, ln) in enumerate(lg[lg_start:]) {
+                        <p key={str(i)} className="font-mono text-[10px] text-muted-foreground/45">{ln}</p>
+                    }}
+                </div>
+            }}
         </div>
     </div>;
 }
@@ -102,6 +155,8 @@ def:pub DocsShell() -> JsxElement {
     has page: dict | None = None;
     has loading: bool = True;
     has syncing: bool = False;
+    has sync_error: bool = False;
+    has progress: dict = {};
     has q: str = "";
     has closed: list[str] = [];
 
@@ -127,23 +182,33 @@ def:pub DocsShell() -> JsxElement {
             }
             if not fresh {
                 syncing = True;
+                sync_error = False;
+                # Kick the ingest (single-flight server-side) and narrate it
+                # live: while the heavy walker works, poll the cheap status
+                # walker and render its progress feed in real time.
+                _ = kick_ingest();
                 got: list[dict] = [];
                 tries = 0;
-                # First call does the ingest (single-flight on the server);
-                # if another visitor is already building, ours returns
-                # building=True with no graph yet — poll until it lands.
-                while len(got) == 0 and tries < 60 {
-                    if tries > 0 {
-                        await _sleep(600);
-                    }
-                    e = root spawn ensure_docs();
-                    if e.reports {
-                        rep = e.reports[0] as dict;
-                        if rep["ready"] as bool {
-                            got = (rep["versions"] or []) as list[dict];
+                while len(got) == 0 and tries < 600 {
+                    await _sleep(500);
+                    s2 = root spawn docs_status();
+                    st2 = (s2.reports[0] if s2.reports else None) as dict | None;
+                    if st2 is not None {
+                        progress = (st2["progress"] or {}) as dict;
+                        building = st2["building"] as bool;
+                        if (progress["phase"] or "") == "error" and not building {
+                            sync_error = True;
+                            break;
+                        }
+                        if (st2["ready"] as bool) and not (st2["stale"] as bool) and not building {
+                            got = st2["versions"] as list[dict];
                         }
                     }
                     tries = tries + 1;
+                }
+                if sync_error or len(got) == 0 {
+                    sync_error = True;
+                    return;
                 }
                 versions = got;
                 syncing = False;
@@ -157,6 +222,18 @@ def:pub DocsShell() -> JsxElement {
         p = root spawn doc_page(version=version, path=cur_path);
         page = (p.reports[0] if p.reports else None) as dict | None;
         loading = False;
+    }
+
+    """Fire-and-forget: the walker that actually does the ingest. Its
+    completion shows up through the docs_status polls, not this promise."""
+    async def kick_ingest {
+        _ = root spawn ensure_docs();
+    }
+
+    def retry_sync(_e: MouseEvent) {
+        sync_error = False;
+        progress = {};
+        load();
     }
 
     can with [loc.pathname] entry {
@@ -179,7 +256,7 @@ def:pub DocsShell() -> JsxElement {
         return <Navigate to="/docs/latest" replace={True} />;
     }
     if syncing {
-        return <DocsSyncScreen />;
+        return <DocsSyncScreen progress={progress} error={sync_error} onRetry={retry_sync} />;
     }
 
     return <div className="mx-auto max-w-7xl pl-4 pr-4 pt-24 pb-16 sm:pl-6 sm:pr-6 lg:pl-8 lg:pr-8">
