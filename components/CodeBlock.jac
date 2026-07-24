@@ -1,22 +1,83 @@
 import from "..lib.utils" { cn }
 
 glob _KEYWORDS: list[str] = [
-    "node", "edge", "walker", "obj", "enum", "class", "def", "can", "with",
-    "entry", "exit", "has", "glob", "import", "from", "by", "async", "await",
-    "return", "if", "else", "elif", "for", "while", "in", "not", "and", "or",
-    "report", "visit", "spawn", "disengage", "skip", "del", "try", "except",
-    "finally", "raise", "match", "case", "impl", "sem", "test", "own", "lambda",
-    "cl", "sv", "na", "print", "yield", "as", "new", "pub", "priv",
-];
+         "node",
+         "edge",
+         "walker",
+         "obj",
+         "enum",
+         "class",
+         "def",
+         "can",
+         "with",
+         "entry",
+         "exit",
+         "has",
+         "glob",
+         "import",
+         "from",
+         "by",
+         "async",
+         "await",
+         "return",
+         "if",
+         "else",
+         "elif",
+         "for",
+         "while",
+         "in",
+         "not",
+         "and",
+         "or",
+         "report",
+         "visit",
+         "spawn",
+         "disengage",
+         "skip",
+         "del",
+         "try",
+         "except",
+         "finally",
+         "raise",
+         "match",
+         "case",
+         "impl",
+         "sem",
+         "test",
+         "own",
+         "lambda",
+         "cl",
+         "sv",
+         "na",
+         "print",
+         "yield",
+         "as",
+         "new",
+         "pub",
+         "priv",
 
-glob _TYPES: list[str] = [
-    "int", "str", "bool", "float", "list", "dict", "tuple", "set", "any", "bytes",
-    "i32", "i64", "u8", "u32", "f32", "f64",
-];
+     ],
+     _TYPES: list[str] = [
+         "int",
+         "str",
+         "bool",
+         "float",
+         "list",
+         "dict",
+         "tuple",
+         "set",
+         "any",
+         "bytes",
+         "i32",
+         "i64",
+         "u8",
+         "u32",
+         "f32",
+         "f64",
 
-glob _LITERALS: list[str] = ["True", "False", "None"];
-
-glob _SPECIALS: list[str] = ["root", "self", "here", "visitor", "super", "llm"];
+     ],
+     _LITERALS: list[str] = ["True", "False", "None"],
+     _SPECIALS: list[str] = ["root", "self", "here", "visitor", "super", "llm"];
 
 def _is_alpha(c: str) -> bool {
     return ("a" <= c and c <= "z") or ("A" <= c and c <= "Z") or c == "_";
@@ -31,20 +92,27 @@ def _is_digit(c: str) -> bool {
 }
 
 def _classify(w: str, next_c: str) -> str {
-    if w in _KEYWORDS { return "kw"; }
-    if w in _LITERALS { return "lit"; }
-    if w in _SPECIALS { return "var"; }
-    if w in _TYPES { return "ty"; }
-    if len(w) > 0 and ("A" <= w[0] and w[0] <= "Z") { return "ty"; }
-    if next_c == "(" { return "fn"; }
+    if w in _KEYWORDS {
+        return "kw";
+    }
+    if w in _LITERALS {
+        return "lit";
+    }
+    if w in _SPECIALS {
+        return "var";
+    }
+    if w in _TYPES {
+        return "ty";
+    }
+    if len(w) > 0 and ("A" <= w[0] and w[0] <= "Z") {
+        return "ty";
+    }
+    if next_c == "(" {
+        return "fn";
+    }
     return "plain";
 }
 
-"""Tokenize one line, carrying multi-line state in and out.
-
-`mode` is "" (code), "d3"/"s3" (inside a triple-quoted string), or "mc"
-(inside a `#* ... *#` comment). Returns {"toks": list[dict], "mode": str}.
-"""
 def _tok_line(line: str, mode: str) -> dict {
     toks: list[dict] = [];
     n = len(line);
@@ -54,7 +122,11 @@ def _tok_line(line: str, mode: str) -> dict {
         q = "\"" if mode == "d3" else "'";
         s = "";
         while i < n {
-            if line[i] == q and i + 2 < n + 1 and i + 2 <= n - 1 and line[i + 1] == q and line[i + 2] == q {
+            if line[i] == q
+            and i + 2 < n + 1
+            and i + 2 <= n - 1
+            and line[i + 1] == q
+            and line[i + 2] == q {
                 s = s + q + q + q;
                 i = i + 3;
                 mode = "";
@@ -64,7 +136,9 @@ def _tok_line(line: str, mode: str) -> dict {
             i = i + 1;
         }
         toks.append({"t": s, "c": "str"});
-        if mode != "" { return {"toks": toks, "mode": mode}; }
+        if mode != "" {
+            return {"toks": toks, "mode": mode};
+        }
     } elif mode == "mc" {
         s = "";
         while i < n {
@@ -78,7 +152,9 @@ def _tok_line(line: str, mode: str) -> dict {
             i = i + 1;
         }
         toks.append({"t": s, "c": "com"});
-        if mode != "" { return {"toks": toks, "mode": mode}; }
+        if mode != "" {
+            return {"toks": toks, "mode": mode};
+        }
     }
 
     while i < n {
@@ -100,12 +176,18 @@ def _tok_line(line: str, mode: str) -> dict {
                 }
                 toks.append({"t": s, "c": "com"});
                 i = j;
-                if not closed { mode = "mc"; break; }
+                if not closed {
+                    mode = "mc";
+                    break;
+                }
                 continue;
             }
             rest = "";
             j = i;
-            while j < n { rest = rest + line[j]; j = j + 1; }
+            while j < n {
+                rest = rest + line[j];
+                j = j + 1;
+            }
             toks.append({"t": rest, "c": "com"});
             break;
         }
@@ -115,7 +197,10 @@ def _tok_line(line: str, mode: str) -> dict {
                 j = i + 3;
                 closed = False;
                 while j < n {
-                    if line[j] == c and j + 2 <= n - 1 and line[j + 1] == c and line[j + 2] == c {
+                    if line[j] == c
+                    and j + 2 <= n - 1
+                    and line[j + 1] == c
+                    and line[j + 2] == c {
                         s = s + c + c + c;
                         j = j + 3;
                         closed = True;
@@ -138,7 +223,10 @@ def _tok_line(line: str, mode: str) -> dict {
                 s = s + line[j];
                 j = j + 1;
             }
-            if j < n { s = s + c; j = j + 1; }
+            if j < n {
+                s = s + c;
+                j = j + 1;
+            }
             toks.append({"t": s, "c": "str"});
             i = j;
             continue;
@@ -158,9 +246,14 @@ def _tok_line(line: str, mode: str) -> dict {
         if _is_digit(c) {
             num = "";
             j = i;
-            while j < n and (_is_digit(line[j]) or line[j] == "." or line[j] == "x"
-                             or ("a" <= line[j] and line[j] <= "f")
-                             or ("A" <= line[j] and line[j] <= "F")) {
+            while j < n
+            and (
+                _is_digit(line[j])
+                or line[j] == "."
+                or line[j] == "x"
+                or ("a" <= line[j] and line[j] <= "f")
+                or ("A" <= line[j] and line[j] <= "F")
+            ) {
                 num = num + line[j];
                 j = j + 1;
             }
@@ -182,8 +275,15 @@ def _tok_line(line: str, mode: str) -> dict {
         if c == "+" or c == "-" or c == "<" or c == ">" or c == "&" {
             op = "";
             j = i;
-            while j < n and (line[j] == "+" or line[j] == "-" or line[j] == "<"
-                             or line[j] == ">" or line[j] == "&" or line[j] == "=") {
+            while j < n
+            and (
+                line[j] == "+"
+                or line[j] == "-"
+                or line[j] == "<"
+                or line[j] == ">"
+                or line[j] == "&"
+                or line[j] == "="
+            ) {
                 op = op + line[j];
                 j = j + 1;
             }
@@ -198,7 +298,6 @@ def _tok_line(line: str, mode: str) -> dict {
     return {"toks": toks, "mode": mode};
 }
 
-"""Tokenize a whole file so multi-line strings and comments carry across lines."""
 def tokenize_lines(lines: list[str], lang: str) -> list[list[dict]] {
     out: list[list[dict]] = [];
     if lang != "jac" and lang != "toml" {
@@ -216,44 +315,82 @@ def tokenize_lines(lines: list[str], lang: str) -> list[list[dict]] {
     return out;
 }
 
-def:pub CodeLines(lines: list[str], lang: str = "jac", numbers: bool = False) -> JsxElement {
+def:pub CodeLines(
+    lines: list[str], lang: str = "jac", numbers: bool = False
+) -> JsxElement {
     line_toks = tokenize_lines(lines, lang);
-    return <div className="code-plain font-mono text-[12px] leading-relaxed">
-        {for (li, ltoks) in enumerate(line_toks) {
-            <div key={str(li)} className="flex min-h-[1.45em]">
-                {if numbers {
-                    <span className="sticky left-0 w-10 shrink-0 select-none border-r border-white/5 bg-[#060607] pr-3 text-right text-white/25">{str(li + 1)}</span>
-                }}
-                <span className="whitespace-pre pl-3 pr-4">
-                    {for (ti, tk) in enumerate(ltoks) {
-                        <span key={str(ti)} className={("tok-" + (tk["c"] as str)) if tk["c"] != "plain" else ""}>{tk["t"]}</span>
-                    }}
-                </span>
-            </div>
-        }}
-    </div>;
-}
-
-def:pub CodeBlock(lines: list[str], title: str = "", className: str = "") -> JsxElement {
-    line_toks = tokenize_lines(lines, "jac");
-    return <div className={cn("code-window rounded-xl overflow-hidden text-left", className)}>
-        {if title != "" {
-            <div className="code-titlebar flex items-center gap-2 pl-4 pr-4 pt-2.5 pb-2.5">
-                <span className="size-2.5 rounded-full bg-white/15"></span>
-                <span className="size-2.5 rounded-full bg-white/15"></span>
-                <span className="size-2.5 rounded-full bg-white/15"></span>
-                <span className="ml-2 font-mono text-xs text-white/45">{title}</span>
-                <span className="ml-auto font-mono text-[10px] uppercase tracking-widest text-orange-400/80">jac</span>
-            </div>
-        }}
-        <pre className="code-scroll code-plain pt-4 pb-4 pl-5 pr-5 text-[13px] leading-relaxed">
+    return
+        <div className="code-plain font-mono text-[12px] leading-relaxed">
             {for (li, ltoks) in enumerate(line_toks) {
-                <div key={str(li)} className="min-h-[1.45em] whitespace-pre">
-                    {for (ti, tk) in enumerate(ltoks) {
-                        <span key={str(ti)} className={("tok-" + (tk["c"] as str)) if tk["c"] != "plain" else ""}>{tk["t"]}</span>
+                <div key={str(li)} className="flex min-h-[1.45em]">
+                    {if numbers {
+                        <span
+                            className="sticky left-0 w-10 shrink-0 select-none border-r border-white/5 bg-[#060607] pr-3 text-right text-white/25"
+                        >
+                            {str(li + 1)}
+                        </span>
                     }}
+                    <span className="whitespace-pre pl-3 pr-4">
+                        {for (ti, tk) in enumerate(ltoks) {
+                            <span
+                                key={str(ti)}
+                                className={("tok-" + (tk["c"] as str))
+                                    if tk["c"] != "plain"
+                                    else ""}
+                            >
+                                {tk["t"]}
+                            </span>
+                        }}
+                    </span>
                 </div>
             }}
-        </pre>
-    </div>;
+        </div>;
+}
+
+def:pub CodeBlock(
+    lines: list[str], title: str = "", className: str = ""
+) -> JsxElement {
+    line_toks = tokenize_lines(lines, "jac");
+    return
+        <div
+            className={cn(
+                "code-window rounded-xl overflow-hidden text-left", className
+            )}
+        >
+            {if title != "" {
+                <div
+                    className="code-titlebar flex items-center gap-2 pl-4 pr-4 pt-2.5 pb-2.5"
+                >
+                    <span className="size-2.5 rounded-full bg-white/15"></span>
+                    <span className="size-2.5 rounded-full bg-white/15"></span>
+                    <span className="size-2.5 rounded-full bg-white/15"></span>
+                    <span className="ml-2 font-mono text-xs text-white/45">
+                        {title}
+                    </span>
+                    <span
+                        className="ml-auto font-mono text-[10px] uppercase tracking-widest text-orange-400/80"
+                    >
+                        jac
+                    </span>
+                </div>
+            }}
+            <pre
+                className="code-scroll code-plain pt-4 pb-4 pl-5 pr-5 text-[13px] leading-relaxed"
+            >
+                {for (li, ltoks) in enumerate(line_toks) {
+                    <div key={str(li)} className="min-h-[1.45em] whitespace-pre">
+                        {for (ti, tk) in enumerate(ltoks) {
+                            <span
+                                key={str(ti)}
+                                className={("tok-" + (tk["c"] as str))
+                                    if tk["c"] != "plain"
+                                    else ""}
+                            >
+                                {tk["t"]}
+                            </span>
+                        }}
+                    </div>
+                }}
+            </pre>
+        </div>;
 }

@@ -3,6 +3,38 @@ name = "jac_site"
 entry-point = "main.jac"
 kind = "web-app"
 
+[dev]
+# Run this site against the checked-out compiler source rather than the jac
+# binary's frozen payload. Without it the nearest jac.toml (this one) declares
+# no source, so `jac start` here silently runs the shipped jaclang.
+jaclang_source = "../../jac"
+
+[precommit]
+# The site is `jac check`-clean, so the hook type-checks as well as formats.
+typecheck = true
+
+[check.lint]
+# "all" turns on every autolint rule; the two strip-* entries are the opt-in
+# "deslop" rules (W3050/W3051), which only activate when named explicitly. With
+# them selected, `jac fmt --lintfix`, `jac precommit`, and CI's
+# `jac fmt --check --lintfix` strip comments and docstrings from every
+# non-excluded .jac file.
+select = ["all", "strip-comments", "strip-docstrings"]
+exclude = [
+    # Build output: bundler-generated .jac never belongs to the source tree.
+    ".jac/*",
+    # These five carry `# jac:ignore[...]` directives, which the parser reads
+    # into inline_suppressions -- deleting one silently re-arms the diagnostic
+    # it suppressed. jaclang <= 0.34.5 strips them along with real comments, so
+    # they stay lint-exempt until a release carrying the W3050 carve-out lands;
+    # drop these five entries then.
+    "components/DocsShell.jac",
+    "components/FloatingSource.jac",
+    "components/Leaderboard.jac",
+    "components/Reveal.jac",
+    "raylib_shim.jac",
+]
+
 [jac-shadcn]
 style = "nova"
 baseColor = "neutral"

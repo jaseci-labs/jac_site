@@ -9,17 +9,18 @@ import from ..components.Agents { Agents }
 import from ..components.BookSection { BookSection }
 import from ..components.ExplorerFinale { ExplorerFinale }
 
-def:pub page() -> JsxPage {
-    return <>
-        <Hero />
-        <StatsBand />
-        <WasmGame />
-        <WhyJac />
-        <Showcase />
-        <Capabilities />
-        <OneBinary />
-        <Agents />
-        <BookSection />
-        <ExplorerFinale />
-    </>;
+def:pub page -> JsxPage {
+    return
+        <>
+            <Hero/>
+            <StatsBand/>
+            <WasmGame/>
+            <WhyJac/>
+            <Showcase/>
+            <Capabilities/>
+            <OneBinary/>
+            <Agents/>
+            <BookSection/>
+            <ExplorerFinale/>
+        </>;
 }

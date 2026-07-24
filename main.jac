@@ -7,16 +7,11 @@ cl import ".styles.global.css";
 cl import ".styles.site.css";
 
 cl {
-    # File-based routing: pages/ builds the router; app just renders it.
     def:pub app(children: any) -> JsxElement {
         return <>{children}</>;
     }
 }
 
-# ═══ The native game: the same rlgl cube shooter that compiles to a desktop
-# binary, here compiled to /static/main.wasm by the client build and rendered
-# in the browser by components/WasmGame.jac via the WebGL shim in
-# raylib_shim.jac. Ported from the this_is_jac showcase.
 import from raylib {
     def InitWindow(width: i32, height: i32, title: str) -> None;  def WindowShouldClose -> bool;  def CloseWindow -> None;  def SetTargetFPS(
         fps: i32
@@ -24,9 +19,7 @@ import from raylib {
         r: u8, g: u8, b: u8, a: u8
     ) -> None;  def rlClearScreenBuffers -> None;  def DrawFPS(
         pos_x: i32, pos_y: i32
-    ) -> None;  def IsKeyDown(key: i32) -> bool;  def IsKeyPressed(
-        key: i32
-    ) -> bool;  def GetFrameTime -> f32;  def GetMouseX -> i32;  def GetMouseY -> i32;  def IsMouseButtonPressed(
+    ) -> None;  def IsKeyDown(key: i32) -> bool;  def IsKeyPressed(key: i32) -> bool;  def GetFrameTime -> f32;  def GetMouseX -> i32;  def GetMouseY -> i32;  def IsMouseButtonPressed(
         button: i32
     ) -> bool;  def DisableCursor -> None;  def EnableCursor -> None;  def rlMatrixMode(
         mode: i32
@@ -52,63 +45,50 @@ glob RL_MODELVIEW: int = 0x1700,
      RL_LINES: int = 0x0001,
      RL_TRIANGLES: int = 0x0004;
 
-"""Open a window. No frame-rate cap is set, so the loop runs as fast as the
-hardware allows (call `SetTargetFPS` yourself if you want to limit it)."""
 def open_window(width: int, height: int, title: str) {
     InitWindow(width, height, title);
 }
 
-"""True once the user closes the window or presses ESC."""
 def should_close -> bool {
     return WindowShouldClose();
 }
 
-"""Tear the window down."""
 def close_window {
     CloseWindow();
 }
 
-"""Seconds elapsed during the previous frame (for frame-rate-independent motion)."""
 def dt -> float {
     return GetFrameTime();
 }
 
-"""Held-this-frame test for a raylib key code."""
 def key_held(code: int) -> bool {
     return IsKeyDown(code);
 }
 
-"""Pressed-this-frame (edge) test for a raylib key code."""
 def key_tapped(code: int) -> bool {
     return IsKeyPressed(code);
 }
 
-"""Current mouse X in pixels (as a float - see the GetMouseX note above)."""
 def mouse_x -> float {
     return float(GetMouseX());
 }
 
-"""Current mouse Y in pixels (as a float)."""
 def mouse_y -> float {
     return float(GetMouseY());
 }
 
-"""Pressed-this-frame test for a mouse button (0 = left)."""
 def mouse_pressed(button: int) -> bool {
     return IsMouseButtonPressed(button);
 }
 
-"""Hide and lock the cursor for FPS-style relative mouse-look."""
 def lock_mouse {
     DisableCursor();
 }
 
-"""Show and release the cursor."""
 def unlock_mouse {
     EnableCursor();
 }
 
-"""Begin a frame: clear color+depth to (r,g,b) and turn on depth testing."""
 def begin_frame(r: int, g: int, b: int) {
     BeginDrawing();
     rlClearColor(r, g, b, 255);
@@ -116,12 +96,10 @@ def begin_frame(r: int, g: int, b: int) {
     rlEnableDepthTest();
 }
 
-"""Present the frame."""
 def end_frame {
     EndDrawing();
 }
 
-"""End the 3D pass and switch to a pixel-space 2D overlay mode."""
 def end_camera(width: float, height: float) {
     EndMode3D();
     rlMatrixMode(RL_PROJECTION);
@@ -131,12 +109,10 @@ def end_camera(width: float, height: float) {
     rlLoadIdentity();
 }
 
-"""Draw raylib's built-in FPS counter at (x, y) as a 2D overlay."""
 def draw_fps(x: int, y: int) {
     DrawFPS(x, y);
 }
 
-"""Install a perspective camera at (px,py,pz) looking with yaw/pitch (degrees)."""
 def set_camera(
     px: float, py: float, pz: float, yaw_deg: float, pitch_deg: float, aspect: float
 ) {
@@ -154,7 +130,6 @@ def set_camera(
     rlTranslatef(-px, -py, -pz);
 }
 
-"""Emit one quad (corners 0->1->2->3, CCW) as two triangles."""
 def _quad(
     p0: float,
     p1: float,
@@ -177,13 +152,11 @@ def _quad(
     rlVertex3f(p9, p10, p11);
 }
 
-"""Scale a 0-255 channel by a percentage (cheap face shading)."""
 def _shade(c: int, pct: int) -> int {
     v = c * pct // 100;
     return v if v < 255 else 255;
 }
 
-"""Draw an axis-aligned colored box centered at (cx,cy,cz) with size (sx,sy,sz)."""
 def draw_box(
     cx: float,
     cy: float,
@@ -217,7 +190,6 @@ def draw_box(
     rlPopMatrix();
 }
 
-"""Draw a flat floor grid of `half*2` lines per axis, spaced `step` apart, on y=0."""
 def draw_floor(half: int, step: float) {
     ext = float(half) * step;
     rlSetLineWidth(1.0);
@@ -235,12 +207,10 @@ def draw_floor(half: int, step: float) {
     rlEnd();
 }
 
-"""Seconds elapsed since the window opened (raylib's own clock)."""
 def clock -> float {
     return GetTime();
 }
 
-"""Benchmark duration in seconds, or 0 for normal (interactive) play."""
 def bench_seconds -> float {
     if FileExists(".bench_seconds") {
         return float(TextToInteger(LoadFileText(".bench_seconds")));
@@ -248,17 +218,14 @@ def bench_seconds -> float {
     return 0.0;
 }
 
-"""Hand the benchmark result back to demo.sh (avg max frames seconds)."""
 def write_bench_result(
     avg_fps: float, peak_fps: float, frame_count: int, seconds: float
 ) {
     SaveFileText(
-        ".bench_result",
-        f"BENCH_RESULT {avg_fps} {peak_fps} {frame_count} {seconds}"
+        ".bench_result", f"BENCH_RESULT {avg_fps} {peak_fps} {frame_count} {seconds}"
     );
 }
 
-"""Benchmark accumulators (dormant unless `.bench_seconds` exists)."""
 glob bench: float = bench_seconds(),
      frames: int = 0,
      max_fps: float = 0.0;
@@ -290,7 +257,6 @@ glob KEY_W: int = 87,
      mouse_sens: float = 0.12,
      mouse_captured: bool = False;
 
-"""cos via range-reduced Taylor series (good to ~1e-4 on the reduced range)."""
 def jcos(a: float) -> float {
     twopi = 6.283185307179586;
     pi = 3.141592653589793;
@@ -309,12 +275,10 @@ def jcos(a: float) -> float {
     return 1.0 - x2 / 2.0 + x4 / 24.0 - x6 / 720.0 + x8 / 40320.0 - x10 / 3628800.0 + x12 / 479001600.0;
 }
 
-"""sin(a) = cos(a - pi/2)."""
 def jsin(a: float) -> float {
     return jcos(a - 1.5707963267948796);
 }
 
-"""sqrt via Newton's method (plenty for gameplay distances)."""
 def jsqrt(v: float) -> float {
     if v <= 0.0 {
         return 0.0;
@@ -328,21 +292,15 @@ def jsqrt(v: float) -> float {
     return g;
 }
 
-"""Uniform pseudo-random float in [0, 1) via a 31-bit LCG."""
 def rand01 -> float {
     rng = (rng * 1103515245 + 12345) % 2147483648;
     return float(rng) / 2147483648.0;
 }
 
-"""Random float in [lo, hi)."""
 def rand_range(lo: float, hi: float) -> float {
     return lo + rand01() * (hi - lo);
 }
 
-# ─── The cast ────────────────────────────────────────────────────────────────
-
-"""A hovering hunter drone. It strafes, keeps its distance, telegraphs its
-shot with a charge glow, and fires back."""
 obj Enemy {
     has x: float,
         y: float,
@@ -357,7 +315,6 @@ obj Enemy {
         alive: bool;
 }
 
-"""A player rocket in flight."""
 obj Rocket {
     has x: float,
         y: float,
@@ -368,7 +325,6 @@ obj Rocket {
         life: float;
 }
 
-"""An enemy plasma bolt."""
 obj Shot {
     has x: float,
         y: float,
@@ -379,8 +335,6 @@ obj Shot {
         life: float;
 }
 
-"""Debris, sparks, and smoke. `fade` remembers the starting life so the
-cube can shrink as it burns out; `grav` lets smoke rise while debris falls."""
 obj Particle {
     has x: float,
         y: float,
@@ -402,8 +356,6 @@ glob enemies: list[Enemy] = [],
      shots: list[Shot] = [],
      sparks: list[Particle] = [];
 
-# ─── Player state ────────────────────────────────────────────────────────────
-
 glob HP_MAX: float = 100.0,
      CHARGE_T: float = 0.95,
      hp: float = 100.0,
@@ -414,14 +366,19 @@ glob HP_MAX: float = 100.0,
      kick_t: float = 0.0,
      muzzle_t: float = 0.0;
 
-# ─── Particles ───────────────────────────────────────────────────────────────
-
-"""Claim a dead pool slot for one particle (drops it if the pool is full)."""
 def spawn_particle(
-    x: float, y: float, z: float,
-    vx: float, vy: float, vz: float,
-    life: float, size: float, grav: float,
-    r: int, g: int, b: int
+    x: float,
+    y: float,
+    z: float,
+    vx: float,
+    vy: float,
+    vz: float,
+    life: float,
+    size: float,
+    grav: float,
+    r: int,
+    g: int,
+    b: int
 ) {
     for i in range(len(sparks)) {
         p = sparks[i];
@@ -444,22 +401,28 @@ def spawn_particle(
     }
 }
 
-"""Radial burst of debris cubes at (x, y, z)."""
 def burst(x: float, y: float, z: float, n: int, speed: float, r: int, g: int, b: int) {
     for i in range(n) {
         a = rand_range(0.0, 6.283);
         up = rand_range(0.2, 1.0);
         s = rand_range(0.3, 1.0) * speed;
         spawn_particle(
-            x, y, z,
-            jcos(a) * s, up * s, jsin(a) * s,
-            rand_range(0.35, 0.8), rand_range(0.08, 0.22), 9.0,
-            r, g, b
+            x,
+            y,
+            z,
+            jcos(a) * s,
+            up * s,
+            jsin(a) * s,
+            rand_range(0.35, 0.8),
+            rand_range(0.08, 0.22),
+            9.0,
+            r,
+            g,
+            b
         );
     }
 }
 
-"""Advance every live particle: integrate, apply gravity, burn down."""
 def update_particles(step: float) {
     for i in range(len(sparks)) {
         p = sparks[i];
@@ -479,9 +442,6 @@ def update_particles(step: float) {
     }
 }
 
-# ─── Enemies ─────────────────────────────────────────────────────────────────
-
-"""(Re)place a drone somewhere in the arena in front of the player."""
 def respawn_enemy(e: Enemy) {
     e.x = rand_range(-14.0, 14.0);
     e.base_y = rand_range(1.2, 5.0);
@@ -496,7 +456,6 @@ def respawn_enemy(e: Enemy) {
     e.alive = True;
 }
 
-"""Loose a plasma bolt at the player's current position, with a little spread."""
 def enemy_fire(e: Enemy) {
     tx = px + rand_range(-1.4, 1.4);
     ty = py + rand_range(-0.7, 0.7);
@@ -524,8 +483,6 @@ def enemy_fire(e: Enemy) {
     }
 }
 
-"""Drone brain: bob, strafe around the player, hold a comfortable range,
-telegraph with a charge glow, then shoot. Dead drones wait out respawn_t."""
 def update_enemies(step: float) {
     for i in range(len(enemies)) {
         e = enemies[i];
@@ -556,10 +513,18 @@ def update_enemies(step: float) {
                 }
             }
 
-            if e.x > 16.0 { e.x = 16.0; }
-            if e.x < -16.0 { e.x = -16.0; }
-            if e.z > 8.0 { e.z = 8.0; }
-            if e.z < -18.0 { e.z = -18.0; }
+            if e.x > 16.0 {
+                e.x = 16.0;
+            }
+            if e.x < -16.0 {
+                e.x = -16.0;
+            }
+            if e.z > 8.0 {
+                e.z = 8.0;
+            }
+            if e.z < -18.0 {
+                e.z = -18.0;
+            }
 
             e.fire_t -= step;
             if e.fire_t <= 0.0 and dist < 28.0 {
@@ -579,7 +544,6 @@ def update_enemies(step: float) {
     }
 }
 
-"""Kill a drone: score it, scrap it, schedule its replacement."""
 def kill_enemy(e: Enemy) {
     e.alive = False;
     e.respawn_t = rand_range(1.2, 2.6);
@@ -588,9 +552,6 @@ def kill_enemy(e: Enemy) {
     burst(e.x, e.y, e.z, 5, 4.0, 255, 210, 110);
 }
 
-# ─── Player damage ───────────────────────────────────────────────────────────
-
-"""Take a hit: flash, interrupt regen, and respawn on zero."""
 def damage_player(amount: float) {
     if invuln_t > 0.0 {
         return;
@@ -608,9 +569,6 @@ def damage_player(amount: float) {
     }
 }
 
-# ─── Rockets ─────────────────────────────────────────────────────────────────
-
-"""Fire a rocket from the eye along the current aim, reusing a dead pool slot."""
 def fire_rocket {
     yaw_r = yaw * DEG2RAD;
     pitch_r = pitch * DEG2RAD;
@@ -636,7 +594,6 @@ def fire_rocket {
     }
 }
 
-"""Splash damage: scrap every drone near the blast, then throw debris."""
 def explode(x: float, y: float, z: float) {
     for i in range(len(enemies)) {
         e = enemies[i];
@@ -654,7 +611,6 @@ def explode(x: float, y: float, z: float) {
     spawn_particle(x, y, z, 0.0, 0.6, 0.0, 0.28, 0.9, -0.5, 255, 235, 160);
 }
 
-"""Advance rockets, trail smoke, and detonate on drones or the floor."""
 def update_rockets(step: float) {
     for i in range(len(rockets)) {
         r = rockets[i];
@@ -664,9 +620,18 @@ def update_rockets(step: float) {
             r.z += r.vz * step;
             r.life -= step;
             spawn_particle(
-                r.x, r.y, r.z,
-                rand_range(-0.4, 0.4), rand_range(0.1, 0.6), rand_range(-0.4, 0.4),
-                0.35, 0.1, -0.6, 120, 122, 130
+                r.x,
+                r.y,
+                r.z,
+                rand_range(-0.4, 0.4),
+                rand_range(0.1, 0.6),
+                rand_range(-0.4, 0.4),
+                0.35,
+                0.1,
+                -0.6,
+                120,
+                122,
+                130
             );
             boom = False;
             if r.y <= 0.1 {
@@ -694,7 +659,6 @@ def update_rockets(step: float) {
     }
 }
 
-"""Advance plasma bolts and resolve hits on the player."""
 def update_shots(step: float) {
     for i in range(len(shots)) {
         s = shots[i];
@@ -719,9 +683,6 @@ def update_shots(step: float) {
     }
 }
 
-# ─── Input (mouse-look, WASD, capture toggle) ────────────────────────────────
-
-"""Read keyboard + mouse and update camera orientation + position this frame."""
 def handle_input(step: float) {
     turn = 90.0 * step;
 
@@ -802,9 +763,6 @@ def handle_input(step: float) {
     }
 }
 
-# ─── Drawing ─────────────────────────────────────────────────────────────────
-
-"""Draw one drone: hull, top fin, side pods — glowing through its charge-up."""
 def draw_enemy(e: Enemy) {
     k = e.charge / CHARGE_T;
     r = 200;
@@ -826,11 +784,6 @@ def draw_enemy(e: Enemy) {
     draw_box(e.x + 0.85, e.y, e.z, 0.34, 0.34, 0.34, 150, 45, 40);
 }
 
-"""Draw the first-person rocket launcher, bobbing, kicking, and flashing.
-
-The trick: translate to the camera and undo its rotations, so every box is
-laid out in view space (x right, y up, -z forward) with plain axis-aligned
-geometry."""
 def draw_weapon {
     rlPushMatrix();
     rlTranslatef(px, py, pz);
@@ -853,7 +806,6 @@ def draw_weapon {
     rlPopMatrix();
 }
 
-"""Axis-aligned filled rectangle in the 2D overlay (pixel space)."""
 def draw_rect2d(x: float, y: float, w: float, h: float, r: int, g: int, b: int) {
     rlBegin(RL_TRIANGLES);
     rlColor4ub(r, g, b, 255);
@@ -866,7 +818,6 @@ def draw_rect2d(x: float, y: float, w: float, h: float, r: int, g: int, b: int) 
     rlEnd();
 }
 
-"""Crosshair, health bar, hit flash — the pixel-space HUD pass."""
 def draw_hud {
     gap = 6.0 + kick_t * 40.0;
     draw_rect2d(480.0 - gap - 10.0, 299.0, 10.0, 2.0, 215, 220, 230);
@@ -907,53 +858,74 @@ def draw_hud {
     }
 }
 
-# ─── Browser entry points (replace the native `with entry` loop) ─────────────
-
-"""Set up the window and object pools. Call once before the first frame()."""
 def init {
     open_window(960, 600, "Jac Rocket Arena");
     for n in range(8) {
         e = Enemy(
-            x=0.0, y=0.0, z=0.0, base_y=0.0, phase=0.0,
-            strafe_dir=1.0, strafe_t=0.0, fire_t=0.0, charge=0.0,
-            respawn_t=0.0, alive=False
+            x=0.0,
+            y=0.0,
+            z=0.0,
+            base_y=0.0,
+            phase=0.0,
+            strafe_dir=1.0,
+            strafe_t=0.0,
+            fire_t=0.0,
+            charge=0.0,
+            respawn_t=0.0,
+            alive=False
         );
         respawn_enemy(e);
         enemies.append(e);
     }
     for n in range(10) {
-        rockets.append(
-            Rocket(x=0.0, y=0.0, z=0.0, vx=0.0, vy=0.0, vz=0.0, life=0.0)
-        );
+        rockets.append(Rocket(x=0.0, y=0.0, z=0.0, vx=0.0, vy=0.0, vz=0.0, life=0.0));
     }
     for n in range(24) {
-        shots.append(
-            Shot(x=0.0, y=0.0, z=0.0, vx=0.0, vy=0.0, vz=0.0, life=0.0)
-        );
+        shots.append(Shot(x=0.0, y=0.0, z=0.0, vx=0.0, vy=0.0, vz=0.0, life=0.0));
     }
     for n in range(90) {
         sparks.append(
             Particle(
-                x=0.0, y=0.0, z=0.0, vx=0.0, vy=0.0, vz=0.0,
-                life=0.0, fade=1.0, size=0.1, grav=9.0, r=255, g=255, b=255
+                x=0.0,
+                y=0.0,
+                z=0.0,
+                vx=0.0,
+                vy=0.0,
+                vz=0.0,
+                life=0.0,
+                fade=1.0,
+                size=0.1,
+                grav=9.0,
+                r=255,
+                g=255,
+                b=255
             )
         );
     }
 }
 
-"""Advance and render one frame. Returns True when the game wants to close."""
 def frame -> bool {
     step = dt();
     world_t += step;
 
-    if hurt_t > 0.0 { hurt_t -= step; }
-    if invuln_t > 0.0 { invuln_t -= step; }
-    if kick_t > 0.0 { kick_t -= step; }
-    if muzzle_t > 0.0 { muzzle_t -= step; }
+    if hurt_t > 0.0 {
+        hurt_t -= step;
+    }
+    if invuln_t > 0.0 {
+        invuln_t -= step;
+    }
+    if kick_t > 0.0 {
+        kick_t -= step;
+    }
+    if muzzle_t > 0.0 {
+        muzzle_t -= step;
+    }
     safe_t += step;
     if safe_t > 4.0 and hp < HP_MAX {
         hp += 7.0 * step;
-        if hp > HP_MAX { hp = HP_MAX; }
+        if hp > HP_MAX {
+            hp = HP_MAX;
+        }
     }
 
     handle_input(step);
@@ -1010,17 +982,14 @@ def frame -> bool {
     return should_close();
 }
 
-"""Current score (drones destroyed) - for the HTML HUD."""
 def get_score -> int {
     return score;
 }
 
-"""Current health in [0, 100] - for the HTML HUD."""
 def get_hp -> float {
     return hp;
 }
 
-"""Times the player has been destroyed - for the HTML HUD."""
 def get_deaths -> int {
     return deaths;
 }

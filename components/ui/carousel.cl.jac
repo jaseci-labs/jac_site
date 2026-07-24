@@ -12,7 +12,7 @@ def:pub Carousel(props: any) -> JsxElement {
     orientation = props["orientation"] or "horizontal";
     axisOpt = "x" if orientation == "horizontal" else "y";
     userOpts: dict[str, any] = (props["opts"] or {}) as dict[str, any];
-    embla: any = useEmblaCarousel({"axis": axisOpt, **userOpts}, props["plugins"]);
+    embla: any = useEmblaCarousel({"axis": axisOpt, ** userOpts}, props["plugins"]);
     carouselRef = embla[0];
     api: any = embla[1];
     scrollPrev = lambda -> any { api and api.scrollPrev(); };
@@ -67,8 +67,6 @@ def:pub CarouselItem(props: any) -> JsxElement {
         />;
 }
 
-"""One pagination dot; a component per dot keeps the scroll index bound
-per-instance instead of late-bound through a loop closure."""
 def:pub CarouselDot(index: int, selected: int) -> JsxElement {
     ctx: any = useContext(CarouselContext);
 
@@ -78,44 +76,56 @@ def:pub CarouselDot(index: int, selected: int) -> JsxElement {
         }
     }
 
-    return <button type="button" onClick={go}
-        aria-label={"Go to slide " + str(index + 1)}
-        className={cn(
-            "h-2 cursor-pointer rounded-full transition-all duration-300",
-            "w-5 bg-primary" if selected == index
-            else "w-2 bg-muted-foreground/30 hover:bg-muted-foreground/60"
-        )} />;
+    return
+        <button
+            type="button"
+            onClick={go}
+            aria-label={"Go to slide " + str(index + 1)}
+            className={cn(
+                "h-2 cursor-pointer rounded-full transition-all duration-300",
+                "w-5 bg-primary"
+                    if selected == index
+                    else "w-2 bg-muted-foreground/30 hover:bg-muted-foreground/60"
+            )}
+        />;
 }
 
 def:pub CarouselDots(props: any) -> JsxElement {
-    has selected: int = 0;
-    has count: int = 0;
+    has selected: int = 0,
+        count: int = 0;
+
     ctx: any = useContext(CarouselContext);
     api: any = ctx.api if ctx else None;
 
-    useEffect(lambda {
-        if not api {
-            return lambda {};
-        }
-        update = lambda (_a: any) {
-            count = len(api.scrollSnapList());
-            selected = api.selectedScrollSnap();
-        };
-        update(None);
-        api.on("select", update);
-        api.on("reInit", update);
-        return lambda {
-            api.off("select", update);
-            api.off("reInit", update);
-        };
-    }, [api]);
+    useEffect(
+        lambda {
+            if not api {
+                return lambda { };
+            }
+            update = lambda (_a: any) {
+                count = len(api.scrollSnapList());
+                selected = api.selectedScrollSnap();
+            };
+            update(None);
+            api.on("select", update);
+            api.on("reInit", update);
+            return lambda {
+                api.off("select", update);
+                api.off("reInit", update);
+            };
+        },
+        [api]
+    );
 
-    return <div data-slot="carousel-dots"
-        className={cn("flex items-center justify-center gap-2", props["className"])}>
-        {for i in range(count) {
-            <CarouselDot key={str(i)} index={i} selected={selected} />
-        }}
-    </div>;
+    return
+        <div
+            data-slot="carousel-dots"
+            className={cn("flex items-center justify-center gap-2", props["className"])}
+        >
+            {for i in range(count) {
+                <CarouselDot key={str(i)} index={i} selected={selected}/>
+            }}
+        </div>;
 }
 
 def:pub CarouselPrevious(props: any) -> JsxElement {
@@ -134,9 +144,7 @@ def:pub CarouselPrevious(props: any) -> JsxElement {
             variant={variant}
             size={size}
             className={cn(
-                "rounded-full absolute touch-manipulation",
-                posClass,
-                props["className"]
+                "rounded-full absolute touch-manipulation", posClass, props["className"]
             )}
             onClick={scrollPrev}
         >
@@ -161,9 +169,7 @@ def:pub CarouselNext(props: any) -> JsxElement {
             variant={variant}
             size={size}
             className={cn(
-                "rounded-full absolute touch-manipulation",
-                posClass,
-                props["className"]
+                "rounded-full absolute touch-manipulation", posClass, props["className"]
             )}
             onClick={scrollNext}
         >

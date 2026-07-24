@@ -11,11 +11,16 @@ def init_theme {
     }
 }
 
-def:pub layout() -> JsxLayout {
+def:pub layout -> JsxLayout {
     init_theme();
-    return <div className="min-h-screen overflow-x-clip bg-background text-foreground antialiased">
-        <Navbar />
-        <main><Outlet /></main>
-        <Footer />
-    </div>;
+    return
+        <div
+            className="min-h-screen overflow-x-clip bg-background text-foreground antialiased"
+        >
+            <Navbar/>
+            <main>
+                <Outlet/>
+            </main>
+            <Footer/>
+        </div>;
 }

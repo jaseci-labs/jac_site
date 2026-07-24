@@ -1,29 +1,23 @@
-"""Live source browser for the site itself.
-
-Walks the project directory on request — the site serves a view of the very
-code that is serving it. Returns raw text; the client's own Jac tokenizer
-does the highlighting.
-"""
 import os;
 import from pathlib { Path }
 
-glob EXCLUDE_DIRS: set = {".git", ".jac", "node_modules", "__pycache__", "assets"};
-glob ALLOW_EXT: set = {".jac", ".toml", ".css", ".md"};
+glob EXCLUDE_DIRS: set = {".git", ".jac", "node_modules", "__pycache__", "assets"},
+     ALLOW_EXT: set = {".jac", ".toml", ".css", ".md"};
 
 obj SourceFile {
-    has path: str;
-    has dir: str;
-    has name: str;
-    has language: str;
-    has lines: int;
+    has path: str,
+        dir: str,
+        name: str,
+        language: str,
+        lines: int;
 }
 
 obj SourceView {
-    has path: str;
-    has language: str;
-    has size_bytes: int;
-    has lines: int;
-    has raw_lines: list[str];
+    has path: str,
+        language: str,
+        size_bytes: int,
+        lines: int,
+        raw_lines: list[str];
 }
 
 def _language_of(name: str) -> str {
@@ -33,19 +27,18 @@ def _language_of(name: str) -> str {
 }
 
 def _tree_order(f: SourceFile) -> tuple {
-    return (
-        0 if f.dir == "" else 1,
-        f.dir,
-        0 if f.name == "main.jac" else 1,
-        f.name,
-    );
+    return (0 if f.dir == "" else 1, f.dir, 0 if f.name == "main.jac" else 1, f.name, );
 }
 
-def _walk_sources() -> list[SourceFile] {
+def _walk_sources -> list[SourceFile] {
     proj_root = os.getcwd();
     found: list[SourceFile] = [];
     for (cur, dirnames, filenames) in os.walk(proj_root) {
-        kept = [d for d in sorted(dirnames) if not d.startswith(".") and d not in EXCLUDE_DIRS];
+        kept = [
+            d
+            for d in sorted(dirnames)
+            if not d.startswith(".") and d not in EXCLUDE_DIRS
+        ];
         dirnames.clear();
         dirnames.extend(kept);
         for fname in sorted(filenames) {
@@ -60,19 +53,21 @@ def _walk_sources() -> list[SourceFile] {
             } except Exception {
                 continue;
             }
-            found.append(SourceFile(
-                path=rel.replace(os.sep, "/"),
-                dir=os.path.dirname(rel).replace(os.sep, "/"),
-                name=fname,
-                language=_language_of(fname),
-                lines=text.count("\n") + 1,
-            ));
+            found.append(
+                SourceFile(
+                    path=rel.replace(os.sep, "/"),
+                    dir=os.path.dirname(rel).replace(os.sep, "/"),
+                    name=fname,
+                    language=_language_of(fname),
+                    lines=text.count("\n") + 1,
+                )
+            );
         }
     }
     return sorted(found, key=_tree_order);
 }
 
-def:pub source_tree() -> list[SourceFile] {
+def:pub source_tree -> list[SourceFile] {
     return _walk_sources();
 }
 
