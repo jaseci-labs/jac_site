@@ -75,7 +75,10 @@ section[id] { scroll-margin-top: 4.5rem; }
     from { opacity: 0; transform: translateY(26px); }
     to   { opacity: 1; transform: none; }
 }
-.anim-fade-up { animation: fade-up 0.9s cubic-bezier(0.16, 1, 0.3, 1) both; }
+/* `backwards` (not `both`): a forwards-filled transform animation retains an
+   identity matrix, which silently turns ancestor into a containing block and
+   breaks position:fixed descendants (the floating source browser). */
+.anim-fade-up { animation: fade-up 0.9s cubic-bezier(0.16, 1, 0.3, 1) backwards; }
 .anim-d1 { animation-delay: 0.08s; }
 .anim-d2 { animation-delay: 0.18s; }
 .anim-d3 { animation-delay: 0.28s; }
@@ -147,6 +150,12 @@ section[id] { scroll-margin-top: 4.5rem; }
 
 @keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }
 .anim-fade-in { animation: fade-in 0.25s ease both; }
+
+@keyframes float-in {
+    from { opacity: 0; transform: translateY(24px) scale(0.96); }
+    to   { opacity: 1; }
+}
+.float-in { animation: float-in 0.35s cubic-bezier(0.16, 1, 0.3, 1) both; }
 
 @keyframes sync-slide {
     0% { transform: translateX(-130%); }

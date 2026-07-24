@@ -3,7 +3,7 @@ import from .ui.badge { Badge }
 import from "..lib.utils" { cn }
 import from "@jac/runtime" { Link }
 import from .GraphBackdrop { GraphBackdrop }
-import from .SourceBrowser { SourceBrowser }
+import from .FloatingSource { FloatingSource }
 import from .CopyCommand { CopyCommand }
 import from "@hugeicons/react" { HugeiconsIcon }
 import from "@hugeicons/core-free-icons" { StarIcon, BookOpen01Icon }
@@ -55,9 +55,9 @@ def:pub Hero() -> JsxElement {
                     </p>
                 </div>
                 <div className="anim-fade-up anim-d3 hidden min-w-0 lg:block">
-                    <SourceBrowser />
+                    <FloatingSource />
                     <p className="mt-3 text-center font-mono text-xs text-muted-foreground">
-                        the actual codebase serving this page — click around
+                        the actual codebase serving this page — click around · it follows you
                     </p>
                 </div>
             </div>

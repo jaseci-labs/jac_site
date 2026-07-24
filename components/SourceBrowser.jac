@@ -87,7 +87,7 @@ def:pub SourceBrowser(className: str = "") -> JsxElement {
     total_lines: int = 0;
     for f in tree { total_lines = total_lines + f.lines; }
 
-    return <div className={"code-window flex h-[540px] flex-col overflow-hidden rounded-xl text-left " + className}>
+    return <div className={"code-window flex h-full flex-col overflow-hidden rounded-xl text-left " + className}>
         <div className="code-titlebar flex shrink-0 items-center gap-2 pl-4 pr-4 pt-2.5 pb-2.5">
             <span className="size-2.5 rounded-full bg-white/15"></span>
             <span className="size-2.5 rounded-full bg-white/15"></span>
