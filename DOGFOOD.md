@@ -34,12 +34,18 @@ it) · **open** (nothing done yet).
    body items**, surfacing as unrelated "missing implementation" noise.
    **open** (long-standing).
 9. **`bun x vite` requires a system `node`** (vite's `#!/usr/bin/env node`
-   shebang; `--bun` doesn't help) — breaks the "no Node required" promise.
-   Local builds had silently depended on a dangling node symlink left by an
-   old tool session. **fixed-in-tree**: `_vite_invocation` in
-   `runtimelib/client/impl/vite_bundler.impl.jac` runs
-   `bun node_modules/vite/bin/vite.js` directly; verified 6.4s builds with
-   no node installed.
+   shebang; neither `bun x --bun` nor `bun run --bun` overrides it, verified
+   on bun 1.3.11) — breaks the "no Node required" promise. Local builds had
+   silently depended on a dangling node symlink left by an old tool session.
+   **fixed-in-tree** (2026-07-24): `_build_vite_command` +
+   `_resolve_vite_entry` in `runtimelib/client/impl/vite_bundler.impl.jac`
+   hand bun the resolved `node_modules/vite/bin/vite.js` for the build,
+   generated-config, and dev-server paths, keeping `bun x vite` only for the
+   not-installed-yet case; regression tests in
+   `jac/tests/runtimelib/test_client_bundle.jac` run a build with `PATH`
+   scrubbed of node. Verified: 5.5s builds here with no node installed at
+   all. (An earlier revision of this entry credited a `_vite_invocation`
+   helper that was never in the tree — same dead-claim pattern as #20.)
 10. **Stale `.jac/cache` + `.jac/client/compiled` after a binary rebuild**
     → client build dies with `ModuleNotFoundError: No module named 'main'`,
     which looks exactly like the wrong-cwd failure. Cache should be keyed
@@ -54,6 +60,14 @@ it) · **open** (nothing done yet).
     project-config parsing and the serving runtime come from the binary,
     so changes there need a full `zig build` (chicken-and-egg: `[dev]` is
     itself read by the embedded config code). **open** (document at least).
+    Related, and worse: a stanza that does not resolve (bad relative path,
+    or a directory with no `jaclang/` inside) falls back to the bundled
+    compiler **silently** — `apply_dev_source_override` in `jac/_jac_finder.py`
+    bare-returns on the isdir guard and swallows everything else in
+    `except Exception: pass`. The only tell is the missing "🛠 jac dev mode"
+    banner, so an edit-and-retest loop can run entirely against the shipped
+    compiler and look like the change did nothing. This site had no `[dev]`
+    stanza at all until 2026-07-24 for exactly that reason. **open**.
 
 ## B. Type checker
 
@@ -132,3 +146,28 @@ it) · **open** (nothing done yet).
 33. Long-running `jac start` processes must be killed by verified
     `/proc/PID/cwd`, and `kill` exit-144 aborts `&&` chains — launch and
     kill in separate commands.
+
+## G. Formatter, lint, and suppressions
+
+34. **The deslop rule strips `# jac:ignore[...]` directives.** W3050 cleared
+    every entry in `source.comments`, including the ones the parser reads
+    into `inline_suppressions` (`jac0core/parser/parser.jac`), so turning on
+    `strip-comments` for this repo silently re-armed E1053 in five files —
+    `jac check` went from 50 passed to 47 passed with no mention of why.
+    **fixed-in-tree** (2026-07-24): `_strip_noise` in
+    `compiler/passes/tool/impl/jac_auto_lint_pass.impl.jac` keeps any comment
+    whose line carries a suppression, with a test in
+    `jac/tests/compiler/passes/tool/test_jac_auto_lint_pass.jac`. jaclang
+    0.34.5 and earlier still strip them, so those five files sit in
+    `[check.lint] exclude` in jac.toml until a release carries the carve-out;
+    drop the entries then.
+35. **`jac fmt` reflow separates code from its suppression comment.** Inline
+    suppressions are keyed by line number, and formatting
+    `new(IntersectionObserver, lambda ... )  # jac:ignore[E1053]` splits the
+    call across lines: the directive rides along on the lambda line while the
+    diagnostic anchors to the `IntersectionObserver` argument line, so the
+    suppression stops applying. No warning, and plain `jac fmt` does it
+    without any deslop rule enabled — this repo had simply never been run
+    through the formatter. **workaround**: the directives were moved onto the
+    line the diagnostic anchors to. A suppression comment arguably belongs to
+    the statement it sits in, not to one line of it. **open**.
