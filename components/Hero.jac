@@ -9,7 +9,6 @@ import from "@hugeicons/react" { HugeiconsIcon }
 import from "@hugeicons/core-free-icons" { StarIcon, BookOpen01Icon }
 
 glob INSTALL_CMD: str = "curl -fsSL https://jaclang.org/install.sh | bash";
-glob CLONE_CMD: str = "git clone https://github.com/jaseci-labs/jac_site && cd jac_site && jac install && jac start";
 
 def:pub Hero() -> JsxElement {
 
@@ -52,9 +51,6 @@ def:pub Hero() -> JsxElement {
                     </div>
                     <div className="anim-fade-up anim-d4 mt-6 flex justify-center lg:justify-start">
                         <CopyCommand command={INSTALL_CMD} className="max-w-full sm:max-w-xl" />
-                    </div>
-                    <div className="anim-fade-up anim-d4 mt-3 flex justify-center lg:justify-start">
-                        <CopyCommand command={CLONE_CMD} className="max-w-full sm:max-w-xl" />
                     </div>
                     <p className="anim-fade-up anim-d5 mt-4 text-sm text-muted-foreground">
                         One self-contained binary. No Python, Node, or C toolchain required.

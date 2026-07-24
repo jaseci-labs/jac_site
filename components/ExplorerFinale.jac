@@ -5,6 +5,7 @@ import from .ui.badge { Badge }
 import from .ui.button { buttonVariants }
 import from .Reveal { Reveal }
 import from .SourceBrowser { SourceBrowser }
+import from .CopyCommand { CopyCommandBlock }
 import from "@jac/runtime" { Link }
 import from "@hugeicons/react" { HugeiconsIcon }
 import from "@hugeicons/core-free-icons" {
@@ -14,6 +15,13 @@ import from "@hugeicons/core-free-icons" {
 
 # Client globs don't cross modules — same concept DOI as BookSection.jac.
 glob BOOK_URL: str = "https://doi.org/10.5281/zenodo.21464040";
+
+glob RUN_LINES: list[str] = [
+    "git clone https://github.com/jaseci-labs/jac_site",
+    "cd jac_site",
+    "jac install",
+    "jac start",
+];
 
 def:pub CodespaceCard(icon: any, tag: str, title: str, body: str) -> JsxElement {
     return <div className="flex items-start gap-4 rounded-xl border border-border/70 bg-card/40 pt-5 pb-5 pl-5 pr-5">
@@ -65,6 +73,16 @@ def:pub ExplorerFinale() -> JsxElement {
                 <p className="mt-4 text-center font-mono text-xs text-muted-foreground">
                     the whole thing · one program · zero glue
                 </p>
+                <div className="mx-auto mt-10 max-w-xl text-center">
+                    <p className="text-balance text-muted-foreground">
+                        This isn&apos;t a site you can only look at — everything above
+                        runs on <span className="font-medium text-foreground">your machine</span>,
+                        right now, in four commands:
+                    </p>
+                    <div className="mt-4 flex justify-center">
+                        <CopyCommandBlock lines={RUN_LINES} className="w-full sm:w-auto sm:min-w-[26rem]" />
+                    </div>
+                </div>
                 <div className="mt-8 flex flex-col items-center gap-3 sm:flex-row sm:flex-wrap sm:justify-center">
                     <a href="https://github.com/jaseci-labs/jaseci" target="_blank" rel="noreferrer"
                         className={buttonVariants().call(None, {"size": "lg"})}>
