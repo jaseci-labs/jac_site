@@ -1,10 +1,10 @@
+import from ..lib.motion { view_once }
 import from "motion/react" { motion }
 
 glob MPath: any = motion.path,
      MLine: any = motion.line,
      MText: any = motion.text,
-     MCircle: any = motion.circle,
-     _VIEW: dict = {"once": True, "amount": 0.4};
+     MCircle: any = motion.circle;
 
 def:pub TaxChip(x: int, y: int, w: int, label: str) -> JsxElement {
     return
@@ -356,7 +356,7 @@ def:pub GradualBorrowDiagram -> JsxElement {
                         strokeWidth="1.2"
                         initial={{"pathLength": 0}}
                         whileInView={{"pathLength": 1}}
-                        viewport={_VIEW}
+                        viewport={view_once()}
                         transition={{"duration": 0.6, "delay": 0.3}}
                     />
                     <polygon
@@ -374,7 +374,7 @@ def:pub GradualBorrowDiagram -> JsxElement {
                         fill="#ff6b35"
                         initial={{"opacity": 0}}
                         whileInView={{"opacity": 1}}
-                        viewport={_VIEW}
+                        viewport={view_once()}
                         transition={{"delay": 0.7}}
                     >
                         own y = obj()
@@ -515,7 +515,7 @@ def:pub GradualBorrowDiagram -> JsxElement {
                         strokeWidth="1.4"
                         initial={{"opacity": 0}}
                         whileInView={{"opacity": 1}}
-                        viewport={_VIEW}
+                        viewport={view_once()}
                         transition={{"delay": 0.5}}
                     />
                     <MPath
@@ -527,7 +527,7 @@ def:pub GradualBorrowDiagram -> JsxElement {
                         strokeDasharray="3 4"
                         initial={{"pathLength": 0}}
                         whileInView={{"pathLength": 1}}
-                        viewport={_VIEW}
+                        viewport={view_once()}
                         transition={{"duration": 0.6, "delay": 0.8}}
                     />
                     <MText
@@ -539,7 +539,7 @@ def:pub GradualBorrowDiagram -> JsxElement {
                         fill="#56d364"
                         initial={{"opacity": 0}}
                         whileInView={{"opacity": 1}}
-                        viewport={_VIEW}
+                        viewport={view_once()}
                         transition={{"delay": 1.2}}
                     >
                         borrow ✓ checked
@@ -553,7 +553,7 @@ def:pub GradualBorrowDiagram -> JsxElement {
                         strokeDasharray="3 4"
                         initial={{"pathLength": 0}}
                         whileInView={{"pathLength": 1}}
-                        viewport={_VIEW}
+                        viewport={view_once()}
                         transition={{"duration": 0.6, "delay": 1.0}}
                     />
                     <text
@@ -576,7 +576,7 @@ def:pub GradualBorrowDiagram -> JsxElement {
                         fillOpacity="0.9"
                         initial={{"opacity": 0}}
                         whileInView={{"opacity": 1}}
-                        viewport={_VIEW}
+                        viewport={view_once()}
                         transition={{"delay": 1.4}}
                     >
                         escape = compile error
@@ -592,7 +592,7 @@ def:pub GradualBorrowDiagram -> JsxElement {
                         strokeWidth="1.1"
                         initial={{"pathLength": 0}}
                         whileInView={{"pathLength": 1}}
-                        viewport={_VIEW}
+                        viewport={view_once()}
                         transition={{"duration": 0.4, "delay": 1.5}}
                     />
                     <MLine
@@ -605,7 +605,7 @@ def:pub GradualBorrowDiagram -> JsxElement {
                         strokeWidth="1.1"
                         initial={{"pathLength": 0}}
                         whileInView={{"pathLength": 1}}
-                        viewport={_VIEW}
+                        viewport={view_once()}
                         transition={{"duration": 0.4, "delay": 1.6}}
                     />
                     <MText
@@ -617,7 +617,7 @@ def:pub GradualBorrowDiagram -> JsxElement {
                         fill="var(--muted-foreground)"
                         initial={{"opacity": 0}}
                         whileInView={{"opacity": 1}}
-                        viewport={_VIEW}
+                        viewport={view_once()}
                         transition={{"delay": 1.7}}
                     >
                         ships as today&apos;s code
@@ -631,7 +631,7 @@ def:pub GradualBorrowDiagram -> JsxElement {
                         fill="#ff6b35"
                         initial={{"opacity": 0}}
                         whileInView={{"opacity": 1}}
-                        viewport={_VIEW}
+                        viewport={view_once()}
                         transition={{"delay": 1.8}}
                     >
                         ships Rust-grade native

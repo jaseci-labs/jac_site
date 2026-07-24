@@ -1,8 +1,8 @@
+import from ..lib.motion { view_once }
 import from "motion/react" { motion }
 
 glob MLine: any = motion.line,
      MCircle: any = motion.circle,
-     _VIEW: dict = {"once": True, "amount": 0.4},
      _GNODES: list[dict] = [
          {"x": 150, "y": 92},
          {"x": 150, "y": 228},
@@ -201,7 +201,7 @@ def:pub TopokineticDiagram -> JsxElement {
                             strokeWidth="1.1"
                             initial={{"pathLength": 0}}
                             whileInView={{"pathLength": 1}}
-                            viewport={_VIEW}
+                            viewport={view_once()}
                             transition={{"duration": 0.5, "delay": 0.15 + ei * 0.07}}
                         />
                     }}
@@ -240,7 +240,7 @@ def:pub TopokineticDiagram -> JsxElement {
                             strokeWidth="1.2"
                             initial={{"opacity": 0}}
                             whileInView={{"opacity": 1}}
-                            viewport={_VIEW}
+                            viewport={view_once()}
                             transition={{"duration": 0.4, "delay": 0.2 + ni * 0.08}}
                         />
                     }}

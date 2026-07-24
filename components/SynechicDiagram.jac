@@ -1,9 +1,9 @@
+import from ..lib.motion { view_once }
 import from "motion/react" { motion }
 
 glob MPath: any = motion.path,
      MLine: any = motion.line,
-     MText: any = motion.text,
-     _VIEW: dict = {"once": True, "amount": 0.4};
+     MText: any = motion.text;
 
 def:pub StackBox(x: int, y: int, label: str, sub: str) -> JsxElement {
     return
@@ -251,7 +251,7 @@ def:pub SynechicDiagram -> JsxElement {
                         strokeWidth="1.2"
                         initial={{"pathLength": 0}}
                         whileInView={{"pathLength": 1}}
-                        viewport={_VIEW}
+                        viewport={view_once()}
                         transition={{"duration": 0.7, "delay": 0.2}}
                     />
                     <MPath
@@ -262,7 +262,7 @@ def:pub SynechicDiagram -> JsxElement {
                         strokeWidth="1.2"
                         initial={{"pathLength": 0}}
                         whileInView={{"pathLength": 1}}
-                        viewport={_VIEW}
+                        viewport={view_once()}
                         transition={{"duration": 0.7, "delay": 0.35}}
                     />
                     <MPath
@@ -273,7 +273,7 @@ def:pub SynechicDiagram -> JsxElement {
                         strokeWidth="1.2"
                         initial={{"pathLength": 0}}
                         whileInView={{"pathLength": 1}}
-                        viewport={_VIEW}
+                        viewport={view_once()}
                         transition={{"duration": 0.7, "delay": 0.5}}
                     />
                     {#* the continuous medium *#}
@@ -389,7 +389,7 @@ def:pub SynechicDiagram -> JsxElement {
                         strokeWidth="1.2"
                         initial={{"pathLength": 0}}
                         whileInView={{"pathLength": 1}}
-                        viewport={_VIEW}
+                        viewport={view_once()}
                         transition={{"duration": 0.5, "delay": 0.7}}
                     />
                     <MLine
@@ -402,7 +402,7 @@ def:pub SynechicDiagram -> JsxElement {
                         strokeWidth="1.2"
                         initial={{"pathLength": 0}}
                         whileInView={{"pathLength": 1}}
-                        viewport={_VIEW}
+                        viewport={view_once()}
                         transition={{"duration": 0.5, "delay": 0.85}}
                     />
                     <MLine
@@ -415,7 +415,7 @@ def:pub SynechicDiagram -> JsxElement {
                         strokeWidth="1.2"
                         initial={{"pathLength": 0}}
                         whileInView={{"pathLength": 1}}
-                        viewport={_VIEW}
+                        viewport={view_once()}
                         transition={{"duration": 0.5, "delay": 1.0}}
                     />
                     <MText
@@ -425,7 +425,7 @@ def:pub SynechicDiagram -> JsxElement {
                         fill="#56d364"
                         initial={{"opacity": 0}}
                         whileInView={{"opacity": 1}}
-                        viewport={_VIEW}
+                        viewport={view_once()}
                         transition={{"delay": 1.1}}
                     >
                         ✓
@@ -437,7 +437,7 @@ def:pub SynechicDiagram -> JsxElement {
                         fill="#56d364"
                         initial={{"opacity": 0}}
                         whileInView={{"opacity": 1}}
-                        viewport={_VIEW}
+                        viewport={view_once()}
                         transition={{"delay": 1.25}}
                     >
                         ✓
@@ -449,7 +449,7 @@ def:pub SynechicDiagram -> JsxElement {
                         fill="#56d364"
                         initial={{"opacity": 0}}
                         whileInView={{"opacity": 1}}
-                        viewport={_VIEW}
+                        viewport={view_once()}
                         transition={{"delay": 1.4}}
                     >
                         ✓

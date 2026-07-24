@@ -23,16 +23,25 @@ select = ["all", "strip-comments", "strip-docstrings"]
 exclude = [
     # Build output: bundler-generated .jac never belongs to the source tree.
     ".jac/*",
-    # These five carry `# jac:ignore[...]` directives, which the parser reads
-    # into inline_suppressions -- deleting one silently re-arms the diagnostic
-    # it suppressed. jaclang <= 0.34.5 strips them along with real comments, so
+    # Teaching samples rendered by components/Showcase.jac. These are content,
+    # not site source: their comments ARE the explanation (so strip-comments
+    # must not touch them), and "all" turns on no-print (E3012), which a
+    # `with entry { print(...) }` sample is entitled to trip.
+    "examples/*",
+    # These carry `# jac:ignore[...]` directives, which the parser reads into
+    # inline_suppressions -- deleting one silently re-arms the diagnostic it
+    # suppressed. jaclang <= 0.34.5 strips them along with real comments, so
     # they stay lint-exempt until a release carrying the W3050 carve-out lands;
-    # drop these five entries then.
-    "components/DocsShell.jac",
+    # drop these entries then.
+    #
+    # DocsShell.jac and Leaderboard.jac left this list when their browser-API
+    # calls moved into lib/async_utils.cl.jac and lib/format.cl.jac -- the two
+    # suppressions the site still needs now live in one small file each.
     "components/FloatingSource.jac",
-    "components/Leaderboard.jac",
     "components/Reveal.jac",
-    "raylib_shim.jac",
+    "game/webgl_host.jac",
+    "lib/async_utils.cl.jac",
+    "lib/format.cl.jac",
 ]
 
 [jac-shadcn]

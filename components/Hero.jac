@@ -1,6 +1,6 @@
 import from .ui.button { buttonVariants }
 import from .ui.badge { Badge }
-import from "..lib.utils" { cn }
+import from ..lib.utils { cn }
 import from "@jac/runtime" { Link }
 import from .GraphBackdrop { GraphBackdrop }
 import from .FloatingSource { FloatingSource }

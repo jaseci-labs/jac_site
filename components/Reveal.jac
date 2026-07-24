@@ -1,5 +1,5 @@
 import from react { useEffect }
-import from "..lib.utils" { cn }
+import from ..lib.utils { cn }
 
 def:pub Reveal(
     children: any = None, delay: int = 0, className: str = ""

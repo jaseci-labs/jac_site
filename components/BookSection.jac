@@ -1,6 +1,6 @@
 import from .ui.badge { Badge }
 import from .ui.button { buttonVariants }
-import from "..lib.utils" { cn }
+import from ..lib.utils { cn }
 import from .Reveal { Reveal }
 import from "@hugeicons/react" { HugeiconsIcon }
 import from "@hugeicons/core-free-icons" {

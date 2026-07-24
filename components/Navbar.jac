@@ -1,5 +1,5 @@
 import from .ui.button { buttonVariants }
-import from "..lib.utils" { cn }
+import from ..lib.utils { cn }
 import from "@jac/runtime" { Link }
 import from react { useEffect }
 sv import from ..services.install { ensure_install }

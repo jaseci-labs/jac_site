@@ -1,7 +1,7 @@
 import from .ui.badge { Badge }
 import from .ui.button { Button }
 import from .Reveal { Reveal }
-import from ..raylib_shim { run_game }
+import from ..game.webgl_host { run_game }
 import from "@hugeicons/react" { HugeiconsIcon }
 import from "@hugeicons/core-free-icons" { GameController01Icon, PlayIcon }
 

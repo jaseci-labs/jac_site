@@ -1,10 +1,19 @@
 import os;
 import hashlib;
-import datetime;
-import urllib.request;
+import from .github { fetch }
+import from .timefmt { now_iso, seconds_since }
+
+obj InstallStatus {
+    has updated: bool = False,
+        building: bool = False,
+        sha: str = "",
+        checked_at: str = "";
+}
 
 glob INSTALL_SRC: str = "https://raw.githubusercontent.com/jaseci-labs/jac/main/scripts/install.sh",
-     CHECK_TTL_S: int = 900,
+     USER_AGENT: str = "jaclang.org installer sync",
+     CHECK_TTL_S: float = 900.0,
+     MIN_SCRIPT_BYTES: int = 500,
      _pulling: bool = False;
 
 node InstallMeta {
@@ -13,54 +22,35 @@ node InstallMeta {
         updated_at: str = "";
 }
 
-def _now_dt -> datetime.datetime {
-    return datetime.datetime.now(datetime.UTC).replace(tzinfo=None);
-}
-
-def _now -> str {
-    return _now_dt().isoformat() + "Z";
-}
-
 def _get_meta -> InstallMeta | None {
     metas = [root.shared-->[?:InstallMeta]];
     return metas[0] if metas else None;
 }
 
-def _asset_path -> str {
+def asset_path -> str {
     return os.path.join("assets", "install.sh");
 }
 
 def _fresh(meta: InstallMeta) -> bool {
-    if not meta.checked_at {
-        return False;
-    }
-    try {
-        then = datetime.datetime.fromisoformat(meta.checked_at.rstrip("Z"));
-        return (_now_dt() - then).total_seconds() < CHECK_TTL_S;
-    } except ValueError {
-        return False;
-    }
+    waited = seconds_since(meta.checked_at);
+    return waited >= 0.0 and waited < CHECK_TTL_S;
 }
 
-def _fetch -> str | None {
-    try {
-        req = urllib.request.Request(
-            INSTALL_SRC, headers={"User-Agent": "jaclang.org installer sync"}
-        );
-        resp = urllib.request.urlopen(req, timeout=10);
-        try {
-            data = resp.read();
-        } finally {
-            resp.close();
-        }
-        text = data.decode("utf-8");
-        if not text.startswith("#!") or len(text) < 500 {
-            return None;
-        }
-        return text;
-    } except Exception {
+def looks_like_script(text: str) -> bool {
+    return text.startswith("#!") and len(text) >= MIN_SCRIPT_BYTES;
+}
+
+def _fetch_script -> str | None {
+    data = fetch(INSTALL_SRC, USER_AGENT);
+    if data is None {
         return None;
     }
+    try {
+        text = data.decode("utf-8");
+    } except UnicodeDecodeError {
+        return None;
+    }
+    return text if looks_like_script(text) else None;
 }
 
 def _write_asset(text: str) {
@@ -69,7 +59,7 @@ def _write_asset(text: str) {
     with open(tmp, "w") as f {
         f.write(text);
     }
-    os.replace(tmp, _asset_path());
+    os.replace(tmp, asset_path());
 }
 
 walker:pub ensure_install {
@@ -80,40 +70,32 @@ walker:pub ensure_install {
         if meta is None {
             meta = (root.shared ++> InstallMeta()) as InstallMeta;
         }
-        have_file = os.path.exists(_asset_path());
+        have_file = os.path.exists(asset_path());
         if (_fresh(meta) and have_file) or _pulling {
-            report {
-                "updated": False,
-                "building": _pulling,
-                "sha": meta.sha,
-                "checked_at": meta.checked_at,
-
-            };
+            report InstallStatus(
+                building=_pulling, sha=meta.sha, checked_at=meta.checked_at
+            );
         } else {
             _pulling = True;
             updated = False;
             try {
-                text = _fetch();
+                text = _fetch_script();
                 if text is not None {
                     new_sha = hashlib.sha256(text.encode("utf-8")).hexdigest();
                     if new_sha != meta.sha or not have_file {
                         _write_asset(text);
                         meta.sha = new_sha;
-                        meta.updated_at = _now();
+                        meta.updated_at = now_iso();
                         updated = True;
                     }
-                    meta.checked_at = _now();
+                    meta.checked_at = now_iso();
                 }
             } finally {
                 _pulling = False;
             }
-            report {
-                "updated": updated,
-                "building": False,
-                "sha": meta.sha,
-                "checked_at": meta.checked_at,
-
-            };
+            report InstallStatus(
+                updated=updated, sha=meta.sha, checked_at=meta.checked_at
+            );
         }
     }
 }

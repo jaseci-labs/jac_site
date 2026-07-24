@@ -1,5 +1,5 @@
 import from react { useEffect }
-import from "..lib.utils" { cn }
+import from ..lib.utils { cn }
 import from .SourceBrowser { SourceBrowser }
 import from "@hugeicons/react" { HugeiconsIcon }
 import from "@hugeicons/core-free-icons" {

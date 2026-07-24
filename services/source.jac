@@ -2,7 +2,8 @@ import os;
 import from pathlib { Path }
 
 glob EXCLUDE_DIRS: set = {".git", ".jac", "node_modules", "__pycache__", "assets"},
-     ALLOW_EXT: set = {".jac", ".toml", ".css", ".md"};
+     ALLOW_EXT: set = {".jac", ".toml", ".css", ".md"},
+     EXAMPLES_DIR: str = "examples";
 
 obj SourceFile {
     has path: str,
@@ -73,8 +74,8 @@ def:pub source_tree -> list[SourceFile] {
 
 def:pub source_file(path: str) -> SourceView | None {
     allowed = {f.path: f for f in _walk_sources()};
-    entry = allowed.get(path);
-    if entry is None {
+    found = allowed.get(path);
+    if found is None {
         return None;
     }
     full = os.path.join(os.getcwd(), path);
@@ -85,9 +86,22 @@ def:pub source_file(path: str) -> SourceView | None {
     }
     return SourceView(
         path=path,
-        language=entry.language,
+        language=found.language,
         size_bytes=os.path.getsize(full),
-        lines=entry.lines,
+        lines=found.lines,
         raw_lines=text.split("\n"),
     );
+}
+
+def:pub examples -> dict[str, SourceView] {
+    out: dict[str, SourceView] = {};
+    for f in _walk_sources() {
+        if f.dir == EXAMPLES_DIR {
+            view = source_file(f.path);
+            if view is not None {
+                out[f.name[:-4]] = view;
+            }
+        }
+    }
+    return out;
 }

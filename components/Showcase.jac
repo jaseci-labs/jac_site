@@ -1,3 +1,4 @@
+sv import from ..services.source { SourceView, examples }
 import from .ui.badge { Badge }
 import from .ui.tabs { Tabs, TabsList, TabsTrigger, TabsContent }
 import from .CodeBlock { CodeBlock }
@@ -6,66 +7,7 @@ import from "@jac/runtime" { Link }
 import from "@hugeicons/react" { HugeiconsIcon }
 import from "@hugeicons/core-free-icons" { CheckmarkCircle01Icon, ArrowUpRight01Icon }
 
-glob _AI_LINES: list[str] = [
-         "enum Priority { LOW, MEDIUM, HIGH, URGENT }",
-         "",
-         'sem assess = "Assess the priority of a support ticket.";',
-         "",
-         "def assess(ticket: str) -> Priority by llm();",
-         "",
-         "with entry {",
-         '    print(assess("Checkout is down and customers are leaving!"));',
-         "    # Priority.URGENT",
-         "}",
-
-     ],
-     _GRAPH_LINES: list[str] = [
-         "node Task {",
-         "    has title: str;",
-         "    has done: bool = False;",
-         "}",
-         "",
-         "walker:pub add_task {",
-         "    has title: str;",
-         "    can create with Root entry {",
-         "        task = Task(title=self.title);",
-         "        root ++> task;",
-         '        report {"id": jid(task)};',
-         "    }",
-         "}",
-         "",
-         "walker:pub list_tasks {",
-         "    can fetch with Root entry {",
-         "        report [t.title for t in [-->][?:Task]];",
-         "    }",
-         "}",
-         "",
-         "# jac start api.jac  →  POST /walker/add_task",
-
-     ],
-     _FULL_LINES: list[str] = [
-         "node Todo { has title: str; }",
-         "",
-         "def:pub add_todo(title: str) -> Todo {",
-         "    todo = Todo(title=title);",
-         "    root ++> todo;",
-         "    return todo;",
-         "}",
-         "",
-         "def:pub get_todos -> list[Todo] {",
-         "    return [root-->][?:Todo];",
-         "}",
-         "",
-         "cl def:pub app -> JsxElement {",
-         "    has todos: list[Todo] = [];",
-         "    async can with entry { todos = await get_todos(); }",
-         "    return <ul>",
-         "        {[<li key={jid(t)}>{t.title}</li> for t in todos]}",
-         "    </ul>;",
-         "}",
-
-     ],
-     _NATIVE_LINES: list[str] = [
+glob _NATIVE_LINES: list[str] = [
          "obj Buffer { has n: int = 0; }",
          "",
          "with entry {",
@@ -145,6 +87,19 @@ def:pub ShowcasePanel(
 }
 
 def:pub Showcase -> JsxElement {
+    has samples: dict[str, SourceView] = {};
+
+    async def load_samples -> None;
+
+    def sample_lines(name: str) -> list[str] {
+        view = samples.get(name);
+        return view.raw_lines if view is not None else [];
+    }
+
+    can with entry {
+        _ = load_samples();
+    }
+
     return
         <section id="language" className="pt-16 pb-16 sm:pt-24 sm:pb-24">
             <div
@@ -193,7 +148,7 @@ def:pub Showcase -> JsxElement {
                             </TabsList>
                             <TabsContent value="ai">
                                 <ShowcasePanel
-                                    lines={_AI_LINES}
+                                    lines={sample_lines("ai_priority")}
                                     file="triage.jac"
                                     heading="There is no prompt to write."
                                     blurb="Delegate a function body to a model with two words."
@@ -209,7 +164,7 @@ def:pub Showcase -> JsxElement {
                             </TabsContent>
                             <TabsContent value="graph">
                                 <ShowcasePanel
-                                    lines={_GRAPH_LINES}
+                                    lines={sample_lines("graph_api")}
                                     file="api.jac"
                                     heading="Your graph is your API."
                                     blurb="Nodes and edges are the data model. Walkers — mobile computation — are the endpoints."
@@ -225,7 +180,7 @@ def:pub Showcase -> JsxElement {
                             </TabsContent>
                             <TabsContent value="full">
                                 <ShowcasePanel
-                                    lines={_FULL_LINES}
+                                    lines={sample_lines("fullstack_todo")}
                                     file="app.jac"
                                     heading="Frontend and backend in one file."
                                     blurb="cl code compiles to React for the browser. Everything else compiles to Python for the server."
