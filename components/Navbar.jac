@@ -32,6 +32,10 @@ def:pub Navbar() -> JsxElement {
                 <span className="text-lg font-bold tracking-tight">Jac</span>
             </Link>
             <div className="ml-auto flex items-center gap-2">
+                <Link to="/leaderboard"
+                    className="rounded-md pl-3 pr-3 pt-1.5 pb-1.5 text-sm text-muted-foreground transition-colors hover:bg-accent hover:text-foreground">
+                    Leaderboard
+                </Link>
                 <Link to="/docs/latest"
                     className="rounded-md pl-3 pr-3 pt-1.5 pb-1.5 text-sm text-muted-foreground transition-colors hover:bg-accent hover:text-foreground">
                     Docs
