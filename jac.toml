@@ -34,6 +34,21 @@ lib_imports = ["import tailwindcss from '@tailwindcss/vite'"]
 
 [serve]
 base_route_app = "app"
+# Serve assets/install.sh at the clean root URL /install.sh (short-cache),
+# kept fresh by services/install.jac's ensure_install walker. This knob
+# covers the jac-scale FastAPI server (production).
+extra_asset_exts = [".sh"]
+
+[client.assets]
+# Same thing for the `jac start` dev server, which routes root-path assets
+# by this list instead. NOTE: a non-empty list REPLACES the server's default
+# set, so this is the default set plus .sh (fonts arrive as root-path
+# requests, e.g. /geist-latin-wght-normal.woff2).
+custom_extensions = [
+    ".sh", ".png", ".jpg", ".jpeg", ".gif", ".webp", ".svg", ".ico",
+    ".woff", ".woff2", ".ttf", ".otf", ".eot", ".mp4", ".webm", ".mp3",
+    ".wav", ".css", ".js", ".json",
+]
 
 # Keep the source service in-process: without this, services/source.jac being
 # sv-imported from the client makes `jac start` auto-enter local microservice

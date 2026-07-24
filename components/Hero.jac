@@ -2,15 +2,29 @@ import from .ui.button { buttonVariants }
 import from .ui.badge { Badge }
 import from "..lib.utils" { cn }
 import from "@jac/runtime" { Link }
+import from react { useEffect }
+sv import from ..services.install { ensure_install }
 import from .GraphBackdrop { GraphBackdrop }
 import from .FloatingSource { FloatingSource }
 import from .CopyCommand { CopyCommand }
 import from "@hugeicons/react" { HugeiconsIcon }
 import from "@hugeicons/core-free-icons" { StarIcon, BookOpen01Icon }
 
-glob INSTALL_CMD: str = "curl -fsSL https://raw.githubusercontent.com/jaseci-labs/jaseci/main/scripts/install.sh | bash";
+glob INSTALL_CMD: str = "curl -fsSL https://jaclang.org/install.sh | bash";
 
 def:pub Hero() -> JsxElement {
+    # Every landing-page visit keeps the hosted installer fresh — the same
+    # staleness-check-on-visit pattern the docs graph uses. Fire-and-forget:
+    # nothing in the UI waits on it.
+    async def freshen_installer {
+        _ = root spawn ensure_install();
+    }
+
+    useEffect(lambda {
+        _ = freshen_installer();
+        return lambda {};
+    }, []);
+
     return <section id="top" className="relative overflow-hidden pt-36 pb-24 sm:pt-44 sm:pb-32">
         <div className="hero-glow absolute inset-0"></div>
         <div className="dot-grid absolute inset-0"></div>
