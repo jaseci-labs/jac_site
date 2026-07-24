@@ -1,5 +1,5 @@
 import from "embla-carousel-react" { default as useEmblaCarousel }
-import from react { createContext, useContext }
+import from react { createContext, useContext, useEffect }
 import from "@hugeicons/react" { HugeiconsIcon }
 import from "@hugeicons/core-free-icons" { ArrowLeft01Icon, ArrowRight01Icon }
 import from .button { Button }
@@ -11,7 +11,8 @@ def:pub Carousel(props: any) -> JsxElement {
     attrs: dict[str, any] = {** props};
     orientation = props["orientation"] or "horizontal";
     axisOpt = "x" if orientation == "horizontal" else "y";
-    embla: any = useEmblaCarousel({"axis": axisOpt}, props["plugins"]);
+    userOpts: dict[str, any] = (props["opts"] or {}) as dict[str, any];
+    embla: any = useEmblaCarousel({"axis": axisOpt, **userOpts}, props["plugins"]);
     carouselRef = embla[0];
     api: any = embla[1];
     scrollPrev = lambda -> any { api and api.scrollPrev(); };
@@ -64,6 +65,57 @@ def:pub CarouselItem(props: any) -> JsxElement {
                 "min-w-0 shrink-0 grow-0 basis-full", padClass, props["className"]
             )}
         />;
+}
+
+"""One pagination dot; a component per dot keeps the scroll index bound
+per-instance instead of late-bound through a loop closure."""
+def:pub CarouselDot(index: int, selected: int) -> JsxElement {
+    ctx: any = useContext(CarouselContext);
+
+    def go(_e: any) {
+        if ctx and ctx.api {
+            ctx.api.scrollTo(index);
+        }
+    }
+
+    return <button type="button" onClick={go}
+        aria-label={"Go to slide " + str(index + 1)}
+        className={cn(
+            "h-2 cursor-pointer rounded-full transition-all duration-300",
+            "w-5 bg-primary" if selected == index
+            else "w-2 bg-muted-foreground/30 hover:bg-muted-foreground/60"
+        )} />;
+}
+
+def:pub CarouselDots(props: any) -> JsxElement {
+    has selected: int = 0;
+    has count: int = 0;
+    ctx: any = useContext(CarouselContext);
+    api: any = ctx.api if ctx else None;
+
+    useEffect(lambda {
+        if not api {
+            return lambda {};
+        }
+        update = lambda (_a: any) {
+            count = len(api.scrollSnapList());
+            selected = api.selectedScrollSnap();
+        };
+        update(None);
+        api.on("select", update);
+        api.on("reInit", update);
+        return lambda {
+            api.off("select", update);
+            api.off("reInit", update);
+        };
+    }, [api]);
+
+    return <div data-slot="carousel-dots"
+        className={cn("flex items-center justify-center gap-2", props["className"])}>
+        {for i in range(count) {
+            <CarouselDot key={str(i)} index={i} selected={selected} />
+        }}
+    </div>;
 }
 
 def:pub CarouselPrevious(props: any) -> JsxElement {

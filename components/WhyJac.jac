@@ -1,10 +1,11 @@
 import from .ui.badge { Badge }
 import from .ui.carousel {
-    Carousel, CarouselContent, CarouselItem, CarouselPrevious, CarouselNext
+    Carousel, CarouselContent, CarouselItem, CarouselPrevious, CarouselNext, CarouselDots
 }
 import from .Reveal { Reveal }
 import from .SynechicDiagram { SynechicDiagram }
 import from .TopokineticDiagram { TopokineticDiagram }
+import from .GradualBorrowDiagram { GradualBorrowDiagram }
 
 """One slide's frame: big title (optional gradient accent word), small mono
 subline, content."""
@@ -68,13 +69,16 @@ def:pub WhyJac() -> JsxElement {
                                     <TopokineticDiagram />
                                 </WhySlide>
                             </CarouselItem>
+                            <CarouselItem>
+                                <WhySlide title="Jac has" accent="gradual borrow checking" sub="From fully managed to zero-RC native, one declaration at a time">
+                                    <GradualBorrowDiagram />
+                                </WhySlide>
+                            </CarouselItem>
                         </CarouselContent>
                         <CarouselPrevious className="left-3" />
                         <CarouselNext className="right-3" />
+                        <CarouselDots className="mt-5" />
                     </Carousel>
-                    <p className="mt-4 text-center font-mono text-xs text-muted-foreground">
-                        the problem · bet one · bet two
-                    </p>
                 </div>
             </Reveal>
         </div>

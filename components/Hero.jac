@@ -32,8 +32,9 @@ def:pub Hero() -> JsxElement {
                     </h1>
                     <p className="anim-fade-up anim-d2 mx-auto mt-6 max-w-xl text-balance text-lg leading-8 text-muted-foreground lg:mx-0 xl:text-base xl:leading-7">
                         A Python-like language where AI, graphs, persistence, APIs, UIs,
-                        and deployment are language features — compiled to Python
-                        bytecode, JavaScript, and native machine code.
+                        and deployment are language features —{" "}
+                        <span className="text-gradient font-medium">synechic</span>{" "}
+                        across Python bytecode, JavaScript, and native machine code.
                     </p>
                     <div className="anim-fade-up anim-d3 mt-8 flex flex-col items-center gap-3 sm:flex-row sm:flex-wrap lg:items-start">
                         <a href="https://github.com/jaseci-labs/jaseci" target="_blank" rel="noreferrer"

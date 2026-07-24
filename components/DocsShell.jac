@@ -3,6 +3,7 @@ on-page TOC. All data comes from walkers over the persistent docs graph."""
 sv import from ..services.docs { ensure_docs, docs_status, doc_tree, doc_page }
 import from "@jac/runtime" { Link, Navigate, useLocation, useNavigate }
 import from .GraphBackdrop { GraphBackdrop }
+import from .FloatingSource { FloatingSource }
 import from .ui.select {
     Select, SelectTrigger, SelectContent, SelectGroup, SelectItem, SelectValue
 }
@@ -298,5 +299,6 @@ def:pub DocsShell() -> JsxElement {
                 }}
             </aside>
         </div>
+        <FloatingSource always_float={True} closable={True} />
     </div>;
 }

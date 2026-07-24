@@ -1,7 +1,7 @@
 """'What you get' and 'Build anything' as two slides of one carousel."""
 import from .ui.card { Card, CardHeader, CardTitle, CardContent }
 import from .ui.carousel {
-    Carousel, CarouselContent, CarouselItem, CarouselPrevious, CarouselNext
+    Carousel, CarouselContent, CarouselItem, CarouselPrevious, CarouselNext, CarouselDots
 }
 import from .Reveal { Reveal }
 import from .WhyJac { WhySlide }
@@ -95,10 +95,8 @@ def:pub Capabilities() -> JsxElement {
                         </CarouselContent>
                         <CarouselPrevious className="left-3" />
                         <CarouselNext className="right-3" />
+                        <CarouselDots className="mt-5" />
                     </Carousel>
-                    <p className="mt-4 text-center font-mono text-xs text-muted-foreground">
-                        what you get · build anything
-                    </p>
                 </div>
             </Reveal>
         </div>
