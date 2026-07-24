@@ -8,7 +8,10 @@ import from .CopyCommand { CopyCommand }
 import from "@hugeicons/react" { HugeiconsIcon }
 import from "@hugeicons/core-free-icons" { StarIcon, BookOpen01Icon }
 
-glob INSTALL_CMD: str = "curl -fsSL https://jaclang.org/install.sh | bash";
+# /static/... is the one asset route both servers agree on. The root route
+# (/install.sh) 404s in production: the scale server's serve_root_asset has a
+# hardwired extension allowlist with no .sh and no config knob to extend it.
+glob INSTALL_CMD: str = "curl -fsSL https://jaclang.org/static/install.sh | bash";
 
 def:pub Hero() -> JsxElement {
 

@@ -35,18 +35,20 @@ lib_imports = ["import tailwindcss from '@tailwindcss/vite'"]
 
 [serve]
 base_route_app = "app"
-# Serve assets/install.sh at the clean root URL /install.sh (short-cache),
-# kept fresh by services/install.jac's ensure_install walker. This knob
-# covers the jac-scale FastAPI server (production).
-extra_asset_exts = [".sh"]
+# NOTE: there is no config knob for the root-asset extension allowlist. A
+# previous `extra_asset_exts = [".sh"]` here was inert — the scale server's
+# serve_root_asset hardwires its allowlist, so /install.sh 404'd in
+# production while working under `jac start`. assets/install.sh is served at
+# /static/install.sh instead, which both servers route identically.
 
 [client.assets]
-# Same thing for the `jac start` dev server, which routes root-path assets
-# by this list instead. NOTE: a non-empty list REPLACES the server's default
-# set, so this is the default set plus .sh (fonts arrive as root-path
-# requests, e.g. /geist-latin-wght-normal.woff2).
+# The `jac start` dev server routes root-path assets by this list. NOTE: a
+# non-empty list REPLACES the server's default set, so this is the default
+# set verbatim — it exists only because fonts arrive as root-path requests
+# (e.g. /geist-latin-wght-normal.woff2). Deliberately no ".sh": adding it
+# would make dev serve an /install.sh that production does not.
 custom_extensions = [
-    ".sh", ".png", ".jpg", ".jpeg", ".gif", ".webp", ".svg", ".ico",
+    ".png", ".jpg", ".jpeg", ".gif", ".webp", ".svg", ".ico",
     ".woff", ".woff2", ".ttf", ".otf", ".eot", ".mp4", ".webm", ".mp3",
     ".wav", ".css", ".js", ".json",
 ]

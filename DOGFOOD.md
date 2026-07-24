@@ -77,13 +77,22 @@ it) · **open** (nothing done yet).
 
 20. **Root-asset route: hardwired extension allowlist + 1-year
     Cache-Control** — wrong for mutable content like an auto-refreshed
-    install.sh. **fixed-in-tree**: additive `[serve] extra_asset_exts`
-    (scale server) with 300s cache for opted-in extensions.
+    install.sh. The `[serve] extra_asset_exts` knob this entry previously
+    claimed as **fixed-in-tree** does not exist: `grep` finds it nowhere in
+    jaseci, and `JacAPIServerStatic.serve_root_asset`
+    (`jac/jaclang/scale/server/impl/serve.static.impl.jac`) still hardwires
+    `allowed_extensions` with no config read. The site shipped a dead knob
+    in jac.toml and `https://jaclang.org/install.sh` 404'd in production.
+    **workaround**: serve at `/static/install.sh`, which goes through
+    `serve_static_file` (no extension allowlist, and no Cache-Control
+    header at all, so mutable content stays mutable). **open**.
 21. **Two servers, two asset knobs, different semantics**: the `jac start`
     dev server honors `[client.assets] custom_extensions`, which
     **replaces** its default set (root-path fonts 404'd until the defaults
-    were re-listed); the scale server now has the additive
-    `[serve] extra_asset_exts`. Needs unification. **open**.
+    were re-listed); the scale server has no equivalent knob at all. This
+    is what hid #20 — `.sh` in `custom_extensions` made `/install.sh` work
+    in dev, so the production 404 never showed up locally. Needs
+    unification. **open**.
 22. **No raw-response primitive for walkers/functions** — everything is
     wrapped in the JSON envelope, so dynamic plain-text/HTML endpoints
     aren't expressible in user code. **open** (worked around by serving

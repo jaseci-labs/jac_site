@@ -1,7 +1,8 @@
 """Keeps the hosted installer fresh — the same staleness-check-on-visit
 pattern as the docs graph. ensure_install pulls scripts/install.sh from the
-monorepo's main branch and swaps assets/install.sh (served at /install.sh
-via [serve] extra_asset_exts) only when the bytes actually changed. The
+monorepo's main branch and swaps assets/install.sh (served at
+/static/install.sh — the root /install.sh route 404s in production, see
+jac.toml) only when the bytes actually changed. The
 check TTL hangs off root.shared, so it survives restarts; the file itself
 is re-materialized on first visit after a fresh deploy."""
 import os;
