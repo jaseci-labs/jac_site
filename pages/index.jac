@@ -7,6 +7,7 @@ import from ..components.Capabilities { Capabilities }
 import from ..components.OneBinary { OneBinary }
 import from ..components.Agents { Agents }
 import from ..components.BookSection { BookSection }
+import from ..components.ExplorerFinale { ExplorerFinale }
 
 def:pub page() -> JsxPage {
     return <>
@@ -19,5 +20,6 @@ def:pub page() -> JsxPage {
         <OneBinary />
         <Agents />
         <BookSection />
+        <ExplorerFinale />
     </>;
 }

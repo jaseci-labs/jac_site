@@ -12,12 +12,15 @@ def:pub FloatingSource() -> JsxElement {
     has floating: bool = False;
     has expanded: bool = False;
     has size_anim: bool = False;
+    has yielded: bool = False;
     has anchorRef: Ref[HTMLDivElement] = Ref();
     has winRef: Ref[HTMLDivElement] = Ref();
     has offX: Ref[any] = Ref(0);
     has offY: Ref[any] = Ref(0);
 
-    # Float whenever the hero anchor leaves the viewport.
+    # Float whenever the hero anchor leaves the viewport; fade away when the
+    # finale section arrives — its full-width explorer takes over, so the
+    # window reads as landing there.
     useEffect(lambda {
         target = anchorRef.current;
         if not target {
@@ -27,7 +30,18 @@ def:pub FloatingSource() -> JsxElement {
             floating = not entries[0].isIntersecting;
         }, {"threshold": 0.0});
         obs.observe(target);
-        return lambda { obs.disconnect(); };
+        finale: any = document.getElementById("explorer");
+        fobs: any = None;
+        if finale {
+            fobs = new(IntersectionObserver, lambda (entries: any) {  # jac:ignore[E1053]
+                yielded = entries[0].isIntersecting;
+            }, {"threshold": 0.12});
+            fobs.observe(finale);
+        }
+        return lambda {
+            obs.disconnect();
+            if fobs { fobs.disconnect(); }
+        };
     }, []);
 
     # Apply the remembered drag offset when popping out; clear it when docking.
@@ -103,6 +117,8 @@ def:pub FloatingSource() -> JsxElement {
                 floating and cn(
                     "float-in fixed z-40 h-auto w-auto shadow-2xl [&_.code-titlebar]:cursor-move",
                     "bottom-6 right-6 max-h-[calc(100vh-6rem)] max-w-[calc(100vw-3rem)]",
+                    "transition-opacity duration-500",
+                    yielded and "pointer-events-none opacity-0" or "opacity-100",
                 ) or "")}>
             <div className={cn(
                 "h-full",

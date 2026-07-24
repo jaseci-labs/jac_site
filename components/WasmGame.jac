@@ -35,7 +35,7 @@ def:pub WasmGame() -> JsxElement {
                     <Badge variant="outline" className="mb-4">LLVM Backend</Badge>
                     <h2 className="text-balance text-3xl font-bold tracking-tight sm:text-4xl">
                         Natively compiled using the same backend
-                        Rust, Zig, Swift &amp; Mojo use.
+                        Rust, Zig, C, C++, Swift &amp; Mojo use.
                     </h2>
                 </div>
             </Reveal>
