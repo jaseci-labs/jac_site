@@ -58,7 +58,7 @@ custom_extensions = [
 enabled = false
 
 [client.app_meta_data]
-title = "Jac Language"
+title = "The Jac Programming Language"
 description = "One language, one compiler, the whole stack. No glue. AI, graphs, persistence, APIs, UIs, and cloud deployment as language features."
 keywords = "jac, jaclang, programming language, jaseci, object-spatial programming, by llm, full-stack"
 author = "Jaseci Labs"
