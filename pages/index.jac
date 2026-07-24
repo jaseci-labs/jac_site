@@ -2,13 +2,11 @@ import from ..components.Hero { Hero }
 import from ..components.StatsBand { StatsBand }
 import from ..components.WasmGame { WasmGame }
 import from ..components.WhyJac { WhyJac }
-import from ..components.FirstOnly { FirstOnly }
-import from ..components.BookSection { BookSection }
 import from ..components.Showcase { Showcase }
-import from ..components.Pillars { Pillars }
-import from ..components.BuildGrid { BuildGrid }
+import from ..components.Capabilities { Capabilities }
 import from ..components.OneBinary { OneBinary }
 import from ..components.Agents { Agents }
+import from ..components.BookSection { BookSection }
 
 def:pub page() -> JsxPage {
     return <>
@@ -16,10 +14,8 @@ def:pub page() -> JsxPage {
         <StatsBand />
         <WasmGame />
         <WhyJac />
-        <FirstOnly />
         <Showcase />
-        <Pillars />
-        <BuildGrid />
+        <Capabilities />
         <OneBinary />
         <Agents />
         <BookSection />

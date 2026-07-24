@@ -6,8 +6,8 @@ glob _COLS: list[dict] = [
         "links": [
             {"label": "Documentation", "href": "/docs/latest"},
             {"label": "Playground", "href": "https://playground.jaseci.org"},
-            {"label": "First-app tutorial", "href": "https://docs.jaseci.org/tutorials/first-app/build-ai-day-planner/"},
-            {"label": "Install guide", "href": "https://docs.jaseci.org/quick-guide/install/"},
+            {"label": "First-app tutorial", "href": "/docs/latest/tutorials/first-app/build-ai-day-planner"},
+            {"label": "Install guide", "href": "/docs/latest/quick-guide/install"},
         ],
     },
     {
@@ -15,7 +15,7 @@ glob _COLS: list[dict] = [
         "links": [
             {"label": "GitHub", "href": "https://github.com/jaseci-labs/jaseci"},
             {"label": "Discord", "href": "https://discord.gg/6j3QNdtcN6"},
-            {"label": "Contributing", "href": "https://docs.jaseci.org/community/contributing/"},
+            {"label": "Contributing", "href": "/docs/latest/community/contributing"},
             {"label": "This is Jac (demo)", "href": "https://github.com/jaseci-labs/this_is_jac"},
         ],
     },
@@ -25,7 +25,7 @@ glob _COLS: list[dict] = [
             {"label": "Object-Spatial Programming", "href": "https://arxiv.org/abs/2503.15812"},
             {"label": "Meaning-Typed Programming", "href": "https://arxiv.org/abs/2405.08965"},
             {"label": "The ninja book", "href": "https://doi.org/10.5281/zenodo.21464040"},
-            {"label": "Research & papers", "href": "https://docs.jaseci.org/community/research/"},
+            {"label": "Research & papers", "href": "/docs/latest/community/research"},
         ],
     },
 ];

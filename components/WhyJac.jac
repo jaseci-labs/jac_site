@@ -6,20 +6,17 @@ import from .Reveal { Reveal }
 import from .SynechicDiagram { SynechicDiagram }
 import from .TopokineticDiagram { TopokineticDiagram }
 
-glob _NOTATIONS: list[str] = [
-    "TypeScript", "Python", "SQL", "Shell", "JSX", "CSS",
-    "JSON", "TOML", "YAML", "Dockerfile", "HCL", "dotenv",
-];
-
 """One slide's frame: big title, small mono subline, content."""
-def:pub WhySlide(title: str, sub: str = "", children: any = None) -> JsxElement {
+def:pub WhySlide(title: str = "", sub: str = "", children: any = None) -> JsxElement {
     return <div className="flex h-full flex-col rounded-2xl border border-border/70 bg-card/30 pt-8 pb-8 pl-6 pr-6 sm:pl-12 sm:pr-12">
-        <div className="mb-6 text-center">
-            <h3 className="text-balance text-2xl font-bold tracking-tight sm:text-3xl">{title}</h3>
-            {if sub != "" {
-                <p className="mt-3 font-mono text-xs uppercase tracking-widest text-primary">{sub}</p>
-            }}
-        </div>
+        {if title != "" {
+            <div className="mb-6 text-center">
+                <h3 className="text-balance text-2xl font-bold tracking-tight sm:text-3xl">{title}</h3>
+                {if sub != "" {
+                    <p className="mt-3 font-mono text-xs uppercase tracking-widest text-primary">{sub}</p>
+                }}
+            </div>
+        }}
         <div className="flex min-w-0 flex-1 flex-col justify-center">{children}</div>
     </div>;
 }
@@ -42,22 +39,14 @@ def:pub WhyJac() -> JsxElement {
                     <Carousel className="w-full" opts={{"loop": True}}>
                         <CarouselContent>
                             <CarouselItem>
-                                <WhySlide title="The problem">
-                                    <div className="mx-auto flex max-w-3xl flex-wrap justify-center gap-2">
-                                        {for (i, nt) in enumerate(_NOTATIONS) {
-                                            <span key={str(i)}
-                                                className="rounded-full border border-border bg-card/60 pl-3 pr-3 pt-1 pb-1 font-mono text-xs text-muted-foreground">
-                                                {nt}
-                                            </span>
-                                        }}
-                                    </div>
-                                    <figure className="mx-auto mt-12 max-w-3xl text-center">
-                                        <blockquote className="text-balance text-2xl font-semibold tracking-tight sm:text-3xl">
+                                <WhySlide>
+                                    <figure className="mx-auto max-w-3xl text-center">
+                                        <blockquote className="text-balance text-3xl font-semibold tracking-tight sm:text-4xl">
                                             {"“The whole-program type checker of the modern stack is "}
                                             <span className="text-gradient font-mono">grep</span>
                                             {".”"}
                                         </blockquote>
-                                        <figcaption className="mt-3 text-sm text-muted-foreground">
+                                        <figcaption className="mt-4 text-sm text-muted-foreground">
                                             Jac is one bet against each of the two assumptions that made it so.
                                         </figcaption>
                                     </figure>

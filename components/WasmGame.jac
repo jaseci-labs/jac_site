@@ -40,7 +40,7 @@ def:pub WasmGame() -> JsxElement {
                 </div>
             </Reveal>
             <Reveal delay={120}>
-                <div className="mx-auto mt-12 max-w-4xl">
+                <div className="mt-12 w-full">
                     <div className="code-window overflow-hidden rounded-xl">
                         <div className="code-titlebar flex items-center gap-2 pl-4 pr-4 pt-2.5 pb-2.5">
                             <span className="size-2.5 rounded-full bg-white/15"></span>
@@ -49,7 +49,7 @@ def:pub WasmGame() -> JsxElement {
                             <span className="ml-2 font-mono text-xs text-white/45">the shooter in main.jac → /static/main.wasm</span>
                             <span className="ml-auto font-mono text-[10px] uppercase tracking-widest text-orange-400/80">na → wasm</span>
                         </div>
-                        <div className="relative mx-auto" style={{"aspectRatio": "960 / 600", "maxWidth": "960px"}}>
+                        <div className="relative w-full" style={{"aspectRatio": "960 / 600"}}>
                             <canvas ref={canvasRef} width={960} height={600}
                                 className="h-full w-full"
                                 style={{"display": "block", "cursor": "crosshair"}} />

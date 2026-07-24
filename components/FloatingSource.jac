@@ -11,6 +11,7 @@ import from "@hugeicons/core-free-icons" { ArrowExpand01Icon, ArrowShrink01Icon 
 def:pub FloatingSource() -> JsxElement {
     has floating: bool = False;
     has expanded: bool = False;
+    has size_anim: bool = False;
     has anchorRef: Ref[HTMLDivElement] = Ref();
     has winRef: Ref[HTMLDivElement] = Ref();
     has offX: Ref[any] = Ref(0);
@@ -30,6 +31,8 @@ def:pub FloatingSource() -> JsxElement {
     }, []);
 
     # Apply the remembered drag offset when popping out; clear it when docking.
+    # Size transitions only arm AFTER the pop settles — otherwise the window
+    # visibly shrinks from hero-size while it jumps to the corner.
     can with [floating] entry {
         if winRef.current {
             if floating {
@@ -38,6 +41,11 @@ def:pub FloatingSource() -> JsxElement {
             } else {
                 winRef.current.style.transform = "";
             }
+        }
+        if floating {
+            _ = setTimeout(lambda { size_anim = True; }, 500);
+        } else {
+            size_anim = False;
         }
     }
 
@@ -97,7 +105,8 @@ def:pub FloatingSource() -> JsxElement {
                     "bottom-6 right-6 max-h-[calc(100vh-6rem)] max-w-[calc(100vw-3rem)]",
                 ) or "")}>
             <div className={cn(
-                "h-full transition-[width,height] duration-300",
+                "h-full",
+                size_anim and "transition-[width,height] duration-300" or "",
                 floating and (expanded and "h-[620px] w-[860px]" or "h-[340px] w-[470px]") or "w-full")}>
                 <SourceBrowser className="h-full" />
             </div>

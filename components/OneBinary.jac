@@ -1,6 +1,7 @@
 import from .ui.badge { Badge }
 import from .Reveal { Reveal }
 import from .PolypilerDiagram { PolypilerDiagram }
+import from "@jac/runtime" { Link }
 
 glob _REPLACED: list[str] = [
     "python", "pyenv", "conda", "pip", "pipx", "uv", "poetry", "venv",
@@ -49,8 +50,8 @@ def:pub OneBinary() -> JsxElement {
                         <p className="text-sm text-muted-foreground">
                             <span className="font-mono font-semibold text-primary">jac</span>
                             {" "}— the one thing left on your machine.
-                            {" "}<a href="https://docs.jaseci.org/quick-guide/one-binary/" target="_blank" rel="noreferrer"
-                                className="font-medium text-primary hover:underline">The full story →</a>
+                            {" "}<Link to="/docs/latest/quick-guide/one-binary"
+                                className="font-medium text-primary hover:underline">The full story →</Link>
                         </p>
                     </div>
                 </div>

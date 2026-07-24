@@ -2,6 +2,7 @@ import from .ui.badge { Badge }
 import from .ui.tabs { Tabs, TabsList, TabsTrigger, TabsContent }
 import from .CodeBlock { CodeBlock }
 import from .Reveal { Reveal }
+import from "@jac/runtime" { Link }
 import from "@hugeicons/react" { HugeiconsIcon }
 import from "@hugeicons/core-free-icons" { CheckmarkCircle01Icon, ArrowUpRight01Icon }
 
@@ -94,11 +95,19 @@ def:pub ShowcasePanel(lines: list[str], file: str, heading: str, blurb: str,
                     </li>
                 }}
             </ul>
-            <a href={link_href} target="_blank" rel="noreferrer"
-                className="mt-6 inline-flex items-center gap-1 text-sm font-medium text-primary hover:underline">
-                {link_label}
-                <HugeiconsIcon icon={ArrowUpRight01Icon} strokeWidth={2} className="size-3.5" />
-            </a>
+            {if link_href.startswith("/") {
+                <Link to={link_href}
+                    className="mt-6 inline-flex items-center gap-1 text-sm font-medium text-primary hover:underline">
+                    {link_label}
+                    <HugeiconsIcon icon={ArrowUpRight01Icon} strokeWidth={2} className="size-3.5" />
+                </Link>
+            } else {
+                <a href={link_href} target="_blank" rel="noreferrer"
+                    className="mt-6 inline-flex items-center gap-1 text-sm font-medium text-primary hover:underline">
+                    {link_label}
+                    <HugeiconsIcon icon={ArrowUpRight01Icon} strokeWidth={2} className="size-3.5" />
+                </a>
+            }}
         </div>
     </div>;
 }
@@ -137,7 +146,7 @@ def:pub Showcase() -> JsxElement {
                                     "Any LiteLLM provider, or fully local weights. One line in jac.toml.",
                                 ]}
                                 link_label="Meaning-Typed Programming"
-                                link_href="https://docs.jaseci.org/reference/plugins/byllm/" />
+                                link_href="/docs/latest/reference/plugins/byllm" />
                         </TabsContent>
                         <TabsContent value="graph">
                             <ShowcasePanel lines={_GRAPH_LINES} file="api.jac"
@@ -149,7 +158,7 @@ def:pub Showcase() -> JsxElement {
                                     "Every user is a graph root. Isolation is topology, not a WHERE clause.",
                                 ]}
                                 link_label="Object-Spatial Programming"
-                                link_href="https://docs.jaseci.org/tutorials/language/osp/" />
+                                link_href="/docs/latest/tutorials/language/osp" />
                         </TabsContent>
                         <TabsContent value="full">
                             <ShowcasePanel lines={_FULL_LINES} file="app.jac"
@@ -161,7 +170,7 @@ def:pub Showcase() -> JsxElement {
                                     "jac start serves it. jac start --dev adds hot reload.",
                                 ]}
                                 link_label="Full-stack tutorial"
-                                link_href="https://docs.jaseci.org/build/fullstack-web/" />
+                                link_href="/docs/latest/build/fullstack-web" />
                         </TabsContent>
                         <TabsContent value="native">
                             <ShowcasePanel lines={_NATIVE_LINES} file="buffer.jac"
@@ -173,7 +182,7 @@ def:pub Showcase() -> JsxElement {
                                     "The same source targets standalone binaries and in-browser wasm — no gcc, no emscripten.",
                                 ]}
                                 link_label="Gradual borrow checking"
-                                link_href="https://docs.jaseci.org/reference/language/ownership-borrowing/" />
+                                link_href="/docs/latest/reference/language/ownership-borrowing" />
                         </TabsContent>
                     </Tabs>
                 </div>
