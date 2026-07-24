@@ -4,7 +4,7 @@ import from "..lib.utils" { cn }
 import from .Reveal { Reveal }
 import from "@hugeicons/react" { HugeiconsIcon }
 import from "@hugeicons/core-free-icons" {
-    ArrowUpRight01Icon, Infinity01Icon, HierarchyIcon, CpuIcon, LockIcon
+    ArrowUpRight01Icon, Infinity01Icon, HierarchyIcon, CpuIcon, LockIcon, StarIcon
 }
 
 # Concept DOI — always resolves to the newest version of the book (v2 today).
@@ -61,11 +61,18 @@ def:pub BookSection() -> JsxElement {
                             <ConceptCard icon={LockIcon} name="Gradual borrow checking"
                                 line="From fully managed semantics to zero-RC native artifacts, one declaration at a time." />
                         </div>
-                        <a href={BOOK_URL} target="_blank" rel="noreferrer"
-                            className={cn(buttonVariants().call(None, {"variant": "outline", "size": "lg"}), "mt-7")}>
-                            Read the book — latest version
-                            <HugeiconsIcon icon={ArrowUpRight01Icon} strokeWidth={2} className="size-4" />
-                        </a>
+                        <div className="mt-7 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
+                            <a href={BOOK_URL} target="_blank" rel="noreferrer"
+                                className={buttonVariants().call(None, {"variant": "outline", "size": "lg"})}>
+                                Read the book — latest version
+                                <HugeiconsIcon icon={ArrowUpRight01Icon} strokeWidth={2} className="size-4" />
+                            </a>
+                            <a href="https://github.com/jaseci-labs/jaseci" target="_blank" rel="noreferrer"
+                                className={buttonVariants().call(None, {"size": "lg"})}>
+                                <HugeiconsIcon icon={StarIcon} strokeWidth={2} className="size-4" />
+                                Star the repo
+                            </a>
+                        </div>
                     </div>
                 </Reveal>
             </div>

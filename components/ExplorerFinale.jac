@@ -2,10 +2,18 @@
 lands here at full width — and the point lands with it: this one codebase is
 everything they just saw run, across all three codespaces."""
 import from .ui.badge { Badge }
+import from .ui.button { buttonVariants }
 import from .Reveal { Reveal }
 import from .SourceBrowser { SourceBrowser }
+import from "@jac/runtime" { Link }
 import from "@hugeicons/react" { HugeiconsIcon }
-import from "@hugeicons/core-free-icons" { GlobeIcon, CloudServerIcon, CpuIcon }
+import from "@hugeicons/core-free-icons" {
+    GlobeIcon, CloudServerIcon, CpuIcon,
+    StarIcon, Book02Icon, BookOpen01Icon, DiscordIcon
+}
+
+# Client globs don't cross modules — same concept DOI as BookSection.jac.
+glob BOOK_URL: str = "https://doi.org/10.5281/zenodo.21464040";
 
 def:pub CodespaceCard(icon: any, tag: str, title: str, body: str) -> JsxElement {
     return <div className="flex items-start gap-4 rounded-xl border border-border/70 bg-card/40 pt-5 pb-5 pl-5 pr-5">
@@ -57,6 +65,28 @@ def:pub ExplorerFinale() -> JsxElement {
                 <p className="mt-4 text-center font-mono text-xs text-muted-foreground">
                     the whole thing · one program · zero glue
                 </p>
+                <div className="mt-8 flex flex-col items-center gap-3 sm:flex-row sm:flex-wrap sm:justify-center">
+                    <a href="https://github.com/jaseci-labs/jaseci" target="_blank" rel="noreferrer"
+                        className={buttonVariants().call(None, {"size": "lg"})}>
+                        <HugeiconsIcon icon={StarIcon} strokeWidth={2} className="size-4" />
+                        Star the repo
+                    </a>
+                    <a href={BOOK_URL} target="_blank" rel="noreferrer"
+                        className={buttonVariants().call(None, {"variant": "outline", "size": "lg"})}>
+                        <HugeiconsIcon icon={Book02Icon} strokeWidth={2} className="size-4" />
+                        Read the book
+                    </a>
+                    <Link to="/docs/latest"
+                        className={buttonVariants().call(None, {"variant": "outline", "size": "lg"})}>
+                        <HugeiconsIcon icon={BookOpen01Icon} strokeWidth={2} className="size-4" />
+                        See the docs
+                    </Link>
+                    <a href="https://discord.gg/6j3QNdtcN6" target="_blank" rel="noreferrer"
+                        className={buttonVariants().call(None, {"variant": "outline", "size": "lg"})}>
+                        <HugeiconsIcon icon={DiscordIcon} strokeWidth={2} className="size-4" />
+                        Join the Discord
+                    </a>
+                </div>
             </Reveal>
         </div>
     </section>;

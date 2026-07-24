@@ -34,8 +34,8 @@ def:pub WasmGame() -> JsxElement {
                 <div className="mx-auto max-w-2xl text-center">
                     <Badge variant="outline" className="mb-4">LLVM Backend</Badge>
                     <h2 className="text-balance text-3xl font-bold tracking-tight sm:text-4xl">
-                        This entire site is Jac — frontend,
-                        backend, and this game.
+                        This entire site is one Jac program —
+                        frontend, backend, and this game.
                     </h2>
                     <p className="mt-4 text-balance text-lg text-muted-foreground">
                         The game below is natively compiled using the same
