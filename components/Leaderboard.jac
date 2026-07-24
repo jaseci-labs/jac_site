@@ -135,7 +135,15 @@ def:pub RepoCard(e: dict, rank: int) -> JsxElement {
                 {str(e["forks"] as int)}
             </span>
             <span>{str(e["jac_lines"] as int)} jac lines</span>
-            <span className="ml-auto">{_ago(e["scored_at"] as str)}</span>
+            {if (e["scored_sha"] or "") != "" {
+                <a href={e["permalink"]} target="_blank" rel="noreferrer"
+                    title="The repo exactly as it was scored"
+                    className="ml-auto truncate transition-colors hover:text-primary">
+                    {"@" + ((e["scored_sha"] as str)[:7]) + " · " + _ago(e["scored_at"] as str)}
+                </a>
+            } else {
+                <span className="ml-auto">{_ago(e["scored_at"] as str)}</span>
+            }}
         </div>
     </div>;
 }
@@ -315,6 +323,15 @@ def:pub Leaderboard() -> JsxElement {
                                 {"#" + str(rank_of((reveal as dict)["full"] as str)) + " of " + str(len(entries))}
                             </span>
                         </p>
+                        {if ((reveal as dict)["scored_sha"] or "") != "" {
+                            <p className="mt-3 font-mono text-[11px] text-muted-foreground">
+                                {"scored at commit "}
+                                <a href={(reveal as dict)["permalink"]} target="_blank" rel="noreferrer"
+                                    className="text-primary hover:underline">
+                                    {"@" + (((reveal as dict)["scored_sha"] as str)[:7])}
+                                </a>
+                            </p>
+                        }}
                         {if sub_note != "" {
                             <p className="mt-3 text-xs text-muted-foreground">{sub_note}</p>
                         }}

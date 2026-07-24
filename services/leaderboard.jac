@@ -56,6 +56,7 @@ node RepoEntry {
         score: int = 0,
         breakdown: dict = {},
         belt: str = "white",
+        scored_sha: str = "",
         submitted_at: str = "",
         scored_at: str = "";
 }
@@ -128,6 +129,26 @@ def _gh_repo(owner: str, name: str) -> dict | None {
         return json.loads(data) as dict;
     } except Exception {
         return None;
+    }
+}
+
+"""Commit sha a ref points at right now; "" on any failure (rate limit,
+network). One call per scoring — the rescore cooldown keeps this cheap."""
+def _repo_head_sha(owner: str, name: str, ref: str) -> str {
+    try {
+        req = urllib.request.Request(
+            "https://api.github.com/repos/" + owner + "/" + name + "/commits/" + ref,
+            headers=_gh_headers(),
+        );
+        resp = urllib.request.urlopen(req, timeout=10);
+        try {
+            data = resp.read();
+        } finally {
+            resp.close();
+        }
+        return ((json.loads(data) as dict).get("sha") or "") as str;
+    } except Exception {
+        return "";
     }
 }
 
@@ -331,6 +352,8 @@ def _entry_dict(e: RepoEntry) -> dict {
         "jac_files": e.jac_files, "jac_lines": e.jac_lines,
         "features": e.features, "score": e.score, "breakdown": e.breakdown,
         "belt": e.belt, "submitted_at": e.submitted_at, "scored_at": e.scored_at,
+        "scored_sha": e.scored_sha,
+        "permalink": (e.html_url + "/tree/" + e.scored_sha) if e.scored_sha != "" else e.html_url,
     };
 }
 
@@ -353,11 +376,16 @@ def _score_repo(hub: BoardHub, owner: str, name: str) -> dict {
     }
     full = (meta.get("full_name") or (owner + "/" + name)) as str;
     ref = (meta.get("default_branch") or "main") as str;
-    _plog("downloading " + full + " (" + ref + ")");
-    files = _fetch_repo_files(
-        ((meta.get("owner") or {}) as dict).get("login", owner) as str,
-        (meta.get("name") or name) as str, ref
-    );
+    real_owner = ((meta.get("owner") or {}) as dict).get("login", owner) as str;
+    real_name = (meta.get("name") or name) as str;
+    # Pin the score to the exact commit we analyze — the card links to
+    # /tree/<sha>, the repo as it was the moment it earned its belt.
+    sha = _repo_head_sha(real_owner, real_name, ref);
+    if sha != "" {
+        _plog("pinning " + full + " @ " + sha[:7]);
+    }
+    _plog("downloading " + full + " (" + (sha[:7] if sha != "" else ref) + ")");
+    files = _fetch_repo_files(real_owner, real_name, sha if sha != "" else ref);
     if files is None {
         return {"error": "fetch_failed"};
     }
@@ -390,6 +418,7 @@ def _score_repo(hub: BoardHub, owner: str, name: str) -> dict {
     entry.score = sc["total"] as int;
     entry.breakdown = sc;
     entry.belt = sc["belt"] as str;
+    entry.scored_sha = sha;
     entry.scored_at = _now();
     _plog(full + " scored " + str(entry.score) + " — " + entry.belt + " belt");
     return {"entry": _entry_dict(entry)};
