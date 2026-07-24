@@ -3,9 +3,31 @@
 Parses markdown into typed block dicts and renders them as styled JSX — no
 external renderer. Fenced jac/toml code goes through the same hand-written
 tokenizer that powers the hero source browser; mkdocs admonitions become
-styled callouts; links stay in-site (ingest already rewrote them)."""
+styled callouts (`???` ones collapse to <details>); `=== "Tab"` content
+tabs use the site's Tabs; mermaid fences render as live diagrams; Material
+icon shortcodes like :octicons-arrow-right-24: map to site icons; links
+stay in-site (ingest already rewrote them)."""
 import from "@jac/runtime" { Link }
 import from .CodeBlock { CodeLines }
+import from .MermaidDiagram { MermaidDiagram }
+import from .ui.tabs { Tabs, TabsList, TabsTrigger, TabsContent }
+import from "@hugeicons/react" { HugeiconsIcon }
+import from "@hugeicons/core-free-icons" {
+    ArrowRight01Icon, ArrowLeft01Icon, Link01Icon, HierarchyIcon,
+    CheckmarkCircle01Icon, Alert01Icon
+}
+
+# Material-style icon shortcodes seen in the corpus, mapped to site icons.
+# Unknown shortcodes render as nothing rather than leaking raw `:name:`.
+glob _ICON_MAP: dict = {
+    "octicons-arrow-right-24": ArrowRight01Icon,
+    "octicons-arrow-left-24": ArrowLeft01Icon,
+    "octicons-check-16": CheckmarkCircle01Icon,
+    "octicons-alert-16": Alert01Icon,
+    "material-vector-link": Link01Icon,
+    "material-graph-outline": HierarchyIcon,
+    "material-check": CheckmarkCircle01Icon,
+};
 
 glob _ADMON_STYLES: dict = {
     "note":     ["border-sky-500/50", "bg-sky-500/5", "text-sky-400"],
@@ -115,8 +137,10 @@ def _parse_blocks(lines: list[str]) -> list[dict] {
             blocks.append({"k": "code", "lang": lang, "lines": body});
             continue;
         }
-        if s.startswith("!!! ") or s.startswith("??? ") {
-            rest = s[4:].strip();
+        if s.startswith("!!! ") or s.startswith("??? ") or s.startswith("???+ ") {
+            collapse = s.startswith("???");
+            open_flag = s.startswith("???+");
+            rest = (s[5:] if open_flag else s[4:]).strip();
             kind = rest.split(" ")[0].lower().strip('"');
             title = kind[0].upper() + kind[1:] if kind else "Note";
             if '"' in rest {
@@ -134,8 +158,24 @@ def _parse_blocks(lines: list[str]) -> list[dict] {
             }
             blocks.append({
                 "k": "admon", "kind": kind, "title": title,
+                "collapse": collapse, "open": open_flag,
                 "blocks": _parse_blocks(body),
             });
+            continue;
+        }
+        if s.startswith('=== "') {
+            tabs: list[dict] = [];
+            while i < n and lines[i].strip().startswith('=== "') {
+                tt = lines[i].strip()[4:].strip().strip('"');
+                i = i + 1;
+                tbody: list[str] = [];
+                while i < n and (lines[i].strip() == "" or lines[i].startswith("    ")) {
+                    tbody.append(lines[i][4:] if lines[i].startswith("    ") else "");
+                    i = i + 1;
+                }
+                tabs.append({"title": tt, "blocks": _parse_blocks(tbody)});
+            }
+            blocks.append({"k": "tabs", "items": tabs});
             continue;
         }
         if s.startswith("#") {
@@ -211,7 +251,8 @@ def _parse_blocks(lines: list[str]) -> list[dict] {
         while i < n {
             t = lines[i].strip();
             if t == "" or t.startswith("```") or t.startswith("#") or t.startswith(">")
-                or t.startswith("!!! ") or t.startswith("??? ") or _is_list_line(lines[i])
+                or t.startswith("!!! ") or t.startswith("??? ") or t.startswith("???+ ")
+                or t.startswith('=== "') or _is_list_line(lines[i])
                 or (t.startswith("|") and i + 1 < n and _is_table_sep(lines[i + 1])) {
                 break;
             }
@@ -223,7 +264,21 @@ def _parse_blocks(lines: list[str]) -> list[dict] {
     return blocks;
 }
 
-"""Inline text -> spans: code, strong, em, links, images, plain."""
+"""Is this a Material icon shortcode body (between colons)?"""
+def _icon_name_ok(name: str) -> bool {
+    if not (name.startswith("octicons-") or name.startswith("material-")
+        or name.startswith("fontawesome-") or name.startswith("simple-")) {
+        return False;
+    }
+    for ch in name {
+        if not (_is_alnum(ch) or ch == "-") {
+            return False;
+        }
+    }
+    return True;
+}
+
+"""Inline text -> spans: code, strong, em, links, images, icons, plain."""
 def _parse_inline(t: str) -> list[dict] {
     spans: list[dict] = [];
     buf = "";
@@ -231,6 +286,22 @@ def _parse_inline(t: str) -> list[dict] {
     n = len(t);
     while i < n {
         c = t[i];
+        if c == ":" {
+            close = t.find(":", i + 1);
+            if close > i + 1 and _icon_name_ok(t[i + 1:close]) {
+                if buf != "" { spans.append({"k": "t", "t": buf}); buf = ""; }
+                spans.append({"k": "icon", "name": t[i + 1:close]});
+                i = close + 1;
+                # Swallow a Material attr-list riding the icon: `{ .lg .middle }`
+                if i < n and t[i] == "{" {
+                    brace = t.find("}", i);
+                    if brace > i and "." in t[i:brace] {
+                        i = brace + 1;
+                    }
+                }
+                continue;
+            }
+        }
         if c == "`" {
             close = t.find("`", i + 1);
             if close > i {
@@ -312,6 +383,13 @@ def:pub MDSpans(text: str) -> JsxElement {
                 <strong key={str(i)} className="font-semibold text-foreground"><MDLabel text={sp["t"] as str} /></strong>
             } elif sp["k"] == "em" {
                 <em key={str(i)}><MDLabel text={sp["t"] as str} /></em>
+            } elif sp["k"] == "icon" {
+                if (sp["name"] as str) in _ICON_MAP {
+                    <HugeiconsIcon key={str(i)} icon={_ICON_MAP[sp["name"]]} strokeWidth={2}
+                        className="inline size-4 align-[-3px] text-primary" />
+                } else {
+                    <span key={str(i)}></span>
+                }
             } elif sp["k"] == "img" {
                 <img key={str(i)} src={sp["src"]} alt={sp["alt"]}
                     className="my-2 inline-block max-w-full rounded-lg border border-border/60" />
@@ -354,14 +432,18 @@ def:pub MDBlocks(blocks: list[dict]) -> JsxElement {
             } elif b["k"] == "p" {
                 <p key={str(bi)} className="mb-4 leading-7 text-foreground/90"><MDSpans text={b["text"] as str} /></p>
             } elif b["k"] == "code" {
-                <div key={str(bi)} className="code-window my-5 overflow-hidden rounded-lg">
-                    <div className="code-titlebar flex items-center pl-4 pr-4 pt-1.5 pb-1.5">
-                        <span className="font-mono text-[10px] uppercase tracking-widest text-white/40">{b["lang"] or "text"}</span>
+                if (b["lang"] as str) == "mermaid" {
+                    <MermaidDiagram key={str(bi)} code={"\n".join(b["lines"] as list[str])} />
+                } else {
+                    <div key={str(bi)} className="code-window my-5 overflow-hidden rounded-lg">
+                        <div className="code-titlebar flex items-center pl-4 pr-4 pt-1.5 pb-1.5">
+                            <span className="font-mono text-[10px] uppercase tracking-widest text-white/40">{b["lang"] or "text"}</span>
+                        </div>
+                        <div className="overflow-x-auto pt-3 pb-3">
+                            <CodeLines lines={b["lines"] as list[str]} lang={b["lang"] as str} numbers={False} />
+                        </div>
                     </div>
-                    <div className="overflow-x-auto pt-3 pb-3">
-                        <CodeLines lines={b["lines"] as list[str]} lang={b["lang"] as str} numbers={False} />
-                    </div>
-                </div>
+                }
             } elif b["k"] == "list" {
                 <div key={str(bi)} className="mb-4 flex flex-col gap-1.5">
                     {for (ii, it) in enumerate(b["items"] as list[dict]) {
@@ -373,12 +455,42 @@ def:pub MDBlocks(blocks: list[dict]) -> JsxElement {
                     }}
                 </div>
             } elif b["k"] == "admon" {
-                <div key={str(bi)} className={"my-5 rounded-r-lg border-l-2 pt-4 pb-4 pl-5 pr-5 "
-                    + (((_ADMON_STYLES[b["kind"]] as list[str])[0] + " " + (_ADMON_STYLES[b["kind"]] as list[str])[1]) if b["kind"] in _ADMON_STYLES else "border-border bg-muted/30")}>
-                    <p className={"mb-2 text-xs font-semibold uppercase tracking-widest "
-                        + ((_ADMON_STYLES[b["kind"]] as list[str])[2] if b["kind"] in _ADMON_STYLES else "text-muted-foreground")}>{b["title"]}</p>
-                    <MDBlocks blocks={b["blocks"] as list[dict]} />
-                </div>
+                if b["collapse"] {
+                    <details key={str(bi)} open={b["open"] as bool}
+                        className={"md-details my-5 rounded-r-lg border-l-2 "
+                            + (((_ADMON_STYLES[b["kind"]] as list[str])[0] + " " + (_ADMON_STYLES[b["kind"]] as list[str])[1]) if b["kind"] in _ADMON_STYLES else "border-border bg-muted/30")}>
+                        <summary className={"flex cursor-pointer select-none items-center gap-2 pt-4 pb-4 pl-5 pr-5 text-xs font-semibold uppercase tracking-widest "
+                            + ((_ADMON_STYLES[b["kind"]] as list[str])[2] if b["kind"] in _ADMON_STYLES else "text-muted-foreground")}>
+                            <span className="md-chev inline-block transition-transform duration-200">▸</span>
+                            <MDLabel text={b["title"] as str} />
+                        </summary>
+                        <div className="pl-5 pr-5 pb-4">
+                            <MDBlocks blocks={b["blocks"] as list[dict]} />
+                        </div>
+                    </details>
+                } else {
+                    <div key={str(bi)} className={"my-5 rounded-r-lg border-l-2 pt-4 pb-4 pl-5 pr-5 "
+                        + (((_ADMON_STYLES[b["kind"]] as list[str])[0] + " " + (_ADMON_STYLES[b["kind"]] as list[str])[1]) if b["kind"] in _ADMON_STYLES else "border-border bg-muted/30")}>
+                        <p className={"mb-2 text-xs font-semibold uppercase tracking-widest "
+                            + ((_ADMON_STYLES[b["kind"]] as list[str])[2] if b["kind"] in _ADMON_STYLES else "text-muted-foreground")}>{b["title"]}</p>
+                        <MDBlocks blocks={b["blocks"] as list[dict]} />
+                    </div>
+                }
+            } elif b["k"] == "tabs" {
+                <Tabs key={str(bi)} defaultValue="t0" className="my-5">
+                    <TabsList className="mb-1 flex-wrap">
+                        {for (ti, tb) in enumerate(b["items"] as list[dict]) {
+                            <TabsTrigger key={str(ti)} value={"t" + str(ti)}>
+                                <MDLabel text={tb["title"] as str} />
+                            </TabsTrigger>
+                        }}
+                    </TabsList>
+                    {for (ti, tb) in enumerate(b["items"] as list[dict]) {
+                        <TabsContent key={str(ti)} value={"t" + str(ti)}>
+                            <MDBlocks blocks={tb["blocks"] as list[dict]} />
+                        </TabsContent>
+                    }}
+                </Tabs>
             } elif b["k"] == "quote" {
                 <div key={str(bi)} className="my-4 border-l-2 border-border pl-4 text-muted-foreground">
                     <MDBlocks blocks={b["blocks"] as list[dict]} />

@@ -207,3 +207,8 @@ section[id] { scroll-margin-top: 4.5rem; }
     .anim-fade-up, .g-node, .g-edge, .caret, .dash-drift, .x-pulse, .pulse-ring { animation: none !important; }
     .reveal { opacity: 1; transform: none; transition: none; }
 }
+
+/* Collapsible docs admonitions (??? blocks) */
+.md-details > summary { list-style: none; }
+.md-details > summary::-webkit-details-marker { display: none; }
+.md-details[open] > summary .md-chev { transform: rotate(90deg); }

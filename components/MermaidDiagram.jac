@@ -1,0 +1,67 @@
+"""Mermaid diagrams for the docs, rendered client-side and themed to the
+site's dark/orange palette. Renders into inline SVG via mermaid.render;
+a diagram that fails to parse falls back to showing its source."""
+import from react { useEffect }
+import from "mermaid" { default as mermaid }
+import from .CodeBlock { CodeLines }
+
+glob _mm: any = mermaid;
+glob _mm_ready: bool = False;
+glob _mm_seq: int = 0;
+
+def:pub MermaidDiagram(code: str) -> JsxElement {
+    has svg_html: str = "";
+    has failed: bool = False;
+
+    useEffect(lambda {
+        if not _mm_ready {
+            _mm.initialize({
+                "startOnLoad": False,
+                "theme": "base",
+                "themeVariables": {
+                    "darkMode": True,
+                    "background": "#0d0c0e",
+                    "primaryColor": "#1f1712",
+                    "primaryTextColor": "#e7e5e4",
+                    "primaryBorderColor": "#ff6b35",
+                    "secondaryColor": "#171412",
+                    "secondaryTextColor": "#d6d3d1",
+                    "secondaryBorderColor": "#57534e",
+                    "tertiaryColor": "#121014",
+                    "tertiaryTextColor": "#d6d3d1",
+                    "tertiaryBorderColor": "#44403c",
+                    "lineColor": "#a8a29e",
+                    "textColor": "#e7e5e4",
+                    "clusterBkg": "#131110",
+                    "clusterBorder": "#44403c",
+                    "edgeLabelBackground": "#1c1917",
+                    "fontFamily": "Geist Mono Variable, ui-monospace, monospace",
+                    "fontSize": "13px",
+                },
+            });
+            _mm_ready = True;
+        }
+        _mm_seq = _mm_seq + 1;
+        p: any = _mm.render("mmdg" + str(_mm_seq), code);
+        p.then(lambda (r: any) { svg_html = r.svg; }).catch(lambda (_e: any) { failed = True; });
+        return lambda {};
+    }, [code]);
+
+    if failed {
+        return <div className="code-window my-5 overflow-hidden rounded-lg">
+            <div className="code-titlebar flex items-center pl-4 pr-4 pt-1.5 pb-1.5">
+                <span className="font-mono text-[10px] uppercase tracking-widest text-white/40">mermaid</span>
+            </div>
+            <div className="overflow-x-auto pt-3 pb-3">
+                <CodeLines lines={code.split("\n")} lang="text" numbers={False} />
+            </div>
+        </div>;
+    }
+    return <div className="my-5 overflow-x-auto rounded-xl border border-border/60 bg-card/40 pt-4 pb-4 pl-4 pr-4">
+        {if svg_html != "" {
+            <div className="flex justify-center [&_svg]:h-auto [&_svg]:max-w-full">{unsafe_html(svg_html)}</div>
+        } else {
+            <p className="text-center font-mono text-[11px] text-muted-foreground/60">rendering diagram…</p>
+        }}
+    </div>;
+}

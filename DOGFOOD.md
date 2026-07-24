@@ -107,12 +107,19 @@ it) · **open** (nothing done yet).
     awaited local, not the has-field).
 29. jac browse `scrollIntoView` + smooth scrolling reads back stale
     scrollY; use explicit `scrollTo` + settle sleep.
+30. A bare string literal inside a JSX `{if ...}` statement-slot is a parse
+    error (E0002 "Missing ';'") — conditional text needs the
+    `{"a" if x else "b"}` expression form.
+31. `jac start`'s lazy client rebuild does NOT install npm deps newly added
+    to jac.toml — Rollup fails with "failed to resolve import" until you
+    run `jac install`; and the server caches the build failure, so a
+    restart is needed after fixing it.
 
 ## F. Environment traps (not Jac bugs, but they burned hours)
 
-30. A `~/.local/bin/node` symlink pointing into a deleted /tmp session
+32. A `~/.local/bin/node` symlink pointing into a deleted /tmp session
     scratchpad masked issue A9 for weeks, then broke every build when /tmp
     was cleaned. Never symlink tools out of ephemeral scratchpads.
-31. Long-running `jac start` processes must be killed by verified
+33. Long-running `jac start` processes must be killed by verified
     `/proc/PID/cwd`, and `kill` exit-144 aborts `&&` chains — launch and
     kill in separate commands.
