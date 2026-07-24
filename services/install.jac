@@ -1,25 +1,11 @@
-"""Keeps the hosted installer fresh — the same staleness-check-on-visit
-pattern as the docs graph. ensure_install pulls scripts/install.sh from the
-monorepo's main branch and swaps assets/install.sh (served at
-/static/install.sh — the root /install.sh route 404s in production, see
-jac.toml) only when the bytes actually changed. The
-check TTL hangs off root.shared, so it survives restarts; the file itself
-is re-materialized on first visit after a fresh deploy."""
 import os;
 import hashlib;
 import datetime;
 import urllib.request;
 
-# Canonical repo name (jaseci-labs/jaseci redirects here since the rename).
-glob INSTALL_SRC: str =
-    "https://raw.githubusercontent.com/jaseci-labs/jac/main/scripts/install.sh";
-
-# Re-probe upstream at most this often. The script resolves the newest
-# release at run time anyway, so minutes of staleness cost nothing.
-glob CHECK_TTL_S: int = 900;
-
-# Single-flight guard (per-process, same caveat as docs._ingesting).
-glob _pulling: bool = False;
+glob INSTALL_SRC: str = "https://raw.githubusercontent.com/jaseci-labs/jac/main/scripts/install.sh",
+     CHECK_TTL_S: int = 900,
+     _pulling: bool = False;
 
 node InstallMeta {
     has sha: str = "",
@@ -56,8 +42,6 @@ def _fresh(meta: InstallMeta) -> bool {
     }
 }
 
-"""Fetch upstream; None on any failure or anything that doesn't look like a
-shell script — the last-good copy on disk stays untouched either way."""
 def _fetch -> str | None {
     try {
         req = urllib.request.Request(
@@ -88,12 +72,7 @@ def _write_asset(text: str) {
     os.replace(tmp, _asset_path());
 }
 
-"""Staleness check on visit: cheap no-op inside the TTL, refetch outside it,
-rewrite only when the content hash moved (or the file is missing, e.g. a
-fresh pod). Fetch failures leave checked_at alone so the next visit retries."""
 walker:pub ensure_install {
-    # A field-less walker registers GET-only while the client stub POSTs, so
-    # keep one field to make it a POST endpoint on both sides.
     has probe: bool = True;
 
     can run with Root entry {
@@ -108,6 +87,7 @@ walker:pub ensure_install {
                 "building": _pulling,
                 "sha": meta.sha,
                 "checked_at": meta.checked_at,
+
             };
         } else {
             _pulling = True;
@@ -132,6 +112,7 @@ walker:pub ensure_install {
                 "building": False,
                 "sha": meta.sha,
                 "checked_at": meta.checked_at,
+
             };
         }
     }

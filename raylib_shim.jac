@@ -1,15 +1,3 @@
-"""WebGL shim for the rlgl/input externs of a wasm-compiled na game.
-
-A reusable client library (the moral equivalent of raylib for the browser):
-it emulates the scalar rlgl immediate-mode API + input on WebGL/DOM, supplies
-the libc/__multi3 the Jac native runtime needs, instantiates /static/<name>.wasm,
-and drives init()/frame() per requestAnimationFrame. Its client codespace is
-inferred from its npm import and DOM usage - no marker needed.
-
-The host-ABI surface (console write, abort) is the versioned jac_host1
-contract supplied by @jac/wasm_host; this shim supplies only the game's own
-raylib FFI (plus its legacy libc stubs under env)."""
-
 import from "@jac/wasm_host" { instantiate_na_wasm }
 
 obj Shim {
@@ -217,9 +205,7 @@ def _flush(sh: any) -> None {
 
 def _build_env(sh: any) -> dict {
     return {
-        # Don't let the game rename the browser tab - this is a page, not a
-        # native window; the title stays whatever app_meta_data says.
-        "InitWindow": lambda (w: int , h: int , t: int) { },
+        "InitWindow": lambda (w: int, h: int, t: int) { },
         "WindowShouldClose": lambda { return 0; },
         "CloseWindow": lambda { },
         "SetTargetFPS": lambda (f: int) { },
@@ -228,7 +214,7 @@ def _build_env(sh: any) -> dict {
         "EndMode3D": lambda { _flush(sh); },
         "GetFrameTime": lambda { return sh.dt; },
         "GetTime": lambda { return sh.time; },
-        "DrawFPS": lambda (x: int , y: int) { },
+        "DrawFPS": lambda (x: int, y: int) { },
         "IsKeyDown": lambda (k: int) { return sh.keys.get(k, 0); },
         "IsKeyPressed": lambda (k: int) { return sh.pressed.get(k, 0); },
         "GetMouseX": lambda { return sh.mouseX; },
@@ -236,7 +222,7 @@ def _build_env(sh: any) -> dict {
         "IsMouseButtonPressed": lambda (b: int) { return sh.mpressed.get(b, 0); },
         "DisableCursor": lambda { sh.canvas.requestPointerLock(); },
         "EnableCursor": lambda { document.exitPointerLock(); },
-        "rlClearColor": lambda (r: int , g: int , b: int , a: int) { sh.gl.clearColor(
+        "rlClearColor": lambda (r: int, g: int, b: int, a: int) { sh.gl.clearColor(
             float(r) / 255.0, float(g) / 255.0, float(b) / 255.0, 1.0
         ); },
         "rlClearScreenBuffers": lambda { sh.gl.clear(16384 | 256); },
@@ -254,22 +240,24 @@ def _build_env(sh: any) -> dict {
         } else {
             sh.mv = sh.mvstack.pop();
         } },
-        "rlTranslatef": lambda (x: float , y: float , z: float) { _setcur(
+        "rlTranslatef": lambda (x: float, y: float, z: float) { _setcur(
             sh, _m_mul(_cur(sh), _m_translate(x, y, z))
         ); },
-        "rlRotatef": lambda (a: float , x: float , y: float , z: float) { _setcur(
+        "rlRotatef": lambda (a: float, x: float, y: float, z: float) { _setcur(
             sh, _m_mul(_cur(sh), _m_rotate(a, x, y, z))
         ); },
-        "rlFrustum": lambda (l: float , r: float , b: float , t: float , n: float , f:
-            float) { _setcur(sh, _m_mul(_cur(sh), _m_frustum(l, r, b, t, n, f))); },
-        "rlOrtho": lambda (l: float , r: float , b: float , t: float , n: float , f:
-            float) { _setcur(sh, _m_mul(_cur(sh), _m_ortho(l, r, b, t, n, f))); },
+        "rlFrustum": lambda (
+            l: float, r: float, b: float, t: float, n: float, f: float
+        ) { _setcur(sh, _m_mul(_cur(sh), _m_frustum(l, r, b, t, n, f))); },
+        "rlOrtho": lambda (
+            l: float, r: float, b: float, t: float, n: float, f: float
+        ) { _setcur(sh, _m_mul(_cur(sh), _m_ortho(l, r, b, t, n, f))); },
         "rlBegin": lambda (m: int) {
             sh.bmode = m;
             sh.verts = [];
         },
         "rlEnd": lambda { _flush(sh); },
-        "rlVertex3f": lambda (x: float , y: float , z: float) {
+        "rlVertex3f": lambda (x: float, y: float, z: float) {
             sh.verts.append(x);
             sh.verts.append(y);
             sh.verts.append(z);
@@ -278,7 +266,7 @@ def _build_env(sh: any) -> dict {
             sh.verts.append(sh.color[2]);
             sh.verts.append(sh.color[3]);
         },
-        "rlColor4ub": lambda (r: int , g: int , b: int , a: int) { sh.color = [
+        "rlColor4ub": lambda (r: int, g: int, b: int, a: int) { sh.color = [
             float(r) / 255.0,
             float(g) / 255.0,
             float(b) / 255.0,
@@ -288,16 +276,14 @@ def _build_env(sh: any) -> dict {
         "FileExists": lambda (p: int) { return 0; },
         "LoadFileText": lambda (p: int) { return 0; },
         "TextToInteger": lambda (p: int) { return 0; },
-        "SaveFileText": lambda (p: int , t: int) { return 0; },
+        "SaveFileText": lambda (p: int, t: int) { return 0; },
         "malloc": lambda (n: int) {
-            # n arrives as an i64 (BigInt at the JS boundary); coerce so the
-            # bump-allocator arithmetic stays Number-only (see web shim).
             sz = Number(n);
             p = sh.heap;
             sh.heap = (sh.heap + sz + 7) & ~7;  # jac:ignore[E1055]
             return p;
         },
-        "calloc": lambda (c: int , s: int) {
+        "calloc": lambda (c: int, s: int) {
             n = Number(c) * Number(s);
             p = sh.heap;
             sh.heap = (sh.heap + n + 7) & ~7;  # jac:ignore[E1055]
@@ -306,12 +292,12 @@ def _build_env(sh: any) -> dict {
         },
         "free": lambda (p: int) { },
         "malloc_usable_size": lambda (p: int) { return 0; },
-        "memcpy": lambda (d: int , s: int , n: int) {
+        "memcpy": lambda (d: int, s: int, n: int) {
             sz = Number(n);
             new(Uint8Array, sh.mem.buffer).copyWithin(d, s, s + sz);
             return d;
         },
-        "memcmp": lambda (a: int , b: int , n: int) {
+        "memcmp": lambda (a: int, b: int, n: int) {
             u8 = new(Uint8Array, sh.mem.buffer);
             sz = Number(n);
             i = 0;
@@ -326,11 +312,11 @@ def _build_env(sh: any) -> dict {
         },
         "puts": lambda (p: int) { return 0; },
         "printf": lambda (a: int) { return 0; },
-        "snprintf": lambda (a: int , b: int , c: int , d: int) { return 0; },
+        "snprintf": lambda (a: int, b: int, c: int, d: int) { return 0; },
         "getenv": lambda (p: int) { return 0; },
         "fflush": lambda (p: int) { return 0; },
         "abort": lambda { },
-        "__multi3": lambda (res: int , al: int , ah: int , bl: int , bh: int) {
+        "__multi3": lambda (res: int, al: int, ah: int, bl: int, bh: int) {
             k = (BigInt(1) << BigInt(64)) - BigInt(1);
             a = (BigInt.asUintN(64, ah) << BigInt(64)) | BigInt.asUintN(64, al);
             b = (BigInt.asUintN(64, bh) << BigInt(64)) | BigInt.asUintN(64, bl);
@@ -418,9 +404,6 @@ def _install_input(sh: any) {
         lambda (e: any) {
             was = sh.locked;
             sh.locked = document.pointerLockElement == sh.canvas;
-            # Browser-initiated release (Esc exits pointer lock natively):
-            # synthesize a Tab edge so the game's own release logic runs and
-            # its captured-state stays in sync.
             if was and not sh.locked {
                 sh.pressed[258] = 1;
             }
@@ -439,8 +422,7 @@ def _frame_tick(sh: any, ts: float) {
     }
     sh.time = now;
     closed = sh.exports.frame();
-    # Optional per-frame hook so a page can drive a HUD (score/fps) without the
-    # shim needing to know anything game-specific.
+
     if sh.on_tick is not None {
         fps = Math.round(1.0 / sh.dt) if sh.dt > 0.0 else 0;
         sh.on_tick(sh.exports, fps);
@@ -461,8 +443,7 @@ async def:pub run_game(canvas: any, on_tick: any = None) {
     sh.mv = _m_ident();
     _init_gl(sh);
     _install_input(sh);
-    # jac_host1 (console/os/time host surface) comes from the runtime; this
-    # shim supplies only the game's raylib externs (and legacy libc stubs).
+
     inst: any = await instantiate_na_wasm(
         "/static/main.wasm", sh, {"env": _build_env(sh)}
     );

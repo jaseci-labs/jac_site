@@ -1,65 +1,68 @@
-"""The hero's source browser, unhooked: once the hero scrolls out of view it
-pops out as a floating picture-in-picture window docked bottom-right —
-draggable by its titlebar, expandable/shrinkable anytime. One instance the
-whole time, so the open file and tree state survive the transition.
-With always_float it skips the hero anchor entirely and starts floating —
-how the docs pages carry it — and closable adds a dismiss button."""
 import from react { useEffect }
 import from "..lib.utils" { cn }
 import from .SourceBrowser { SourceBrowser }
 import from "@hugeicons/react" { HugeiconsIcon }
-import from "@hugeicons/core-free-icons" { ArrowExpand01Icon, ArrowShrink01Icon, Cancel01Icon }
+import from "@hugeicons/core-free-icons" {
+    ArrowExpand01Icon,
+    ArrowShrink01Icon,
+    Cancel01Icon
+}
 
-def:pub FloatingSource(always_float: bool = False, closable: bool = False) -> JsxElement {
-    has floating: bool = False;
-    has expanded: bool = False;
-    has size_anim: bool = False;
-    has yielded: bool = False;
-    has closed: bool = False;
-    has anchorRef: Ref[HTMLDivElement] = Ref();
-    has winRef: Ref[HTMLDivElement] = Ref();
-    has offX: Ref[any] = Ref(0);
-    has offY: Ref[any] = Ref(0);
+def:pub FloatingSource(
+    always_float: bool = False, closable: bool = False
+) -> JsxElement {
+    has floating: bool = False,
+        expanded: bool = False,
+        size_anim: bool = False,
+        yielded: bool = False,
+        closed: bool = False,
+        anchorRef: Ref[HTMLDivElement] = Ref(),
+        winRef: Ref[HTMLDivElement] = Ref(),
+        offX: Ref[any] = Ref(0),
+        offY: Ref[any] = Ref(0);
 
-    # Float whenever the hero anchor leaves the viewport; fade away when the
-    # finale section arrives — its full-width explorer takes over, so the
-    # window reads as landing there. In always_float mode there is no anchor
-    # or finale: just arm the size transitions and stay floating.
-    useEffect(lambda {
-        if always_float {
-            size_anim = True;
-            return lambda {};
-        }
-        target = anchorRef.current;
-        if not target {
-            return lambda {};
-        }
-        obs: any = new(IntersectionObserver, lambda (entries: any) {  # jac:ignore[E1053]
-            floating = not entries[0].isIntersecting;
-        }, {"threshold": 0.0});
-        obs.observe(target);
-        finale: any = document.getElementById("explorer");
-        fobs: any = None;
-        if finale {
-            fobs = new(IntersectionObserver, lambda (entries: any) {  # jac:ignore[E1053]
-                yielded = entries[0].isIntersecting;
-            }, {"threshold": 0.12});
-            fobs.observe(finale);
-        }
-        return lambda {
-            obs.disconnect();
-            if fobs { fobs.disconnect(); }
-        };
-    }, []);
+    useEffect(
+        lambda {
+            if always_float {
+                size_anim = True;
+                return lambda { };
+            }
+            target = anchorRef.current;
+            if not target {
+                return lambda { };
+            }
+            obs: any = new(
+                IntersectionObserver,  # jac:ignore[E1053]
+                lambda (entries: any) { floating = not entries[0].isIntersecting; },
+                {"threshold": 0.0}
+            );
+            obs.observe(target);
+            finale: any = document.getElementById("explorer");
+            fobs: any = None;
+            if finale {
+                fobs = new(
+                    IntersectionObserver,  # jac:ignore[E1053]
+                    lambda (entries: any) { yielded = entries[0].isIntersecting; },
+                    {"threshold": 0.12}
+                );
+                fobs.observe(finale);
+            }
+            return lambda {
+                obs.disconnect();
+                if fobs {
+                    fobs.disconnect();
+                }
+            };
+        },
+        []
+    );
 
-    # Apply the remembered drag offset when popping out; clear it when docking.
-    # Size transitions only arm AFTER the pop settles — otherwise the window
-    # visibly shrinks from hero-size while it jumps to the corner.
     can with [floating] entry {
         if winRef.current {
             if floating {
-                winRef.current.style.transform =
-                    "translate(" + str(offX.current) + "px, " + str(offY.current) + "px)";
+                winRef.current.style.transform = "translate(" + str(offX.current) + "px, " + str(
+                    offY.current
+                ) + "px)";
             } else {
                 winRef.current.style.transform = "";
             }
@@ -71,7 +74,6 @@ def:pub FloatingSource(always_float: bool = False, closable: bool = False) -> Js
         }
     }
 
-    """Drag by the titlebar: imperative transform updates, zero re-renders."""
     def start_drag(e: MouseEvent) {
         if not (floating or always_float) {
             return;
@@ -91,7 +93,9 @@ def:pub FloatingSource(always_float: bool = False, closable: bool = False) -> Js
             offX.current = nx;
             offY.current = ny;
             if winRef.current {
-                winRef.current.style.transform = "translate(" + str(nx) + "px, " + str(ny) + "px)";
+                winRef.current.style.transform = "translate(" + str(nx) + "px, " + str(
+                    ny
+                ) + "px)";
             }
         };
         up = lambda (ev: any) {
@@ -121,46 +125,82 @@ def:pub FloatingSource(always_float: bool = False, closable: bool = False) -> Js
         return <></>;
     }
     is_float = floating or always_float;
-    return <div ref={anchorRef} className="relative">
-        {if is_float and not always_float {
-            <div className="flex h-[540px] items-center justify-center rounded-xl border border-dashed border-border/60 bg-card/10">
-                <p className="font-mono text-xs text-muted-foreground/60">source browser floating ↘</p>
-            </div>
-        }}
-        <div ref={winRef} onMouseDown={start_drag} onDoubleClick={maybe_toggle}
-            className={cn(
-                "relative h-[540px] w-full",
-                is_float and cn(
-                    "float-in fixed z-40 h-auto w-auto shadow-2xl [&_.code-titlebar]:cursor-move",
-                    "bottom-6 right-6 max-h-[calc(100vh-6rem)] max-w-[calc(100vw-3rem)]",
-                    "transition-opacity duration-500",
-                    yielded and "pointer-events-none opacity-0" or "opacity-100",
-                ) or "")}>
-            <div className={cn(
-                "h-full",
-                size_anim and "transition-[width,height] duration-300" or "",
-                is_float and (expanded and "h-[620px] w-[860px]" or "h-[340px] w-[470px]") or "w-full")}>
-                <SourceBrowser className="h-full" />
-            </div>
-            {if is_float {
-                <div className="absolute -top-3 -right-3 flex gap-2">
-                    <button onClick={toggle_expand}
-                        title={"Shrink" if expanded else "Expand"}
-                        className="flex size-8 cursor-pointer items-center justify-center rounded-full border border-border bg-card text-muted-foreground shadow-md transition-colors hover:border-primary/50 hover:text-foreground">
-                        {if expanded {
-                            <HugeiconsIcon icon={ArrowShrink01Icon} strokeWidth={2} className="size-4" />
-                        } else {
-                            <HugeiconsIcon icon={ArrowExpand01Icon} strokeWidth={2} className="size-4" />
-                        }}
-                    </button>
-                    {if closable {
-                        <button onClick={do_close} title="Close"
-                            className="flex size-8 cursor-pointer items-center justify-center rounded-full border border-border bg-card text-muted-foreground shadow-md transition-colors hover:border-destructive/60 hover:text-foreground">
-                            <HugeiconsIcon icon={Cancel01Icon} strokeWidth={2} className="size-4" />
-                        </button>
-                    }}
+    return
+        <div ref={anchorRef} className="relative">
+            {if is_float and not always_float {
+                <div
+                    className="flex h-[540px] items-center justify-center rounded-xl border border-dashed border-border/60 bg-card/10"
+                >
+                    <p className="font-mono text-xs text-muted-foreground/60">
+                        source browser floating ↘
+                    </p>
                 </div>
             }}
-        </div>
-    </div>;
+            <div
+                ref={winRef}
+                onMouseDown={start_drag}
+                onDoubleClick={maybe_toggle}
+                className={cn(
+                    "relative h-[540px] w-full",
+                    is_float
+                    and cn(
+                        "float-in fixed z-40 h-auto w-auto shadow-2xl [&_.code-titlebar]:cursor-move",
+                        "bottom-6 right-6 max-h-[calc(100vh-6rem)] max-w-[calc(100vw-3rem)]",
+                        "transition-opacity duration-500",
+                        yielded and "pointer-events-none opacity-0" or "opacity-100",
+                    )
+                    or ""
+                )}
+            >
+                <div
+                    className={cn(
+                        "h-full",
+                        size_anim and "transition-[width,height] duration-300" or "",
+                        is_float
+                        and (
+                            expanded and "h-[620px] w-[860px]" or "h-[340px] w-[470px]"
+                        )
+                        or "w-full"
+                    )}
+                >
+                    <SourceBrowser className="h-full"/>
+                </div>
+                {if is_float {
+                    <div className="absolute -top-3 -right-3 flex gap-2">
+                        <button
+                            onClick={toggle_expand}
+                            title={"Shrink" if expanded else "Expand"}
+                            className="flex size-8 cursor-pointer items-center justify-center rounded-full border border-border bg-card text-muted-foreground shadow-md transition-colors hover:border-primary/50 hover:text-foreground"
+                        >
+                            {if expanded {
+                                <HugeiconsIcon
+                                    icon={ArrowShrink01Icon}
+                                    strokeWidth={2}
+                                    className="size-4"
+                                />
+                            } else {
+                                <HugeiconsIcon
+                                    icon={ArrowExpand01Icon}
+                                    strokeWidth={2}
+                                    className="size-4"
+                                />
+                            } }
+                        </button>
+                        {if closable {
+                            <button
+                                onClick={do_close}
+                                title="Close"
+                                className="flex size-8 cursor-pointer items-center justify-center rounded-full border border-border bg-card text-muted-foreground shadow-md transition-colors hover:border-destructive/60 hover:text-foreground"
+                            >
+                                <HugeiconsIcon
+                                    icon={Cancel01Icon}
+                                    strokeWidth={2}
+                                    className="size-4"
+                                />
+                            </button>
+                        }}
+                    </div>
+                }}
+            </div>
+        </div>;
 }

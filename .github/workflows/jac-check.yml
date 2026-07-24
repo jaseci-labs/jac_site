@@ -1,0 +1,40 @@
+name: Jac Check
+
+# Same gate the local pre-commit hook runs (`jac precommit --staged --verify`),
+# applied to the whole tracked tree: formatting plus the deslop autolint rules
+# from [check.lint] in jac.toml, then the type check that [precommit] enables.
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: jac-check-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  jac-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Install jac
+        # The self-contained binary: no system Python, pip, or uv needed. The
+        # site's own installer serves this same script at /static/install.sh.
+        run: |
+          set -euo pipefail
+          curl -fsSL https://raw.githubusercontent.com/jaseci-labs/jaseci/main/scripts/install.sh | bash
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+
+      - name: Warm up the compiler cache
+        run: jac --version
+
+      - name: Check formatting and autolint
+        # `[dev] jaclang_source` in jac.toml points at a sibling jaseci checkout
+        # that does not exist here; jac falls back to the installed binary
+        # silently, which is what CI wants. Tracked files only, so a stray .jac
+        # under .jac/ or node_modules/ never reaches the formatter.
+        run: git ls-files -z '*.jac' | xargs -0 --no-run-if-empty jac fmt --check --lintfix
+
+      - name: Type check
+        run: jac check . --nowarn

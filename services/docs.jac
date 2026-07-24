@@ -1,21 +1,3 @@
-"""Versioned docs as an object-spatial graph.
-
-Downloads the jac repo's docs/docs markdown tree straight from GitHub
-(codeload tarballs — no local checkout, no git binary) at four pinned refs
-and ingests it into the PUBLIC ROOT GRAPH (root.shared): DocsHub ->
-DocVersion -> DocDir/DocPage, with Contains edges mirroring the directory
-hierarchy exactly. Persistence is reachability — the corpus survives
-restarts because it hangs off the shared root, not because anything was
-written to a database.
-
-While an ingest runs, `_progress` narrates every step (per-version state,
-bytes downloaded, pages built) — docs_status reports it so the client can
-show a live sync screen.
-
-Reads are walkers: doc_page literally walks the URL path, edge by edge, from
-the hub to the page. Links are rewritten at ingest so nothing points at
-docs.jaseci.org — the site renders everything itself.
-"""
 import os;
 import io;
 import re;
@@ -26,39 +8,32 @@ import tarfile;
 import urllib.request;
 
 glob DOC_VERSIONS: list[dict] = [
-    {"label": "latest", "ref": "main"},
-    {"label": "v0.33", "ref": "v0.33.0"},
-    {"label": "v0.32", "ref": "v0.32.1"},
-    {"label": "v0.31", "ref": "v0.31.3"},
-];
+         {"label": "latest", "ref": "main"},
+         {"label": "v0.33", "ref": "v0.33.0"},
+         {"label": "v0.32", "ref": "v0.32.1"},
+         {"label": "v0.31", "ref": "v0.31.3"},
 
-# Single-flight guard: only one request ingests; concurrent visitors see
-# "building" and poll. (Per-process state — a multi-pod deploy would want the
-# runtime's distributed lock instead.)
-glob _ingesting: bool = False;
+     ],
+     _ingesting: bool = False,
+     GH_REPO: str = os.environ.get("JAC_DOCS_GH_REPO", "jaseci-labs/jaseci"),
+     _progress: dict = {
+         "active": False,
+         "phase": "idle",
+         "detail": "",
+         "versions": [],
+         "log": [],
+         "updated_at": "",
 
-# GitHub repo the docs come from (owner/name), env-overridable for forks.
-glob GH_REPO: str = os.environ.get("JAC_DOCS_GH_REPO", "jaseci-labs/jaseci");
+     },
+     _head_cache: dict = {},
+     _DIR_TITLES: dict = {
+         "js": "JS",
+         "cli": "CLI",
+         "osp": "OSP",
+         "api": "API",
+         "quick-guide": "Quick Guide",
 
-# Live narration of the current ingest, reported by docs_status so the
-# client sync screen can show what's happening in real time.
-glob _progress: dict = {
-    "active": False,
-    "phase": "idle",
-    "detail": "",
-    "versions": [],
-    "log": [],
-    "updated_at": "",
-};
-
-# ref -> {"at": epoch, "sha": str}; keeps docs_status from hammering the
-# GitHub API (unauthenticated limit is 60/hr) — one check per ~10 min.
-glob _head_cache: dict = {};
-
-glob _DIR_TITLES: dict = {
-    "js": "JS", "cli": "CLI", "osp": "OSP", "api": "API",
-    "quick-guide": "Quick Guide",
-};
+     };
 
 node DocsHub {
     has built_at: str = "";
@@ -95,7 +70,6 @@ def _now -> str {
     return datetime.datetime.now(datetime.UTC).replace(tzinfo=None).isoformat() + "Z";
 }
 
-"""Append to the live narration (detail line + capped log feed)."""
 def _pstep(detail: str) {
     _progress["detail"] = detail;
     lg = _progress["log"] as list;
@@ -106,7 +80,6 @@ def _pstep(detail: str) {
     _progress["updated_at"] = _now();
 }
 
-"""Set one version's row on the sync screen: state + right-hand detail."""
 def _pver(label: str, state: str, detail: str) {
     vers = _progress["versions"] as list;
     for v in vers {
@@ -121,8 +94,6 @@ def _pver(label: str, state: str, detail: str) {
     _progress["updated_at"] = _now();
 }
 
-"""Commit sha a ref points at on GitHub, cached ~10 min so status probes
-never burn through the unauthenticated API budget. "" on any failure."""
 def _gh_head_sha(ref: str) -> str {
     now = time.time();
     ent = _head_cache.get(ref);
@@ -136,6 +107,7 @@ def _gh_head_sha(ref: str) -> str {
             headers={
                 "User-Agent": "jaclang.org docs sync",
                 "Accept": "application/vnd.github+json",
+
             },
         );
         resp = urllib.request.urlopen(req, timeout=10);
@@ -154,8 +126,6 @@ def _gh_head_sha(ref: str) -> str {
     return sha;
 }
 
-"""One codeload tarball download per version: markdown tree + mkdocs.yml
-nav + doc assets, extracted in memory. Narrates bytes as they arrive."""
 def _fetch_bundle(ref: str, label: str) -> dict {
     url = "https://codeload.github.com/" + GH_REPO + "/tar.gz/" + ref;
     _pver(label, "download", "connecting");
@@ -215,7 +185,6 @@ def _fetch_bundle(ref: str, label: str) -> dict {
     return {"files": files, "nav_text": nav_text, "assets": assets};
 }
 
-"""Page order + titles from mkdocs.yml nav text (hand-parsed, no yaml dep)."""
 def _parse_nav(text: str) -> dict {
     nav: dict = {};
     in_nav = False;
@@ -229,7 +198,9 @@ def _parse_nav(text: str) -> dict {
             if line.strip() and not line.startswith(" ") {
                 break;
             }
-            m = re.match(r"\s*-\s+(?:\"?([^\":]+?)\"?\s*:\s*)?\"?([\w\-/\.]+\.md)\"?\s*$", line);
+            m = re.match(
+                r"\s*-\s+(?:\"?([^\":]+?)\"?\s*:\s*)?\"?([\w\-/\.]+\.md)\"?\s*$", line
+            );
             if m {
                 title = m.group(1) or "";
                 path = m.group(2);
@@ -256,7 +227,6 @@ def _pretty(name: str) -> str {
     return name.replace("-", " ").replace("_", " ").title();
 }
 
-"""Strip mkdocs frontmatter, drop snippet includes."""
 def _clean_md(text: str) -> str {
     lines = text.split("\n");
     if len(lines) > 2 and lines[0].strip() == "---" {
@@ -266,11 +236,14 @@ def _clean_md(text: str) -> str {
         }
         lines = lines[i + 1:];
     }
-    lines = [ln for ln in lines if "--8<--" not in ln];
+    lines = [
+        ln
+        for ln in lines
+        if "--8<--" not in ln
+    ];
     return "\n".join(lines);
 }
 
-"""First `# ` heading in the page (fence-aware)."""
 def _first_h1(text: str) -> str {
     fenced = False;
     for ln in text.split("\n") {
@@ -283,7 +256,6 @@ def _first_h1(text: str) -> str {
     return "";
 }
 
-"""h2/h3 outline with anchor ids (fence-aware)."""
 def _toc_of(text: str) -> list[dict] {
     toc: list[dict] = [];
     fenced = False;
@@ -303,7 +275,6 @@ def _toc_of(text: str) -> list[dict] {
     return toc;
 }
 
-"""Route for a doc-relative md path: strip .md, fold index pages into the dir."""
 def _route_of(version: str, rel: str) -> str {
     p = rel;
     if p.endswith(".md") {
@@ -318,7 +289,6 @@ def _route_of(version: str, rel: str) -> str {
     return ("/docs/" + version + "/" + p).rstrip("/");
 }
 
-"""Rewrite one href so the rendered docs never leave the site."""
 def _rewrite_href(href: str, version: str, cur_dir: str) -> str {
     if href.startswith("#") or href.startswith("mailto:") {
         return href;
@@ -338,8 +308,12 @@ def _rewrite_href(href: str, version: str, cur_dir: str) -> str {
         return href + anchor;
     }
     low = href.lower();
-    is_img = low.endswith(".png") or low.endswith(".svg") or low.endswith(".gif")
-        or low.endswith(".jpg") or low.endswith(".jpeg") or low.endswith(".webp");
+    is_img = low.endswith(".png")
+    or low.endswith(".svg")
+    or low.endswith(".gif")
+    or low.endswith(".jpg")
+    or low.endswith(".jpeg")
+    or low.endswith(".webp");
     resolved = os.path.normpath(os.path.join(cur_dir, href)).replace(os.sep, "/");
     while resolved.startswith("../") {
         resolved = resolved[3:];
@@ -357,7 +331,6 @@ def _rewrite_href(href: str, version: str, cur_dir: str) -> str {
     return href + anchor;
 }
 
-"""Rewrite every markdown/html link and image in a page at ingest time."""
 def _rewrite_links(text: str, version: str, rel: str) -> str {
     cur_dir = os.path.dirname(rel);
 
@@ -388,8 +361,6 @@ def _rewrite_links(text: str, version: str, rel: str) -> str {
     return text;
 }
 
-"""Write the docs asset tree into the site's static dir (served at
-/static/assets/docsmedia) from an in-memory bundle."""
 def _write_assets(assets: dict) {
     dst_root = os.path.join(os.getcwd(), "assets", "docsmedia");
     for rel in assets.keys() {
@@ -406,10 +377,6 @@ def _get_hub -> DocsHub | None {
     return hubs[0] if hubs else None;
 }
 
-"""Build one version's subtree: dirs and pages, Contains edges = dir
-hierarchy. Downloads the version from GitHub; `latest` is pinned to the
-exact sha the API reported so content and staleness marker always agree.
-Returns the fetched bundle (the caller reuses latest's assets)."""
 def _build_version(hub: DocsHub, label: str, ref: str) -> dict {
     sha = _gh_head_sha(ref) if ref == "main" else "";
     bundle = _fetch_bundle(sha if sha != "" else ref, label);
@@ -417,9 +384,8 @@ def _build_version(hub: DocsHub, label: str, ref: str) -> dict {
     nav = _parse_nav(bundle["nav_text"] as str);
     _pver(label, "build", "0 of " + str(len(files)) + " pages");
     _pstep("growing the " + label + " graph · " + str(len(files)) + " pages");
-    ver = hub +>: HasVersion() :+> DocVersion(
-        label=label, git_ref=ref, fetched_at=_now(), pages=len(files),
-        sha=sha
+    ver = hub +>:HasVersion():+> DocVersion(
+        label=label, git_ref=ref, fetched_at=_now(), pages=len(files), sha=sha
     );
     grant(ver, level=ReadPerm);
 
@@ -436,7 +402,7 @@ def _build_version(hub: DocsHub, label: str, ref: str) -> dict {
             parent = acc;
             acc = seg if acc == "" else acc + "/" + seg;
             if acc not in containers {
-                d = containers[parent] +>: Contains() :+> DocDir(
+                d = containers[parent] +>:Contains():+> DocDir(
                     name=seg, path=acc, title=_pretty(seg)
                 );
                 grant(d, level=ReadPerm);
@@ -451,9 +417,11 @@ def _build_version(hub: DocsHub, label: str, ref: str) -> dict {
         if not title {
             title = _first_h1(raw) or _pretty(parts[-1][:-3]);
         }
-        order = (meta.get("order") if meta.get("order") is not None else fallback) as int;
+        order = (
+            meta.get("order") if meta.get("order") is not None else fallback
+        ) as int;
         fallback += 1;
-        pg = containers[os.path.dirname(rel).replace(os.sep, "/")] +>: Contains() :+> DocPage(
+        pg = containers[os.path.dirname(rel).replace(os.sep, "/")] +>:Contains():+> DocPage(
             name=parts[-1][:-3],
             path=_route_of(label, rel).replace("/docs/" + label, "").strip("/"),
             title=title,
@@ -467,7 +435,7 @@ def _build_version(hub: DocsHub, label: str, ref: str) -> dict {
             _pver(label, "build", str(built_ct) + " of " + str(len(files)) + " pages");
         }
     }
-    # a dir sorts where its earliest child sorts (children settle before parents)
+
     for i in range(len(made_dirs)) {
         d = made_dirs[len(made_dirs) - 1 - i];
         lo = 9000;
@@ -487,7 +455,6 @@ def _build_version(hub: DocsHub, label: str, ref: str) -> dict {
     return bundle;
 }
 
-"""Drop any existing hub and rebuild all pinned versions from GitHub."""
 def _ingest_all {
     _progress["active"] = True;
     _progress["phase"] = "sync";
@@ -519,9 +486,8 @@ def _ingest_all {
     _pstep("docs graph ready — persists from here");
 }
 
-"""Is the `latest` subtree behind the repo's main on GitHub?"""
 def _latest_stale(hub: DocsHub) -> bool {
-    vers = [hub-->[?:DocVersion, label == "latest"]];
+    vers = [hub-->[?:DocVersion, label=="latest"]];
     if not vers {
         return True;
     }
@@ -529,9 +495,6 @@ def _latest_stale(hub: DocsHub) -> bool {
     return head != "" and head != vers[0].sha;
 }
 
-"""Rebuild only the `latest` subtree (pinned tags never change). Build the
-new subtree BEFORE dropping the old one so concurrent readers never see a
-gap — they get the old graph or the new one, never neither."""
 def _refresh_latest(hub: DocsHub) {
     _progress["active"] = True;
     _progress["phase"] = "sync";
@@ -539,7 +502,7 @@ def _refresh_latest(hub: DocsHub) {
     _progress["versions"] = [];
     _pver("latest", "wait", "queued");
     _pstep("main moved — refreshing latest");
-    olds = [hub-->[?:DocVersion, label == "latest"]];
+    olds = [hub-->[?:DocVersion, label=="latest"]];
     b = _build_version(hub, "latest", "main");
     _write_assets(b["assets"] as dict);
     for v in olds {
@@ -554,34 +517,47 @@ def _refresh_latest(hub: DocsHub) {
 def _version_list(hub: DocsHub) -> list[dict] {
     out: list[dict] = [];
     for v in [hub-->[?:DocVersion]] {
-        out.append({
-            "label": v.label, "ref": v.git_ref,
-            "pages": v.pages, "fetched_at": v.fetched_at
-        });
+        out.append(
+            {
+                "label": v.label,
+                "ref": v.git_ref,
+                "pages": v.pages,
+                "fetched_at": v.fetched_at
+            }
+        );
     }
     return out;
 }
 
-"""Nested nav tree for one version subtree (no page bodies)."""
 def _tree_of(container: object) -> list[dict] {
     out: list[dict] = [];
     for d in [container-->[?:DocDir]] {
-        out.append({
-            "kind": "dir", "name": d.name, "title": d.title,
-            "path": d.path, "order": d.order, "children": _tree_of(d)
-        });
+        out.append(
+            {
+                "kind": "dir",
+                "name": d.name,
+                "title": d.title,
+                "path": d.path,
+                "order": d.order,
+                "children": _tree_of(d)
+            }
+        );
     }
     for p in [container-->[?:DocPage]] {
-        out.append({
-            "kind": "page", "name": p.name, "title": p.title,
-            "path": p.path, "order": p.order
-        });
+        out.append(
+            {
+                "kind": "page",
+                "name": p.name,
+                "title": p.title,
+                "path": p.path,
+                "order": p.order
+            }
+        );
     }
     out.sort(key=lambda (e: dict) { e["order"]; });
     return out;
 }
 
-"""Reading order: pages flattened depth-first in nav order."""
 def _flatten(tree: list[dict], acc: list[dict]) {
     for it in tree {
         if it["kind"] == "page" {
@@ -592,22 +568,19 @@ def _flatten(tree: list[dict], acc: list[dict]) {
     }
 }
 
-# ─── Walkers: the API ────────────────────────────────────────────────────────
-
-"""Cheap freshness probe: graph present? is `latest` behind the clone's
-main? Never ingests — the client uses this to decide whether to show the
-sync screen before calling ensure_docs."""
 walker:pub docs_status {
-    # A field-less walker registers GET-only while the client stub POSTs, so
-    # keep one field to make it a POST endpoint on both sides.
     has probe: bool = True;
 
     can run with Root entry {
         hub = _get_hub();
         if hub is None {
             report {
-                "ready": False, "stale": True, "building": _ingesting,
-                "versions": [], "progress": _progress,
+                "ready": False,
+                "stale": True,
+                "building": _ingesting,
+                "versions": [],
+                "progress": _progress,
+
             };
         } else {
             report {
@@ -617,13 +590,12 @@ walker:pub docs_status {
                 "versions": _version_list(hub),
                 "built_at": hub.built_at,
                 "progress": _progress,
+
             };
         }
     }
 }
 
-"""Bootstrap + freshness: full ingest when the graph is empty (or forced);
-otherwise re-ingest just `latest` when the clone's main has moved."""
 walker:pub ensure_docs {
     has force: bool = False;
 
@@ -640,8 +612,6 @@ walker:pub ensure_docs {
                     _refresh_latest(hub);
                 }
             } except Exception as e {
-                # Fail soft: keep whatever graph exists, tell the sync
-                # screen, and let the next visit retry.
                 _progress["phase"] = "error";
                 _progress["active"] = False;
                 _pstep("sync failed — " + str(e));
@@ -652,8 +622,11 @@ walker:pub ensure_docs {
         }
         if hub is None {
             report {
-                "ready": False, "building": _ingesting,
-                "versions": [], "progress": _progress,
+                "ready": False,
+                "building": _ingesting,
+                "versions": [],
+                "progress": _progress,
+
             };
         } else {
             report {
@@ -662,12 +635,12 @@ walker:pub ensure_docs {
                 "versions": _version_list(hub),
                 "built_at": hub.built_at,
                 "progress": _progress,
+
             };
         }
     }
 }
 
-"""Sidebar payload: the whole nav tree of one version."""
 walker:pub doc_tree {
     has version: str = "latest";
 
@@ -677,7 +650,7 @@ walker:pub doc_tree {
             report None;
             return;
         }
-        vers = [hub-->[?:DocVersion, label == self.version]];
+        vers = [hub-->[?:DocVersion, label==self.version]];
         if not vers {
             report None;
             return;
@@ -686,15 +659,13 @@ walker:pub doc_tree {
     }
 }
 
-"""Fetch one page by walking the URL path through the graph, edge by edge.
-Missing segments degrade to the nearest existing ancestor's index."""
 walker:pub doc_page {
-    has version: str = "latest";
-    has path: str = "";
-    has segs: list[str] = [];
-    has crumbs: list[dict] = [];
-    has missing: bool = False;
-    has flat: list[dict] = [];
+    has version: str = "latest",
+        path: str = "",
+        segs: list[str] = [],
+        crumbs: list[dict] = [],
+        missing: bool = False,
+        flat: list[dict] = [];
 
     can start with Root entry {
         hub = _get_hub();
@@ -702,13 +673,17 @@ walker:pub doc_page {
             report None;
             disengage;
         }
-        vers = [hub-->[?:DocVersion, label == self.version]];
+        vers = [hub-->[?:DocVersion, label==self.version]];
         if not vers {
             report None;
             disengage;
         }
         _flatten(_tree_of(vers[0]), self.flat);
-        self.segs = [s for s in self.path.split("/") if s];
+        self.segs = [
+            s
+            for s in self.path.split("/")
+            if s
+        ];
         visit vers[0];
     }
 
@@ -737,22 +712,23 @@ walker:pub doc_page {
             "crumbs": self.crumbs,
             "missing": self.missing,
             "prev": self.flat[idx - 1] if idx > 0 else None,
-            "next": self.flat[idx + 1] if (idx >= 0 and idx + 1 < len(self.flat)) else None,
+            "next": self.flat[idx + 1]
+                if (idx >= 0 and idx + 1 < len(self.flat))
+                else None,
+
         };
     }
 
-    """One routing step: consume a segment into a child dir/page, or land on
-    this container's index page (marking a miss if segments remain)."""
     def step(container: object) {
         if len(self.segs) > 0 {
             nxt = self.segs[0];
-            dirs = [container-->[?:DocDir, name == nxt]];
+            dirs = [container-->[?:DocDir, name==nxt]];
             if dirs {
                 self.segs = self.segs[1:];
                 visit dirs[0];
                 return;
             }
-            pages = [container-->[?:DocPage, name == nxt]];
+            pages = [container-->[?:DocPage, name==nxt]];
             if pages {
                 self.segs = self.segs[1:];
                 visit pages[0];
@@ -760,12 +736,12 @@ walker:pub doc_page {
             }
             self.missing = True;
         }
-        idx = [container-->[?:DocPage, name == "index"]];
+        idx = [container-->[?:DocPage, name=="index"]];
         if idx {
             visit idx[0];
             return;
         }
-        # No index here: follow the lowest nav order downward.
+
         best_page: DocPage | None = None;
         bp_order = 999999;
         for p in [container-->[?:DocPage]] {

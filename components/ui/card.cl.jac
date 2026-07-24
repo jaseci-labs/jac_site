@@ -48,7 +48,8 @@ def:pub CardDescription(props: any) -> JsxElement {
             {**attrs}
             data-slot="card-description"
             className={cn(
-                "text-muted-foreground text-sm text-muted-foreground text-sm", props["className"]
+                "text-muted-foreground text-sm text-muted-foreground text-sm",
+                props["className"]
             )}
         />;
 }
