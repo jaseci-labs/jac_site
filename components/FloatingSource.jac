@@ -57,12 +57,73 @@ def:pub FloatingSource(
         []
     );
 
+    def apply_offset(nx: float, ny: float) {
+        el: any = winRef.current;
+        if not el or not (floating or always_float) {
+            return;
+        }
+        cur_x = (offX.current or 0) as float;
+        cur_y = (offY.current or 0) as float;
+        rect: any = el.getBoundingClientRect();
+        base_left = (rect.left as float) - cur_x;
+        base_top = (rect.top as float) - cur_y;
+        bar: any = el.querySelector(".code-titlebar");
+        bar_h = (bar.offsetHeight as float) if bar else 40.0;
+        gap = 8.0;
+        top_guard = gap;
+        nav: any = document.querySelector("header");
+        if nav {
+            nav_style: any = window.getComputedStyle(nav);
+            nav_pos = nav_style.position;
+            if nav_pos == "fixed" or nav_pos == "sticky" {
+                nav_rect: any = nav.getBoundingClientRect();
+                if (nav_rect.top as float) <= gap
+                and (nav_rect.bottom as float) > 0.0 {
+                    top_guard = (nav_rect.bottom as float) + gap;
+                }
+            }
+        }
+        min_x = gap - base_left;
+        max_x = (window.innerWidth as float) - gap - (rect.width as float) - base_left;
+        min_y = top_guard - base_top;
+        max_y = (window.innerHeight as float) - gap - bar_h - base_top;
+        if nx > max_x {
+            nx = max_x;
+        }
+        if nx < min_x {
+            nx = min_x;
+        }
+        if ny > max_y {
+            ny = max_y;
+        }
+        if ny < min_y {
+            ny = min_y;
+        }
+        offX.current = nx;
+        offY.current = ny;
+        el.style.transform = "translate(" + str(nx) + "px, " + str(ny) + "px)";
+    }
+
+    useEffect(
+        lambda {
+            on_resize = lambda (_ev: any) { apply_offset(
+                (offX.current or 0) as float, (offY.current or 0) as float
+            ); };
+            window.addEventListener("resize", on_resize);
+            return lambda { window.removeEventListener("resize", on_resize); };
+        },
+        [floating]
+    );
+
     can with [floating] entry {
         if winRef.current {
             if floating {
                 winRef.current.style.transform = "translate(" + str(offX.current) + "px, " + str(
                     offY.current
                 ) + "px)";
+                apply_offset(
+                    (offX.current or 0) as float, (offY.current or 0) as float
+                );
             } else {
                 winRef.current.style.transform = "";
             }
@@ -87,17 +148,9 @@ def:pub FloatingSource(
         sy = e.clientY;
         bx = (offX.current or 0) as float;
         by = (offY.current or 0) as float;
-        move = lambda (ev: any) {
-            nx = bx + ((ev.clientX as float) - sx);
-            ny = by + ((ev.clientY as float) - sy);
-            offX.current = nx;
-            offY.current = ny;
-            if winRef.current {
-                winRef.current.style.transform = "translate(" + str(nx) + "px, " + str(
-                    ny
-                ) + "px)";
-            }
-        };
+        move = lambda (ev: any) { apply_offset(
+            bx + ((ev.clientX as float) - sx), by + ((ev.clientY as float) - sy)
+        ); };
         up = lambda (ev: any) {
             document.removeEventListener("mousemove", move);
             document.removeEventListener("mouseup", up);
