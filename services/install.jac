@@ -9,8 +9,9 @@ import hashlib;
 import datetime;
 import urllib.request;
 
+# Canonical repo name (jaseci-labs/jaseci redirects here since the rename).
 glob INSTALL_SRC: str =
-    "https://raw.githubusercontent.com/jaseci-labs/jaseci/main/scripts/install.sh";
+    "https://raw.githubusercontent.com/jaseci-labs/jac/main/scripts/install.sh";
 
 # Re-probe upstream at most this often. The script resolves the newest
 # release at run time anyway, so minutes of staleness cost nothing.

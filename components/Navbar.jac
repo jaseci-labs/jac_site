@@ -1,6 +1,8 @@
 import from .ui.button { buttonVariants }
 import from "..lib.utils" { cn }
 import from "@jac/runtime" { Link }
+import from react { useEffect }
+sv import from ..services.install { ensure_install }
 import from "@hugeicons/react" { HugeiconsIcon }
 import from "@hugeicons/core-free-icons" {
     GithubIcon, Moon01Icon, Sun01Icon, DiscordIcon
@@ -12,6 +14,18 @@ def:pub Navbar() -> JsxElement {
     can with entry {
         dark = document.documentElement.classList.contains("dark");
     }
+
+    # The navbar renders on every page, so any visit anywhere keeps the
+    # hosted /install.sh fresh — the same staleness-check-on-visit pattern
+    # the docs graph uses. Fire-and-forget: nothing in the UI waits on it.
+    async def freshen_installer {
+        _ = root spawn ensure_install();
+    }
+
+    useEffect(lambda {
+        _ = freshen_installer();
+        return lambda {};
+    }, []);
 
     def toggle_theme(_e: MouseEvent) {
         if dark {
