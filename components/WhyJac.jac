@@ -6,12 +6,18 @@ import from .Reveal { Reveal }
 import from .SynechicDiagram { SynechicDiagram }
 import from .TopokineticDiagram { TopokineticDiagram }
 
-"""One slide's frame: big title, small mono subline, content."""
-def:pub WhySlide(title: str = "", sub: str = "", children: any = None) -> JsxElement {
+"""One slide's frame: big title (optional gradient accent word), small mono
+subline, content."""
+def:pub WhySlide(title: str = "", accent: str = "", sub: str = "", children: any = None) -> JsxElement {
     return <div className="flex h-full flex-col rounded-2xl border border-border/70 bg-card/30 pt-8 pb-8 pl-6 pr-6 sm:pl-12 sm:pr-12">
-        {if title != "" {
+        {if title != "" or accent != "" {
             <div className="mb-6 text-center">
-                <h3 className="text-balance text-2xl font-bold tracking-tight sm:text-3xl">{title}</h3>
+                <h3 className="text-balance text-2xl font-bold tracking-tight sm:text-3xl">
+                    {title}
+                    {if accent != "" {
+                        <span>{" "}<span className="text-gradient">{accent}</span></span>
+                    }}
+                </h3>
                 {if sub != "" {
                     <p className="mt-3 font-mono text-xs uppercase tracking-widest text-primary">{sub}</p>
                 }}
@@ -53,12 +59,12 @@ def:pub WhyJac() -> JsxElement {
                                 </WhySlide>
                             </CarouselItem>
                             <CarouselItem>
-                                <WhySlide title="Bet one — Jac is synechic" sub="One continuous, checked medium">
+                                <WhySlide title="Jac is" accent="synechic" sub="One continuous, checked medium">
                                     <SynechicDiagram />
                                 </WhySlide>
                             </CarouselItem>
                             <CarouselItem>
-                                <WhySlide title="Bet two — Jac is topokinetic" sub="Computation moves to data with Object Spatial Programming">
+                                <WhySlide title="Jac is" accent="topokinetic" sub="Computation moves to data with Object Spatial Programming">
                                     <TopokineticDiagram />
                                 </WhySlide>
                             </CarouselItem>

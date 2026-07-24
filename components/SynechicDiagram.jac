@@ -26,6 +26,26 @@ def:pub GhostChip(x: int, y: int, w: int, label: str) -> JsxElement {
     </g>;
 }
 
+"""A language's own compiler / ecosystem, riding alongside its box."""
+def:pub ToolChip(x: int, y: int, w: int, label: str) -> JsxElement {
+    return <g>
+        <rect x={x} y={y} width={w} height="20" rx="10"
+            fill="var(--card)" stroke="var(--border)" />
+        <text x={x + w / 2} y={y + 13} textAnchor="middle" fontSize="8.5"
+            fill="var(--muted-foreground)" fontFamily="monospace">{label}</text>
+    </g>;
+}
+
+"""A function call crossing a codespace divider — the whole boundary."""
+def:pub CallPill(cx: int, label: str) -> JsxElement {
+    return <g>
+        <rect x={cx - 38} y="142" width="76" height="17" rx="8.5"
+            fill="var(--card)" stroke="#ff6b35" strokeOpacity="0.5" />
+        <text x={cx} y="153.5" textAnchor="middle" fontSize="8.5"
+            fill="#ff6b35" fontFamily="monospace">{label}</text>
+    </g>;
+}
+
 def:pub Boundary(y: int, label: str) -> JsxElement {
     return <g>
         <line x1="118" y1={y} x2="322" y2={y} stroke="var(--destructive)"
@@ -45,16 +65,22 @@ def:pub SynechicDiagram() -> JsxElement {
             <p className="mb-3 font-mono text-[10px] uppercase tracking-widest text-muted-foreground">
                 Today — three programs, hand-synced
             </p>
-            <svg viewBox="0 0 440 320" className="w-full" aria-label="A conventional stack: three programs joined by unchecked boundaries">
+            <svg viewBox="0 0 440 320" className="w-full" aria-label="A conventional stack: three programs, each with its own compiler and ecosystem, joined by unchecked boundaries">
                 <StackBox x={110} y={14} label="TypeScript" sub="browser" />
+                <ToolChip x={16} y={30} w={88} label="tsc · node" />
+                <ToolChip x={336} y={30} w={88} label="npm" />
                 <Boundary y={94} label="JSON over the wire — unchecked" />
                 <GhostChip x={16} y={84} w={88} label="route table" />
                 <GhostChip x={340} y={84} w={84} label="OpenAPI" />
                 <StackBox x={110} y={128} label="Python" sub="server" />
+                <ToolChip x={16} y={144} w={88} label="CPython" />
+                <ToolChip x={336} y={144} w={88} label="pip · PyPI" />
                 <Boundary y={208} label="FFI — unchecked" />
                 <GhostChip x={16} y={198} w={88} label="ORM models" />
                 <GhostChip x={340} y={198} w={84} label="serializers" />
                 <StackBox x={110} y={242} label="C / Rust" sub="native" />
+                <ToolChip x={16} y={258} w={88} label="gcc · rustc" />
+                <ToolChip x={336} y={258} w={88} label="crates · apt" />
             </svg>
             <p className="mt-3 text-sm text-muted-foreground">
                 Rename a field: it ships anyway, and fails in production.
@@ -62,7 +88,7 @@ def:pub SynechicDiagram() -> JsxElement {
         </div>
         <div className="rounded-2xl border border-primary/30 bg-primary/5 pt-5 pb-5 pl-5 pr-5">
             <p className="mb-3 font-mono text-[10px] uppercase tracking-widest text-primary">
-                Jac — one continuous program
+                Jac — a codespace boundary is just a function call
             </p>
             <svg viewBox="0 0 440 320" className="w-full" aria-label="Jac: one continuous checked medium across client, server, and native">
                 <defs>
@@ -107,6 +133,9 @@ def:pub SynechicDiagram() -> JsxElement {
                     <animateMotion dur="3.2s" repeatCount="indefinite"
                         path="M62,156 L378,156" />
                 </circle>
+                {#* crossing a codespace boundary is just a function call *#}
+                <CallPill cx={160} label="await f(x)" />
+                <CallPill cx={280} label="g(y)" />
                 {#* ecosystems plug straight in *#}
                 <MLine x1="110" y1="268" x2="106" y2="208" stroke="#56d364" strokeOpacity="0.55" strokeWidth="1.2"
                     initial={{"pathLength": 0}} whileInView={{"pathLength": 1}} viewport={_VIEW}

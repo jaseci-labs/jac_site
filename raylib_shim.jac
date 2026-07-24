@@ -195,16 +195,6 @@ def _setcur(sh: any, m: list) {
     }
 }
 
-def _read_cstr(sh: any, p: int) -> str {
-    u8 = new(Uint8Array, sh.mem.buffer);
-    s = "";
-    i = p;
-    while u8[i] != 0 {
-        s = s + String.fromCharCode(u8[i]);
-        i = i + 1;
-    }
-    return s;
-}
 
 def _flush(sh: any) -> None {
     if len(sh.verts) == 0 {
@@ -227,9 +217,9 @@ def _flush(sh: any) -> None {
 
 def _build_env(sh: any) -> dict {
     return {
-        "InitWindow": lambda (w: int , h: int , t: int) { document.title = _read_cstr(
-            sh, t
-        ); },
+        # Don't let the game rename the browser tab - this is a page, not a
+        # native window; the title stays whatever app_meta_data says.
+        "InitWindow": lambda (w: int , h: int , t: int) { },
         "WindowShouldClose": lambda { return 0; },
         "CloseWindow": lambda { },
         "SetTargetFPS": lambda (f: int) { },

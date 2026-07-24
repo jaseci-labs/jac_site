@@ -67,7 +67,11 @@ def:pub PolypilerDiagram() -> JsxElement {
                 fill="#ffffff" fillOpacity="0.85">the polypiler</text>
             <text x="440" y="234" textAnchor="middle" fontSize="10" fontFamily="monospace"
                 fill="var(--muted-foreground)">one binary · compiler + runtime + linkers + package managers</text>
-            {#* targets out *#}
+            {#* targets out — three artifacts, ONE program *#}
+            <rect x="740" y="40" width="136" height="216" rx="14"
+                fill="#ff6b35" fillOpacity="0.05" stroke="#ff6b35" strokeOpacity="0.35" />
+            <text x="808" y="30" textAnchor="middle" fontSize="10" fontFamily="monospace"
+                fill="#ff6b35">one program</text>
             {for (i, p) in enumerate(_OUT_PATHS) {
                 <MPath key={"op" + str(i)} d={p} fill="none" stroke="#ff6b35" strokeOpacity="0.4" strokeWidth="1.3"
                     initial={{"pathLength": 0}} whileInView={{"pathLength": 1}} viewport={_VIEW}
