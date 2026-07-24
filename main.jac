@@ -1,4 +1,10 @@
-import from services.source { source_tree, source_file, SourceFile, SourceView }
+import from services.source {
+    source_tree,
+    source_file,
+    example_sources,
+    SourceFile,
+    SourceView
+}
 import from services.docs { ensure_docs, docs_status, doc_tree, doc_page }
 import from services.install { ensure_install }
 import from services.leaderboard { submit_repo, leaderboard, board_status }

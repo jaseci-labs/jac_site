@@ -41,37 +41,6 @@ def _is_alnum(c: str) -> bool {
     return ("a" <= c and c <= "z") or ("0" <= c and c <= "9");
 }
 
-def _slug(t: str) -> str {
-    t = t.lower();
-    out = "";
-    i = 0;
-    n = len(t);
-    while i < n {
-        c = t[i];
-        if _is_alnum(c) or c == "-" {
-            out = out + c;
-        } elif c == " " {
-            j = i;
-            while j < n and t[j] == " " {
-                j = j + 1;
-            }
-            if out != "" and j < n {
-                out = out + "-";
-            }
-            i = j;
-            continue;
-        }
-        i = i + 1;
-    }
-    while out.startswith("-") {
-        out = out[1:];
-    }
-    while out.endswith("-") {
-        out = out[:-1];
-    }
-    return out;
-}
-
 def _count_hashes(s: str) -> int {
     k = 0;
     while k < len(s) and s[k] == "#" {
@@ -124,8 +93,9 @@ def _split_row(s: str) -> list[str] {
     return [c.strip() for c in t.split("|")];
 }
 
-def _parse_blocks(lines: list[str]) -> list[dict] {
+def _parse_blocks(lines: list[str], anchors: list[str] | None = None) -> list[dict] {
     blocks: list[dict] = [];
+    seen_headings = 0;
     i = 0;
     n = len(lines);
     while i < n {
@@ -199,9 +169,14 @@ def _parse_blocks(lines: list[str]) -> list[dict] {
             level = _count_hashes(s);
             if level <= 6 and level < len(s) and s[level] == " " {
                 text = s[level + 1:].strip();
-                blocks.append(
-                    {"k": "h", "level": level, "text": text, "id": _slug(text)}
-                );
+                anchor = "";
+                if level == 2 or level == 3 {
+                    if anchors is not None and seen_headings < len(anchors) {
+                        anchor = anchors[seen_headings];
+                    }
+                    seen_headings = seen_headings + 1;
+                }
+                blocks.append({"k": "h", "level": level, "text": text, "id": anchor});
                 i = i + 1;
                 continue;
             }
@@ -727,8 +702,10 @@ def:pub MDBlocks(blocks: list[dict]) -> JsxElement {
         </div>;
 }
 
-def:pub Markdown(lines: list[str], skip_title: str = "") -> JsxElement {
-    blocks = _parse_blocks(lines);
+def:pub Markdown(
+    lines: list[str], skip_title: str = "", anchors: list[str] | None = None
+) -> JsxElement {
+    blocks = _parse_blocks(lines, anchors);
     if len(blocks) > 0 and skip_title != "" {
         first = blocks[0];
         if first["k"] == "h"

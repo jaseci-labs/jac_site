@@ -1,7 +1,7 @@
+import from ..lib.motion { view_once }
 import from "motion/react" { motion }
 
 glob MPath: any = motion.path,
-     _VIEW: dict = {"once": True, "amount": 0.4},
      _IN_PATHS: list[str] = [
          "M124,65 C230,65 300,118 384,140",
          "M124,150 L384,150",
@@ -75,7 +75,7 @@ def:pub PolypilerDiagram -> JsxElement {
                         strokeWidth="1.3"
                         initial={{"pathLength": 0}}
                         whileInView={{"pathLength": 1}}
-                        viewport={_VIEW}
+                        viewport={view_once()}
                         transition={{"duration": 0.8, "delay": 0.2 + i * 0.15}}
                     />
                 }}
@@ -168,7 +168,7 @@ def:pub PolypilerDiagram -> JsxElement {
                         strokeWidth="1.3"
                         initial={{"pathLength": 0}}
                         whileInView={{"pathLength": 1}}
-                        viewport={_VIEW}
+                        viewport={view_once()}
                         transition={{"duration": 0.8, "delay": 0.5 + i * 0.15}}
                     />
                 }}

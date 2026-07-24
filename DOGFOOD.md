@@ -171,3 +171,136 @@ it) · **open** (nothing done yet).
     through the formatter. **workaround**: the directives were moved onto the
     line the diagnostic anchors to. A suppression comment arguably belongs to
     the statement it sits in, not to one line of it. **open**.
+
+## H. Found while making the site an idiomatic multi-codespace model
+
+The refactor that moved every endpoint from `dict` payloads to typed `obj`
+view models, split the two shells into sections plus `.impl.jac` annexes, and
+extracted the shared server/client helper modules.
+
+36. **Reference propagation does not cross module boundaries.**
+    `jac guide jac-codespaces` states that "placement propagates through
+    references — helpers, `glob`s, and imports that client code uses join the
+    client bundle, transitively." It does not: a plain `.jac` module (server by
+    default) imported by an inferred-client component fails with
+    **E5082** "Client code imports 'tokenize_lines' from '..lib.jac_tokenizer',
+    but 'tokenize_lines' has no client-side presence". The diagnostic is clear
+    and the fix is a one-character rename (`lib/jac_tokenizer.cl.jac`), but the
+    guide promises inference that the checker does not perform. Either the
+    guide should scope the claim to intra-module references or the checker
+    should follow cross-module reference edges. **open** — the guide is the
+    thing most likely to mislead, since "markerless first" is its headline
+    rule. Pure logic pinned `.cl.jac` is still reachable by `jac test`, which
+    is what makes the workaround tolerable.
+37. **`..`-relative imports across sibling top-level directories break
+    `jac test`.** `services/docs.jac` with `import from ..lib.timefmt { now_iso }`
+    serves correctly under `jac start`, but `jac test services/docs.jac` fails
+    collection with `ImportError: attempted relative import beyond top-level
+    package` — the test runner roots the package at the target file's own
+    directory, so `..` escapes it. **workaround**: `lib/timefmt.jac` moved to
+    `services/timefmt.jac` so the server package only ever uses `.`-relative
+    imports. Worth a note in `jac-testing` at minimum.
+38. **W3005 and W3037 contradict each other on parameterless functions.**
+    `def finish { ... }` — no parameter list at all — reports
+    W3005 "Empty parentheses can be removed", which `jac fmt --lintfix` then
+    cannot fix (there are no parentheses to remove). Adding a return type to
+    quiet it trips W3037 "Unnecessary '-> None' return type annotation". There
+    is no spelling of a parameterless, value-less function that satisfies both.
+    12 permanent hits here. `jac fmt --check --lintfix` still exits 0, so CI is
+    unaffected — it is pure noise, which is the problem. **open**.
+39. **W6002 keys on the method name, not the receiver type.** `t.find(":", i)`
+    where `t: str` is Python's own `str.find`, translated correctly by the JS
+    backend, yet it is reported as "Use of JS-idiomatic method '.find()' — use
+    'next() with generator' for cross-codespace portability". 9 of the site's
+    10 W6002s are this; the 10th is `.fill()` inside a `.cl.jac` module, where
+    cross-codespace portability is moot by construction. A portability lint
+    that fires on the one codespace-pinned file in the tree is backwards.
+    **open**.
+40. **Narrowing is lost for obj attribute access when the local is assigned
+    inside a loop.** With `latest_bundle: DocBundle | None = None` assigned in
+    a `for` body, both `if latest_bundle is not None { latest_bundle.assets }`
+    and the `x.f if x is not None else ...` ternary raise **E1099**. The
+    identical code shaped as a `dict` with `latest_bundle["assets"]` passed —
+    subscripting never asks the narrower anything. So the failure mode only
+    appears once you do the idiomatic thing and move payloads from dicts to
+    typed objects, which is exactly when a type checker should be helping.
+    Related to #16 but distinct: this is `is not None`, not truthiness.
+    **workaround**: hoist the field into a non-optional local before the loop.
+41. **A parse error in one declaration blanks unrelated name resolution in the
+    same file.** `def:pub RepoCard(entry: BoardEntry, ...)` raises E0013
+    ('entry' is a keyword). The same file *also* reported E1032 "Type is
+    Unknown, cannot access attribute 'round'" on `Math.round(...)`, which reads
+    exactly like the browser-globals false-positive class in B15. Fixing the
+    keyword removed both. Same shape as #8, but the cascade here impersonates a
+    known unrelated bug, which is worse than noise. **open**.
+42. **`select = ["all"]` makes `print()` a hard error (E3012) in teaching
+    samples.** `examples/ai_priority.jac` is a `with entry { print(...); }`
+    demo — printing is the point. `no-print` is right for site source and wrong
+    for content, so `examples/*` joins `[check.lint] exclude`, which
+    conveniently also stops `strip-comments` from deleting the `# Priority.URGENT`
+    line that makes the sample teach anything. Two rules, one exclude, both
+    correct — but it does mean a lint profile is a whole-tree decision with no
+    per-directory granularity beyond exclusion. **workaround**.
+
+## I. Found by QA, after `jac check` said the tree was clean
+
+Every entry below was invisible to `jac check` (0 errors, 72 modules) and to
+`jac check . --nowarn`, the CI gate. All six surfaced only by running
+`jac start` and driving the site with `jac browse`. That is the finding
+behind the findings: the current gates cannot tell you whether the app runs.
+
+43. **Client modules export only `def:pub`; a plain `def` imported across
+    modules type-checks clean and dies at bundle time.** `import from
+    ..lib.jac_tokenizer { tokenize_lines }`, where `tokenize_lines` was a
+    plain `def` in a `.cl.jac` module, passed `jac check` with zero
+    diagnostics, then failed the Vite build with `"tokenize_lines" is not
+    exported by "compiled/lib/jac_tokenizer.js"` and served the whole site a
+    503. Adding `:pub` fixed it. This is the function-level sibling of A4
+    (client globs not exported cross-module). The checker resolves the import
+    and knows both modules' codespaces, so it is catchable statically.
+    **open**.
+44. **`is not None` does not guard against JS `undefined` in client code.**
+    `view = samples.get(name); return view.raw_lines if view is not None else
+    [];` took down the landing page with "Cannot read properties of undefined
+    (reading 'raw_lines')": a missing dict key yields `undefined`, and the
+    compiled null check lets it through. Truthiness (`if view`) is the
+    portable form. Python's `None` and JavaScript's `undefined` are not the
+    same absent value and the client codespace follows JS, so the single most
+    common Python null-guard is quietly wrong on one side of a synechic
+    program. **open**.
+45. **Constructing an `sv import`ed obj client-side: "JobProgress is not
+    defined".** `jac-codespaces` promises that a client-referenced obj is
+    auto-shared and "the bundle gets a wire-codec class (constructor with the
+    declared field defaults, `__from_wire`/`__to_wire`, `_jac_id`)". Writing
+    `has progress: JobProgress = JobProgress();` in a client component
+    compiled clean and threw at mount. Receiving and reading the same type
+    over the wire works perfectly -- only construction is missing.
+    **workaround**: hold it as `JobProgress | None = None` and guard.
+46. **A1 confirmed, and the guide still says otherwise.** A `def:pub`
+    referenced only through a client `sv import` returned 405 Method Not
+    Allowed. Renaming it and changing its return type from
+    `dict[str, SourceView]` to `list[SourceView]` changed nothing; adding the
+    name to the entry module's `import from services.source { ... }` fixed it
+    instantly. `jac-fullstack-patterns` still claims "any endpoint a client
+    module references through `sv import` **self-registers at server start**
+    ... (verified live)". It does not. Until jaseci-labs/jac#7695 lands, that
+    rule should say the entry-module import is mandatory -- three wrong
+    hypotheses were chased before checking it. **filed** (#7695).
+47. **An undefined name is a warning, and the CI gate skips warnings.**
+    Deleting a helper left one live call to `_is_alnum`. `jac check` reported
+    `W2001: Name '_is_alnum' may be undefined` and exited 0; `jac check .
+    --nowarn`, which is what CI runs, said nothing at all; the docs page died
+    at runtime with `_is_alnum is not defined`. Worse, W2001 fires 283 times
+    in this repo for SVG/JSX intrinsics (`text`, `circle`, `rect`, `g`, `b`)
+    and jac-shadcn sub-components, so the one true positive was one line in
+    283. Fixing the intrinsic false positives (B15) is what would make W2001
+    promotable to an error, and an undefined name deserves to be one.
+    **open**.
+48. **`/docs` is shadowed by FastAPI's Swagger UI under `jac start`.** A
+    `pages/docs/` route tree is unreachable at its own index: `/docs` serves
+    the OpenAPI explorer while `/docs/latest` and everything deeper serve the
+    app. This site only ever links to `/docs/latest`, so it went unnoticed
+    for the life of the project, but any app with a docs section will hit it.
+    The SPA catch-all already excludes `cl/`, `walker/`, `function/`, `user/`
+    and `static/`; the framework's own doc routes need the same treatment, or
+    to move under a reserved prefix. **open**.
