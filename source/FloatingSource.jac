@@ -12,6 +12,7 @@ def:pub FloatingSource(
     always_float: bool = False, closable: bool = False, initial_path: str = "main.jac"
 ) -> JsxElement {
     has floating: bool = False,
+        pulled: bool = False,
         expanded: bool = False,
         size_anim: bool = False,
         yielded: bool = False,
@@ -57,9 +58,9 @@ def:pub FloatingSource(
         []
     );
 
-    def apply_offset(nx: float, ny: float) {
+    def apply_offset(nx: float, ny: float, force: bool = False) {
         el: any = winRef.current;
-        if not el or not (floating or always_float) {
+        if not el or (not force and not (floating or always_float or pulled)) {
             return;
         }
         cur_x = (offX.current or 0) as float;
@@ -115,9 +116,10 @@ def:pub FloatingSource(
         [floating]
     );
 
-    can with [floating] entry {
+    can with [floating, pulled] entry {
+        active = floating or always_float or pulled;
         if winRef.current {
-            if floating {
+            if active {
                 winRef.current.style.transform = "translate(" + str(offX.current) + "px, " + str(
                     offY.current
                 ) + "px)";
@@ -128,7 +130,7 @@ def:pub FloatingSource(
                 winRef.current.style.transform = "";
             }
         }
-        if floating {
+        if active {
             _ = setTimeout(lambda { size_anim = True; }, 500);
         } else {
             size_anim = False;
@@ -136,27 +138,74 @@ def:pub FloatingSource(
     }
 
     def start_drag(e: MouseEvent) {
-        if not (floating or always_float) {
-            return;
-        }
         tgt: any = e.target;
         if not tgt.closest(".code-titlebar") {
             return;
         }
+        if floating or always_float or pulled {
+            e.preventDefault();
+            sx = e.clientX;
+            sy = e.clientY;
+            bx = (offX.current or 0) as float;
+            by = (offY.current or 0) as float;
+            move = lambda (ev: any) { apply_offset(
+                bx + ((ev.clientX as float) - sx), by + ((ev.clientY as float) - sy)
+            ); };
+            up = lambda (ev: any) {
+                document.removeEventListener("mousemove", move);
+                document.removeEventListener("mouseup", up);
+            };
+            document.addEventListener("mousemove", move);
+            document.addEventListener("mouseup", up);
+            return;
+        }
+        # docked: dragging the titlebar past a small threshold pulls the
+        # browser out of the hero into its floating window, which then
+        # follows the cursor for the rest of the gesture
         e.preventDefault();
         sx = e.clientX;
         sy = e.clientY;
-        bx = (offX.current or 0) as float;
-        by = (offY.current or 0) as float;
-        move = lambda (ev: any) { apply_offset(
-            bx + ((ev.clientX as float) - sx), by + ((ev.clientY as float) - sy)
-        ); };
-        up = lambda (ev: any) {
-            document.removeEventListener("mousemove", move);
-            document.removeEventListener("mouseup", up);
+        detached: any = {"on": False, "x": 0.0, "y": 0.0};
+        follow = lambda {
+            el: any = winRef.current;
+            if not el {
+                return;
+            }
+            rect: any = el.getBoundingClientRect();
+            cur_x = (offX.current or 0) as float;
+            cur_y = (offY.current or 0) as float;
+            bar: any = el.querySelector(".code-titlebar");
+            bar_h = (bar.offsetHeight as float) if bar else 40.0;
+            apply_offset(
+                (detached["x"] as float) - ((rect.left as float) - cur_x) - (
+                    rect.width as float
+                ) / 2.0,
+                (detached["y"] as float) - ((rect.top as float) - cur_y) - bar_h / 2.0,
+                True
+            );
         };
-        document.addEventListener("mousemove", move);
-        document.addEventListener("mouseup", up);
+        pull_move = lambda (ev: any) {
+            detached["x"] = ev.clientX;
+            detached["y"] = ev.clientY;
+            dx = (ev.clientX as float) - sx;
+            dy = (ev.clientY as float) - sy;
+            if not detached["on"] and (dx * dx + dy * dy) > 144.0 {
+                detached["on"] = True;
+                closed = False;
+                pulled = True;
+                _ = setTimeout(follow, 30);
+                return;
+            }
+            if detached["on"] {
+                follow();
+            }
+        };
+        pull_up = lambda (ev: any) {
+            document.removeEventListener("mousemove", pull_move);
+            document.removeEventListener("mouseup", pull_up);
+        };
+        document.addEventListener("mousemove", pull_move);
+        document.addEventListener("mouseup", pull_up);
     }
 
     def reclamp_after_resize {
@@ -188,6 +237,7 @@ def:pub FloatingSource(
         # hero for the main site, while the always-floating docs browser has
         # no dock and simply hides
         closed = True;
+        pulled = False;
         offX.current = 0;
         offY.current = 0;
         if winRef.current {
@@ -198,7 +248,7 @@ def:pub FloatingSource(
     if closed and always_float {
         return <></>;
     }
-    is_float = (floating or always_float) and not closed;
+    is_float = always_float or pulled or (floating and not closed);
     return
         <div ref={anchorRef} className="relative">
             {if is_float and not always_float {
@@ -215,7 +265,7 @@ def:pub FloatingSource(
                 onMouseDown={start_drag}
                 onDoubleClick={maybe_toggle}
                 className={cn(
-                    "relative h-[540px] w-full",
+                    "relative h-[540px] w-full [&_.code-titlebar]:cursor-move",
                     is_float
                     and cn(
                         "float-in fixed z-40 h-auto w-auto shadow-2xl [&_.code-titlebar]:cursor-move",
