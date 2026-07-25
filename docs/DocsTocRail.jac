@@ -1,4 +1,4 @@
-sv import from .graph { TocEntry }
+import from .graph { TocEntry }
 import from ..shared.utils { cn }
 
 def:pub DocsTocRail(toc: list[TocEntry]) -> JsxElement {

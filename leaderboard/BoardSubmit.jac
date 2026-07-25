@@ -1,5 +1,5 @@
-sv import from .board { BoardEntry }
-sv import from ..shared.progress { JobProgress }
+import from .board { BoardEntry }
+import from ..shared.progress { JobProgress }
 import from ..shared.utils { cn }
 import from .format { belt_class, belt_label }
 import from ..shared.ui.badge { Badge }

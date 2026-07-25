@@ -1,4 +1,4 @@
-sv import from .graph { TreeNode, VersionInfo }
+import from .graph { TreeNode, VersionInfo }
 import from "@jac/runtime" { Link }
 import from ..shared.utils { cn }
 import from ..shared.ui.select {

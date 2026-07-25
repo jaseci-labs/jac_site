@@ -23,7 +23,7 @@ glob _KINDS: list[dict] = [
          {"name": "Script / CLI tool", "cmd": "jac run app.jac"},
          {"name": "Zero-dependency native binary", "cmd": "jac build --as native"},
          {"name": "REST API + Swagger + auth", "cmd": "jac start api.jac"},
-         {"name": "Microservice mesh", "cmd": "sv import + jac start"},
+         {"name": "Microservice mesh", "cmd": "import + jac start"},
          {"name": "Full-stack web app", "cmd": "jac start"},
          {"name": "Desktop app (OS webview)", "cmd": "jac build --client desktop"},
          {"name": "Mobile app (Android / iOS)", "cmd": "jac build --client mobile"},

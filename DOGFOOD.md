@@ -210,7 +210,10 @@ extracted the shared server/client helper modules.
     should follow cross-module reference edges. **open** — the guide is the
     thing most likely to mislead, since "markerless first" is its headline
     rule. Pure logic pinned `.cl.jac` is still reachable by `jac test`, which
-    is what makes the workaround tolerable.
+    is what makes the workaround tolerable. (2026-07-25: on the in-tree
+    compiler the checker now follows the edges — E5082 is gone for this
+    shape — but what replaced it is a silent RPC bridge, which is worse; see
+    #55. The `.cl.jac` pins stay.)
 37. **`..`-relative imports across sibling top-level directories break
     `jac test`.** `services/docs.jac` with `import from ..lib.timefmt { now_iso }`
     serves correctly under `jac start`, but `jac test services/docs.jac` fails
@@ -397,3 +400,134 @@ is raylib only).
     extern buys nothing -- the extern's own params are exempt as FFI. The
     idiom that falls out: call externs with string literals directly and
     keep wrappers scalar-only. **workaround** (wrapper inlined).
+
+## L. Found auditing every explicit cl/na/sv marker in the site (2026-07-25)
+
+The audit removed each marker class in turn and drove the result (check,
+tests, `jac start`, curl probes, and reading the emitted JS). Removals that
+survived: the `cl {}` block and both `cl import ".css"` lines in main.jac
+(JSX / string-path inference covers them) and shared/utils' `cl` markers plus
+its `.cl.jac` suffix (its npm imports place it). Everything else earned its
+keep, and the audit surfaced four compiler bugs, three now fixed in tree.
+
+55. **Dropping a pure module's `.cl.jac` suffix silently converts its
+    def:pubs into async RPC stubs.** The in-tree checker no longer fires
+    E5082 for a client import of a server-inferred module: `def:pub` items
+    auto-bridge. Right for real endpoints, catastrophic for helpers --
+    `tokenize_lines` and `belt_class` compiled to
+    `await __jacCallFunction(...)` round-trips while `jac check` stayed at
+    0 errors and every route 200'd; sync call sites now receive Promises,
+    and `time_ago`'s `new(Date)` body would execute under Python. The one
+    honest diagnostic in the pile was E1031 on format.jac (Date has no
+    server-side type), which is the check-time proof the module was being
+    treated as server code. A `.cl.jac` suffix on a pure module was the only
+    thing that said "run this here, don't RPC it". **fixed-in-tree**
+    (2026-07-25, second pass): superseded by the anchor model in section M --
+    a `def:pub` in a module with no server anchor is an export, not an
+    endpoint, so it pulls into the importing codespace instead of bridging;
+    browser-global usage (`Date`, `Promise`, `setTimeout`) now seeds
+    clientness the way JSX and npm imports do. All four pins are plain `.jac`
+    now.
+
+56. **Plain imports that should bridge like `sv import` broke the bundle
+    ("now_iso is not exported by timefmt.js"), two compiler bugs deep.**
+    Making `sv import from ..shared.progress { JobProgress }` plain pulled
+    JobProgress client, dragged `import from .timefmt { now_iso }` along,
+    and rollup died at link time. Both root causes **fixed-in-tree**
+    (2026-07-25) in `jac0core/passes/codespace_pull_pass.jac`:
+    - the pull stamped greedily with no portability check -- JobProgress
+      needs `now_iso` needs `import datetime`, which can never join a
+      browser bundle. `_closure_pullable` now walks the seed's transitive
+      closure (across modules, through jac imports) and declines any seed
+      that reaches a Python import, an access-marked def, or a
+      node/edge/walker; declined seeds fall through to the partition and
+      bridge as wire types / RPC stubs -- exactly what `sv import` emits.
+    - a module that had already been ES-generated kept its stale empty
+      `gen.es_ast` after being stamped (EsastGenPass prunes on the cached
+      module ast), so even a correct pull emitted nothing. Stamps now
+      invalidate the stale `gen.es_ast`/`gen.js`.
+    With both fixes the site builds, serves, and answers on every probe with
+    all fourteen `sv import` markers removed -- endpoints arrive as
+    `__jacSpawn`/`__jacCallFunction` stubs, JobProgress/JobStep as wire
+    types, and no server module joins the bundle. (2026-07-25, second pass:
+    all fourteen markers are deleted -- the tree targets the next binary,
+    which the site already requires for `@restspec(produces=...)` from #22.)
+
+57. **Seeded pulls no longer recruit dependents.** `run_codespace_pull`
+    stamped anything that *references* a pulled item -- right for JSX-seeded
+    local inference, wrong for cross-module dual pulls, where it re-dragged
+    JobProgress client just for referencing pulled JobStep, poisoning the
+    closure #56 had declined. Seeded pulls now grow along the dependency
+    direction only (`pull_dependents=False`). **fixed-in-tree** (2026-07-25).
+
+58. **A plain import of a native module from client-bearing code used to be
+    the silent sv->na ctypes edge.** Raylib under CPython at glob-init (A2's
+    crash shape) with check, build, and every route green. First fix was a
+    diagnostic (E5084, "use `na import`"); the second pass replaced the
+    diagnostic with inference -- see M1: the plain import now IS the cl->na
+    edge when the target is native-anchored, and E5084 is gone. The
+    server-side ctypes edge in pure server modules stays what it was. Tests
+    in `tests/compiler/test_na_import_edge.jac`. **fixed-in-tree**
+    (2026-07-25).
+
+## M. The marker-erasure pass (2026-07-25, second sweep)
+
+The design decision behind all of section L's follow-ups: markers stop being
+required disambiguators and become optional intent overrides. The compiler
+classifies every module by its anchors and picks the edge; this tree now
+carries exactly one marker (the teaching `cl` in examples/fullstack_todo.jac).
+Every change verified by building and driving the site plus the compiler
+suites.
+
+59. **The cl->na edge is inferred.** `is_client_native_edge_import` /
+    `plain_native_import_target` (jac0core/compiler.jac): a plain import
+    whose target is native -- by `.na.jac` suffix, decided codespace, or a
+    *native anchor* (clib extern decls, `own`/`&`/`&mut` ownership marks, or
+    a dep that has them, walked through the hub) -- routes to the na binding
+    when the importing module is client-bearing: `__na_bind` stub client-side,
+    nothing on the Python side, wasm emission driven off the manifest. The
+    same import in a pure server module keeps the ctypes meaning. The es
+    RPC call-site transform learned that NATIVE-context abilities are never
+    server endpoints (it was rewriting wasm calls into `__jacCallFunction`).
+
+60. **`compile_to_wasm` auto-promotes and fails loudly.** The wasm path now
+    compiles markerless targets with `default_codespace='native'` (the same
+    promote `jac nacompile` does), wraps the compile in the na census, and
+    raises with the census demotion reason instead of silently returning
+    None -- the shape behind #53 and the silent 404 the suffix-drop
+    experiment hit. `_emit_wasm_module` reports failures as errors, not
+    buried warnings. The game modules are plain `.jac` and
+    `[gc.enforce]`'s stem globs still arm them.
+
+61. **Pure modules are codespace-polymorphic.** `is_server_anchored_module`
+    (jac0core/compiler.jac): Python imports, node/edge/walker archetypes,
+    `::py::` blocks, and server blocks anchor a module to the server; its
+    `def:pub`s are endpoints and bridge over RPC. In a module with no such
+    anchor, `def:pub` means "exported": the pull brings it into the
+    importing codespace (dual, exported, direct calls -- the tokenizer runs
+    per keystroke in the browser again instead of the #55 RPC round-trip).
+
+62. **Browser globals seed clientness.** A markerless module whose
+    declarations reference unresolved browser names (`Date`, `Promise`,
+    `setTimeout`, `window`, ... -- BROWSER_SEED_GLOBALS in
+    jac0core/constant.jac) gets those declarations stamped client during the
+    pull, the same way JSX and npm string imports seed. This is what lets
+    `leaderboard/format.jac` and `shared/async_utils.jac` drop their
+    suffixes and still type-check (`new(Date)` was E1031 under a server
+    reading -- #55's one honest diagnostic).
+
+63. **The pull stamps every instance of a module the program holds.** The
+    import graph can materialize the same module twice -- the hub instance
+    (what the client compiler generates files from) and the symbol-linked
+    instance (what call-site transforms resolve through). The seeded pull
+    stamped one while the RPC transform read the other, so tokenize_lines
+    was simultaneously a real import and an RPC call. `_pull_plain_jac_
+    import_client` now pulls both; the honest fix is one module identity
+    per path (the single-source re-arch, jaseci-labs/jac#7418) and this is
+    the strongest evidence yet that it is worth doing.
+
+64. **jac-shadcn already ships `.jac`.** The registry components and
+    registry.json carry no `.cl` anywhere; the site's `shared/ui/*.cl.jac`
+    was legacy install naming the handler keeps a fallback for. Renamed to
+    match the registry -- imports never carried the suffix, so nothing else
+    moved.

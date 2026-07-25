@@ -1,4 +1,4 @@
-sv import from .board {
+import from .board {
     BoardEntry,
     BoardStatus,
     BoardView,
@@ -7,7 +7,7 @@ sv import from .board {
     leaderboard,
     submit_repo
 }
-sv import from ..shared.progress { JobProgress }
+import from ..shared.progress { JobProgress }
 import from ..shared.utils { cn }
 import from ..shared.ui.skeleton { Skeleton }
 import from ..shared.GraphBackdrop { GraphBackdrop }

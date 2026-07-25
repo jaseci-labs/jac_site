@@ -17,8 +17,8 @@ exclude = [
     "source/FloatingSource.jac",
     "landing/Reveal.jac",
     "game/webgl_host.jac",
-    "shared/async_utils.cl.jac",
-    "leaderboard/format.cl.jac",
+    "shared/async_utils.jac",
+    "leaderboard/format.jac",
 ]
 
 [gc]

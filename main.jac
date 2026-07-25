@@ -11,11 +11,9 @@ import from docs.graph { ensure_docs, docs_status, doc_tree, doc_page }
 import from shared.install { ensure_install, install_sh }
 import from leaderboard.board { submit_repo, leaderboard, board_status }
 
-cl import ".styles.global.css";
-cl import ".styles.site.css";
+import ".styles.global.css";
+import ".styles.site.css";
 
-cl {
-    def:pub app(children: any) -> JsxElement {
-        return <>{children}</>;
-    }
+def:pub app(children: any) -> JsxElement {
+    return <>{children}</>;
 }
