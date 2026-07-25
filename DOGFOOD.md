@@ -91,26 +91,37 @@ it) · **open** (nothing done yet).
 
 20. **Root-asset route: hardwired extension allowlist + 1-year
     Cache-Control** — wrong for mutable content like an auto-refreshed
-    install.sh. The `[serve] extra_asset_exts` knob this entry previously
-    claimed as **fixed-in-tree** does not exist: `grep` finds it nowhere in
-    jaseci, and `JacAPIServerStatic.serve_root_asset`
-    (`jac/jaclang/scale/server/impl/serve.static.impl.jac`) still hardwires
-    `allowed_extensions` with no config read. The site shipped a dead knob
-    in jac.toml and `https://jaclang.org/install.sh` 404'd in production.
-    **workaround**: serve at `/static/install.sh`, which goes through
-    `serve_static_file` (no extension allowlist, and no Cache-Control
-    header at all, so mutable content stays mutable). **open**.
+    install.sh. The `[serve] extra_asset_exts` knob this entry once claimed
+    as fixed-in-tree never existed, and `https://jaclang.org/install.sh`
+    404'd in production while working under `jac start`. **fixed
+    upstream**: `AssetResolver`
+    (`jac/jaclang/runtimelib/client/impl/assets.impl.jac`) replaced the
+    allowlist with a *denylist* — `SOURCE_ONLY_EXTENSIONS` 403s `.jac`/
+    `.py`/`.ts`, dotfiles and traversal are rejected, and any file that
+    actually exists under a confined asset root is served whatever its
+    extension. The old allowlist survives only to pick 404 vs pass-through
+    for files that do **not** exist. Both servers share the one resolver.
 21. **Two servers, two asset knobs, different semantics**: the `jac start`
-    dev server honors `[client.assets] custom_extensions`, which
-    **replaces** its default set (root-path fonts 404'd until the defaults
-    were re-listed); the scale server has no equivalent knob at all. This
+    dev server honored `[client.assets] custom_extensions`, which
+    **replaced** its default set (root-path fonts 404'd until the defaults
+    were re-listed); the scale server had no equivalent knob at all. This
     is what hid #20 — `.sh` in `custom_extensions` made `/install.sh` work
-    in dev, so the production 404 never showed up locally. Needs
-    unification. **open**.
-22. **No raw-response primitive for walkers/functions** — everything is
-    wrapped in the JSON envelope, so dynamic plain-text/HTML endpoints
-    aren't expressible in user code. **open** (worked around by serving
-    install.sh as a refreshed file asset).
+    in dev, so the production 404 never showed up locally. **fixed
+    upstream**: `custom_extensions` is now additive (it warns on boot and
+    points at `extensions.add`), and both servers route through the shared
+    `AssetResolver`. The block in this repo's jac.toml is now redundant.
+22. **No raw-response primitive for walkers/functions** — everything was
+    wrapped in the JSON envelope, so a `curl | bash` installer could not be
+    served from user code at all: piping `{"ok":true,...}` into a shell is
+    not an install. Returning a `fastapi.Response` did not help either — it
+    got reflectively serialized *into* the envelope. **fixed-in-tree**:
+    `@restspec(envelope=False, produces=...)` returns a function's value as
+    the response body verbatim, which is how `/install.sh` is served now
+    (see `shared/install.jac`), filed as jaseci-labs/jac#7727. Two limits by
+    design: walkers keep the envelope (a walker can `report` any number of
+    times, so there is no one value to project), and raw bodies are text —
+    a `bytes` return is stringified by `Serializer` before the response
+    layer sees it.
 
 ## D. jac-shadcn
 
