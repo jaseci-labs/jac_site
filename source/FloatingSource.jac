@@ -184,7 +184,16 @@ def:pub FloatingSource(
     }
 
     def do_close(_e: MouseEvent) {
-        closed = True;
+        if always_float {
+            closed = True;
+            return;
+        }
+        # on the main site the browser has a docked home in the hero: closing
+        # returns there instead of destroying the panel, and the intersection
+        # observer re-docks it as the anchor scrolls back into view
+        offX.current = 0;
+        offY.current = 0;
+        window.scrollTo({"top": 0, "behavior": "smooth"});
     }
 
     if closed {
