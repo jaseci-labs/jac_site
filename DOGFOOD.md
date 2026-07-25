@@ -14,8 +14,16 @@ it) · **open** (nothing done yet).
 2. **wasm gathering is entry-module-only.** `import shooter;` /
    `include shooter;` silently emit no wasm (404 on /static/main.wasm);
    a `.na.jac` module crashes the server by executing raylib externs at
-   glob-init. The whole game must live in main.jac. **workaround** (game
-   is ~970 lines of main.jac).
+   glob-init. The whole game had to live in main.jac (~970 lines).
+   **fixed-in-tree** (2026-07-25): `na import from .arena { init }` in a
+   client module is now a first-class cl→na edge — it drives wasm emission
+   (`ViteCompiler._emit_na_wasm` walks the na modules collected from client
+   manifests through a shared `_emit_wasm_module`), compiles client-side to
+   a generated `__na_bind` stub that lazily instantiates the wasm on first
+   call, and compiles to *nothing* on the Python side, which kills the
+   glob-init crash structurally: only a plain (ctypes-flavored) import
+   executes the module server-side. The game now lives in
+   `game/arena.na.jac`.
 3. **A bare sv-walker call in cl code compiles to `new walker`** — no
    compile diagnostic, runtime `ReferenceError`, page error-boundary. The
    working form is `root spawn w()` inside an `async def`. Should be a
@@ -352,3 +360,40 @@ behind the findings: the current gates cannot tell you whether the app runs.
     it sits next to. Related trap: `pkill -f "jac start"` matches every Jac
     server on the machine, including other projects' -- kill by PID verified
     through the process cwd instead.
+
+## K. Found moving the game to an enforced zero-RC module
+
+The A2 split: `game/arena.na.jac` under `[gc.enforce]` + `[gc] default =
+"none"`, entity pools rewritten from `list[Enemy]` (a container of heap
+elements, banned headerless) to index arenas -- parallel scalar lists in an
+`own Game` the JS host holds as an opaque i32 handle and passes back to
+`frame(g: &mut Game)`. The ownbench `own_rbtree` idiom, verified end to end:
+the artifact contains zero `__rc_*` symbols and the browser shim needs no
+malloc/free/memcpy stubs anymore (the vendored libc floor is linked in; env
+is raylib only).
+
+52. **The nogc fence fired E1401 on clib extern declarations.** Every
+    parameter of `import from raylib { def InitWindow(... title: str) ... }`
+    was treated as an unannotated heap contract position, and `i32`/`f32`/
+    `u8` were not in the checker's scalar set, so a nogc-enforced module
+    could not declare FFI at all -- the ownbench kernels never use clib, so
+    nothing had ever hit it. **fixed-in-tree** (2026-07-25): params under a
+    `uni.Import` parent are skipped (an extern is an FFI contract, not
+    ownership-world code) and the native width types joined
+    `_NOGC_SCALARS` in `ownership_check_pass.enforce.impl.jac`.
+53. **`compile_to_wasm` ignored `[gc]` entirely and swallowed diagnostics.**
+    The site-build wasm path hardcoded default CompileOptions, so the
+    emitted wasm always carried the RC runtime regardless of jac.toml, and
+    a module that failed enforcement produced `llvm_ir = None` -> a silent
+    "no wasm" with the E140x text never shown. **fixed-in-tree**
+    (2026-07-25): `wasm_build.compile_to_wasm` resolves `[gc] default` and
+    `[gc.enforce]` from project config, raises with the first pretty-printed
+    diagnostic on compile errors, and when the mode is `none` audits the IR
+    for `__rc_*`/collector machinery before linking (a built-in
+    `--assert-no-rc`).
+54. **A `str` parameter on a plain helper is unannotatable-in-practice under
+    enforcement.** `def open_window(w: int, h: int, title: str)` trips E1401
+    (str is heap), and threading `&str` through a one-line wrapper around an
+    extern buys nothing -- the extern's own params are exempt as FFI. The
+    idiom that falls out: call externs with string literals directly and
+    keep wrappers scalar-only. **workaround** (wrapper inlined).
