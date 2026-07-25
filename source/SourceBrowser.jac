@@ -25,6 +25,16 @@ def _ancestors_of(d: str) -> list[str] {
     return out;
 }
 
+def _dir_paths(rows: list[dict]) -> list[str] {
+    out: list[str] = [];
+    for r in rows {
+        if r["kind"] == "dir" {
+            out.append(r["path"] as str);
+        }
+    }
+    return out;
+}
+
 def _build_rows(tree: list[SourceFile]) -> list[dict] {
     rows: list[dict] = [];
     seen: list[str] = [];
@@ -71,7 +81,9 @@ def:pub SourceBrowser(className: str = "") -> JsxElement {
     async can with entry {
         fetched = await source_tree();
         tree = fetched;
-        rows = _build_rows(fetched);
+        built = _build_rows(fetched);
+        rows = built;
+        closed = _dir_paths(built);
         path = "main.jac";
         view = await source_file(path);
     }
