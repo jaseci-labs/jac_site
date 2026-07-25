@@ -304,3 +304,40 @@ behind the findings: the current gates cannot tell you whether the app runs.
     The SPA catch-all already excludes `cl/`, `walker/`, `function/`, `user/`
     and `static/`; the framework's own doc routes need the same treatment, or
     to move under a reserved prefix. **open**.
+
+## J. Found reorganizing the site by feature
+
+49. **Moving a module orphans every persisted node it declares.** Archetype
+    identity includes the module path, so renaming `services/leaderboard.jac`
+    to `leaderboard/board.jac` left the live `RepoEntry` and `BoardHub` nodes
+    unreachable: `strings .jac/data/anchor_store.db` still shows them filed
+    under `services.leaderboard`, while `[root.shared-->[?:BoardHub]]` in the
+    moved module matches nothing and the board renders empty. No error, no
+    warning, no quarantine notice -- the graph simply looks empty. The docs
+    graph hit the same wall and partially self-healed, which made it *worse*
+    to diagnose: `_latest_stale` found no `latest` DocVersion, re-ingested
+    that one version, and the page looked fine at 91 pages while the three
+    pinned versions silently vanished from the picker. A file move is a
+    schema migration and nothing says so. **open** -- at minimum this wants a
+    startup warning naming archetypes present on disk under module paths that
+    no longer exist.
+50. **`jac test <file>` forces the import style in a feature-first layout.**
+    Any feature module reaching shared code has to climb out of its own
+    package, and `import from ..shared.github { untar }` collects fine under
+    `jac start` but dies under `jac test leaderboard/board.jac` with
+    `attempted relative import beyond top-level package` (the #37 mechanism,
+    now unavoidable rather than incidental). The no-dot absolute form
+    `import from shared.github { untar }` fixes it and is what
+    `jac-core-cheatsheet` already recommends for depth-independence -- this
+    is a second, harder reason for the same advice. Worth promoting from
+    preference to rule for server modules.
+51. **`jac start` silently takes the next free port, and QA lies to you.**
+    Port 8000 was held by an unrelated Jac app in a sibling directory; this
+    site started on 8001 with one dim `Port 8000 is in use, using port 8001
+    instead` line buried in the build log, while `jac browse open
+    localhost:8000` cheerfully drove the *other* app. A smoke test across
+    three routes came back green against an app that was not the one under
+    test. The port line deserves to be as loud as the `Server ready` banner
+    it sits next to. Related trap: `pkill -f "jac start"` matches every Jac
+    server on the machine, including other projects' -- kill by PID verified
+    through the process cwd instead.

@@ -1,6 +1,6 @@
 import from "@jac/runtime" { Outlet }
-import from ..components.Navbar { Navbar }
-import from ..components.Footer { Footer }
+import from ..shared.Navbar { Navbar }
+import from ..shared.Footer { Footer }
 
 def init_theme {
     saved = localStorage.getItem("jac-theme");
