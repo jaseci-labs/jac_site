@@ -149,12 +149,21 @@ protocol (`docs/graph.test.jac`), and the Jac syntax highlighter
 
 ## The game module
 
-`game/arena.na.jac` is the one explicitly-native module, and it is deliberately
-**not imported by anything**. Importing it server-side would execute its raylib
-externs at glob-init under the Python runtime (DOGFOOD A2); instead
-`[client] wasm_modules` in `jac.toml` names it, and the client build compiles
-it standalone to `/static/arena.wasm`, which `game/webgl_host.jac` fetches and
-drives over WebGL.
+`game/arena.na.jac` is the one explicitly-native module, and the browser host
+reaches it through the cl→na import edge:
+
+```jac
+na import from .arena { init }
+```
+
+That one line in `game/webgl_host.jac` is the whole wiring. It makes the
+client build compile the module to `/static/arena.wasm`, binds `init` to a
+generated stub that lazily instantiates the wasm on first call (via
+`@jac/wasm_host`), and compiles to nothing on the server — a plain import
+would mean the sv→na ctypes crossing and would execute raylib externs under
+the Python runtime (DOGFOOD A2). Because arena declares app FFI, the host
+registers its WebGL implementations first with `set_na_env("arena", sh,
+{"env": ...})`; an FFI-free na module would need no ceremony at all.
 
 Its memory story is the point: `[gc] default = "none"` builds it headerless —
 no reference counting, no collector, static drops only — and

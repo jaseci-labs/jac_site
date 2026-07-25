@@ -15,14 +15,15 @@ it) · **open** (nothing done yet).
    `include shooter;` silently emit no wasm (404 on /static/main.wasm);
    a `.na.jac` module crashes the server by executing raylib externs at
    glob-init. The whole game had to live in main.jac (~970 lines).
-   **fixed-in-tree** (2026-07-25): `[client] wasm_modules` in jac.toml names
-   native modules the client build compiles standalone —
-   `ViteCompiler._emit_na_wasm` now loops the declared list (plus the entry
-   module when it declares native code) through a shared
-   `_emit_wasm_module`, so the module never has to be imported at all, which
-   also sidesteps the glob-init crash: the server never sees it. The game
-   now lives in `game/arena.na.jac`. The import-graph half (emitting for a
-   native module the entry *does* import) is still open upstream.
+   **fixed-in-tree** (2026-07-25): `na import from .arena { init }` in a
+   client module is now a first-class cl→na edge — it drives wasm emission
+   (`ViteCompiler._emit_na_wasm` walks the na modules collected from client
+   manifests through a shared `_emit_wasm_module`), compiles client-side to
+   a generated `__na_bind` stub that lazily instantiates the wasm on first
+   call, and compiles to *nothing* on the Python side, which kills the
+   glob-init crash structurally: only a plain (ctypes-flavored) import
+   executes the module server-side. The game now lives in
+   `game/arena.na.jac`.
 3. **A bare sv-walker call in cl code compiles to `new walker`** — no
    compile diagnostic, runtime `ReferenceError`, page error-boundary. The
    working form is `root spawn w()` inside an `async def`. Should be a

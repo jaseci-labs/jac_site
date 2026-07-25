@@ -1,4 +1,6 @@
-import from "@jac/wasm_host" { instantiate_na_wasm }
+import from "@jac/wasm_host" { set_na_env }
+
+na import from .arena { init }
 
 obj Shim {
     has gl: any = None,
@@ -393,9 +395,7 @@ async def:pub run_game(canvas: any, on_tick: any = None) {
     _init_gl(sh);
     _install_input(sh);
 
-    inst: any = await instantiate_na_wasm(
-        "/static/arena.wasm", sh, {"env": _build_env(sh)}
-    );
-    sh.game = inst.exports.init();
+    set_na_env("arena", sh, {"env": _build_env(sh)});
+    sh.game = await init();
     requestAnimationFrame(lambda (ts: float) { _frame_tick(sh, ts); });
 }
