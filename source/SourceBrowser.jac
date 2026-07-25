@@ -17,7 +17,9 @@ def _dir_paths(rows: list[dict]) -> list[str];
 
 def _build_rows(tree: list[SourceFile]) -> list[dict];
 
-def:pub SourceBrowser(className: str = "") -> JsxElement {
+def:pub SourceBrowser(
+    className: str = "", initial_path: str = "main.jac"
+) -> JsxElement {
     has tree: list[SourceFile] = [],
         rows: list[dict] = [],
         closed: list[str] = [],
@@ -29,9 +31,14 @@ def:pub SourceBrowser(className: str = "") -> JsxElement {
         tree = fetched;
         built = _build_rows(fetched);
         rows = built;
-        closed = _dir_paths(built);
-        path = "main.jac";
-        view = await source_file(path);
+        home_dir = "/".join(initial_path.split("/")[:-1]);
+        open_chain = _ancestors_of(home_dir);
+        closed = [
+            d
+            for d in _dir_paths(built)
+            if d not in open_chain
+        ];
+        view = await source_file(initial_path);
     }
 
     async def open_path(path: str);
@@ -171,7 +178,8 @@ def:pub SourceBrowser(className: str = "") -> JsxElement {
                             </div>
                         } else {
                             <p className="pl-4 pt-4 font-mono text-xs text-white/35">
-                                opening main.jac
+                                {"opening "}
+                                {initial_path}
                                 <span className="caret ml-1"></span>
                             </p>
                         } }

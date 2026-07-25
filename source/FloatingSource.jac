@@ -9,7 +9,7 @@ import from "@hugeicons/core-free-icons" {
 }
 
 def:pub FloatingSource(
-    always_float: bool = False, closable: bool = False
+    always_float: bool = False, closable: bool = False, initial_path: str = "main.jac"
 ) -> JsxElement {
     has floating: bool = False,
         expanded: bool = False,
@@ -238,7 +238,7 @@ def:pub FloatingSource(
                         or "w-full"
                     )}
                 >
-                    <SourceBrowser className="h-full"/>
+                    <SourceBrowser className="h-full" initial_path={initial_path}/>
                 </div>
                 {if is_float {
                     <div className="absolute -top-3 -right-3 flex gap-2">
