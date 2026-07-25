@@ -1,4 +1,4 @@
-sv import from .graph {
+import from .graph {
     DocPageView,
     DocsStatus,
     DocTree,
@@ -9,7 +9,7 @@ sv import from .graph {
     docs_status,
     ensure_docs
 }
-sv import from ..shared.progress { JobProgress }
+import from ..shared.progress { JobProgress }
 import from "@jac/runtime" { Navigate, useLocation, useNavigate }
 import from .DocsArticle { DocsArticle, DocsArticleSkeleton }
 import from .DocsSidebar { DocsSidebar }

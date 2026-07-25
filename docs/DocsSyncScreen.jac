@@ -1,4 +1,4 @@
-sv import from ..shared.progress { JobProgress, JobStep }
+import from ..shared.progress { JobProgress, JobStep }
 import from ..shared.utils { cn }
 import from ..shared.GraphBackdrop { GraphBackdrop }
 import from "@hugeicons/react" { HugeiconsIcon }

@@ -1,6 +1,6 @@
 import from "@jac/wasm_host" { set_na_env }
 
-na import from .arena { init }
+import from .arena { init }
 
 obj Shim {
     has gl: any = None,

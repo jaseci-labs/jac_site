@@ -35,16 +35,16 @@ exclude = [
     # drop these entries then.
     #
     # The two shells left this list when their browser-API calls moved into
-    # shared/async_utils.cl.jac and leaderboard/format.cl.jac -- each remaining
+    # shared/async_utils.jac and leaderboard/format.jac -- each remaining
     # suppression now lives in one small file owned by the feature that needs it.
     "source/FloatingSource.jac",
     "landing/Reveal.jac",
     "game/webgl_host.jac",
-    "shared/async_utils.cl.jac",
-    "leaderboard/format.cl.jac",
+    "shared/async_utils.jac",
+    "leaderboard/format.jac",
 ]
 
-# The shooter (game/arena.na.jac + sim + gmath + platform_rl) compiles to
+# The shooter (game/arena.jac + sim + gmath + platform_rl) compiles to
 # /static/arena.wasm with no reference counting at all: [gc] default =
 # "none" makes the native build headerless (static drops, zero RC call
 # sites), and the build audits the emitted IR for __rc_* machinery, so a

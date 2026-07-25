@@ -1,4 +1,4 @@
-sv import from .files { source_tree, source_file, SourceFile, SourceView }
+import from .files { source_tree, source_file, SourceFile, SourceView }
 import from ..shared.CodeBlock { CodeLines }
 import from "@hugeicons/react" { HugeiconsIcon }
 import from "@hugeicons/core-free-icons" { ArrowRight01Icon, Folder01Icon }

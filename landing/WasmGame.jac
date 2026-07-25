@@ -69,7 +69,7 @@ def:pub WasmGame -> JsxElement {
                                 <span className="size-2.5 rounded-full bg-white/15"></span>
                                 <span className="size-2.5 rounded-full bg-white/15"></span>
                                 <span className="ml-2 font-mono text-xs text-white/45">
-                                    game/arena.na.jac → /static/arena.wasm
+                                    game/arena.jac → /static/arena.wasm
                                 </span>
                                 <span
                                     className="ml-auto font-mono text-[10px] uppercase tracking-widest text-orange-400/80"
@@ -130,7 +130,7 @@ def:pub WasmGame -> JsxElement {
                                             <p className="mt-1 text-sm text-white/50">
                                                 The drones shoot back. Borrow-checked Jac with zero garbage collection, compiled to WebAssembly from{" "}
                                                 <span className="font-mono">
-                                                    game/arena.na.jac
+                                                    game/arena.jac
                                                 </span>
                                             </p>
                                         </div>
