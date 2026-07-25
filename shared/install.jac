@@ -1,5 +1,6 @@
 import os;
 import hashlib;
+import from http { HTTPMethod }
 import from .github { fetch }
 import from .timefmt { now_iso, seconds_since }
 
@@ -60,6 +61,28 @@ def _write_asset(text: str) {
         f.write(text);
     }
     os.replace(tmp, asset_path());
+}
+
+glob UNAVAILABLE_SH: str = "#!/usr/bin/env bash\necho 'jac: installer temporarily unavailable' >&2\nexit 1\n";
+
+@restspec(
+    method=HTTPMethod.GET,
+    path="/install.sh",
+    produces="text/x-shellscript",
+    envelope=False
+)
+def:pub install_sh -> str {
+    path = asset_path();
+    if not os.path.exists(path) {
+        text = _fetch_script();
+        if text is None {
+            return UNAVAILABLE_SH;
+        }
+        _write_asset(text);
+    }
+    with open(path) as f {
+        return f.read();
+    }
 }
 
 walker:pub ensure_install {

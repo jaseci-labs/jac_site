@@ -76,18 +76,20 @@ lib_imports = ["import tailwindcss from '@tailwindcss/vite'"]
 
 [serve]
 base_route_app = "app"
-# NOTE: there is no config knob for the root-asset extension allowlist. A
-# previous `extra_asset_exts = [".sh"]` here was inert — the scale server's
-# serve_root_asset hardwires its allowlist, so /install.sh 404'd in
-# production while working under `jac start`. assets/install.sh is served at
-# /static/install.sh instead, which both servers route identically.
+# /install.sh is not an asset route. shared/install.jac mounts it as a
+# @restspec function, and function endpoints register ahead of the asset
+# catch-all, so the function answers. AssetResolver would now serve
+# assets/install.sh at that URL too, but as application/octet-stream and only
+# if the file already exists — the function types it text/x-shellscript and
+# materializes it on demand after a cold deploy.
 
 [client.assets]
-# The `jac start` dev server routes root-path assets by this list. NOTE: a
-# non-empty list REPLACES the server's default set, so this is the default
-# set verbatim — it exists only because fonts arrive as root-path requests
-# (e.g. /geist-latin-wght-normal.woff2). Deliberately no ".sh": adding it
-# would make dev serve an /install.sh that production does not.
+# STALE, and now redundant: this list used to REPLACE the dev server's
+# default extension set, so it had to restate the defaults or root-path fonts
+# (e.g. /geist-latin-wght-normal.woff2) 404'd. Both servers now share
+# AssetResolver and this key is additive, which makes a copy of the defaults
+# a no-op — jac warns about it on every boot and points at `extensions.add`.
+# Delete the block once the site pins a jaclang that carries the resolver.
 custom_extensions = [
     ".png", ".jpg", ".jpeg", ".gif", ".webp", ".svg", ".ico",
     ".woff", ".woff2", ".ttf", ".otf", ".eot", ".mp4", ".webm", ".mp3",
