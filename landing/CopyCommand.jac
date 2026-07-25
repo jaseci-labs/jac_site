@@ -5,11 +5,7 @@ import from "@hugeicons/core-free-icons" { Copy01Icon, CheckmarkCircle01Icon }
 def:pub CopyCommandBlock(lines: list[str], className: str = "") -> JsxElement {
     has copied: bool = False;
 
-    def handle_copy(_e: MouseEvent) {
-        navigator.clipboard.writeText("\n".join(lines));
-        copied = True;
-        _ = setTimeout(lambda { copied = False; }, 1800);
-    }
+    def handle_copy(_e: MouseEvent);
 
     return
         <button
@@ -49,11 +45,7 @@ def:pub CopyCommand(
 ) -> JsxElement {
     has copied: bool = False;
 
-    def handle_copy(_e: MouseEvent) {
-        navigator.clipboard.writeText(command);
-        copied = True;
-        _ = setTimeout(lambda { copied = False; }, 1800);
-    }
+    def handle_copy(_e: MouseEvent);
 
     return
         <button
