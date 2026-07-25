@@ -376,7 +376,7 @@ def _frame_tick(sh: any, ts: float) {
 
     if sh.on_tick is not None {
         fps = Math.round(1.0 / sh.dt) if sh.dt > 0.0 else 0;
-        sh.on_tick(sh.exports, fps);
+        sh.on_tick(sh.exports, sh.game, fps);
     }
     sh.pressed = {};
     sh.mpressed = {};

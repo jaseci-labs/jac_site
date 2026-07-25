@@ -44,23 +44,25 @@ exclude = [
     "leaderboard/format.cl.jac",
 ]
 
-# The shooter (game/arena.na.jac) compiles to /static/arena.wasm with no
-# reference counting at all: [gc] default = "none" makes the native build
-# headerless (static drops, zero RC call sites), and the build audits the
-# emitted IR for __rc_* machinery, so a wasm that re-entered the RC world
-# fails to build rather than shipping.
+# The shooter (game/arena.na.jac + sim + gmath + platform_rl) compiles to
+# /static/arena.wasm with no reference counting at all: [gc] default =
+# "none" makes the native build headerless (static drops, zero RC call
+# sites), and the build audits the emitted IR for __rc_* machinery, so a
+# wasm that re-entered the RC world fails to build rather than shipping.
 [gc]
 default = "none"
 
-# Ships disarmed: the released 0.34.x checker fires E1401 on clib extern-decl
-# params (i32/f32/u8 are missing from its scalar set), so enforcing here
-# fails CI's released-jac `jac check` on arena's raylib import block. Re-arm
-# the ownership contract (E140x hard errors at check time) with
-#   modules = ["arena*"]
-# once a release carries jaseci-labs/jac#7732. The artifact-level zero-RC
-# guarantee above does not wait for it.
+# Armed: headerless (zero-RC) codegen only happens for ENFORCED modules --
+# [gc] default = "none" alone leaves RC on as a safe fallback, and the wasm
+# build's IR audit then rejects the artifact ("Skipped na->wasm" on boot;
+# jaseci-labs/jac#7735). The game is four na modules and all four must be
+# enforced together, because E1403 treats a call into a sibling module that
+# is NOT enforced as a heap value escaping the nogc world. Needs a jaclang
+# release carrying jaseci-labs/jac#7732 (clib extern-decl E1401 fix) and
+# jaseci-labs/jac#7737 (imported na modules inherit gc options); on older
+# releases `jac check` fails on platform_rl's raylib import block.
 [gc.enforce]
-modules = []
+modules = ["arena*", "sim*", "gmath*", "platform_rl*"]
 
 [jac-shadcn]
 style = "nova"
