@@ -184,22 +184,21 @@ def:pub FloatingSource(
     }
 
     def do_close(_e: MouseEvent) {
-        if always_float {
-            closed = True;
-            return;
-        }
-        # on the main site the browser has a docked home in the hero: closing
-        # returns there instead of destroying the panel, and the intersection
-        # observer re-docks it as the anchor scrolls back into view
+        # closing dismisses the float in place; the panel stays docked in the
+        # hero for the main site, while the always-floating docs browser has
+        # no dock and simply hides
+        closed = True;
         offX.current = 0;
         offY.current = 0;
-        window.scrollTo({"top": 0, "behavior": "smooth"});
+        if winRef.current {
+            winRef.current.style.transform = "";
+        }
     }
 
-    if closed {
+    if closed and always_float {
         return <></>;
     }
-    is_float = floating or always_float;
+    is_float = (floating or always_float) and not closed;
     return
         <div ref={anchorRef} className="relative">
             {if is_float and not always_float {
