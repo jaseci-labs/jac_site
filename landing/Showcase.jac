@@ -1,4 +1,4 @@
-sv import from ..source.files { SourceView, example_sources }
+import from ..source.files { SourceView, example_sources }
 import from ..shared.ui.badge { Badge }
 import from ..shared.ui.tabs { Tabs, TabsList, TabsTrigger, TabsContent }
 import from ..shared.CodeBlock { CodeBlock }

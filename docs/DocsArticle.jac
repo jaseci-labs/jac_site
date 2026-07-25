@@ -1,4 +1,4 @@
-sv import from .graph { DocPageView }
+import from .graph { DocPageView }
 import from "@jac/runtime" { Link }
 import from ..shared.ui.skeleton { Skeleton }
 import from .Markdown { Markdown }

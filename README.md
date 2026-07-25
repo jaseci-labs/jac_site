@@ -4,7 +4,7 @@ The marketing site, docs reader, and Ninja Leaderboard for the Jac programming
 language, built end to end in Jac (naturally). One language spans all three
 codespaces here: the pages and components compile to JavaScript, the
 endpoints compile to Python and serve over RPC, and the game in
-`game/arena.na.jac` compiles through LLVM to `/static/arena.wasm` — fully
+`game/arena.jac` compiles through LLVM to `/static/arena.wasm` — fully
 borrow-checked, with zero reference counting in the artifact.
 
 Built on jac-shadcn (nova style, orange accent, Geist). Dark-first with a
@@ -27,7 +27,7 @@ The same two gates CI runs (`.github/workflows/jac-check.yml`):
 ```bash
 git ls-files -z '*.jac' | xargs -0 jac fmt --check --lintfix   # format + deslop autolint
 jac check . --nowarn                                           # type check
-JAC_TEST_JOBS=0 jac test docs/graph.jac leaderboard/board.jac shared/jac_tokenizer.cl.jac
+JAC_TEST_JOBS=0 jac test docs/graph.jac leaderboard/board.jac shared/jac_tokenizer.jac
 ```
 
 `jac precommit --install` wires the first two as a git hook.
@@ -48,7 +48,7 @@ machine runs them, which is the tier boundary this language exists to erase.
 | `landing/diagrams/` | The four animated SVG arguments |
 | `docs/` | The docs reader: graph schema, ingest, read walkers, shell, sections, renderer |
 | `leaderboard/` | Submit, score, board: rubric, graph, shell, card |
-| `game/` | The rlgl shooter (`arena.na.jac`, owned/borrowed, zero-GC) and its WebGL host |
+| `game/` | The rlgl shooter (`arena.jac`, owned/borrowed, zero-GC) and its WebGL host |
 | `source/` | The live source browser and its floating window |
 | `shared/` | Earned its way in: used by two or more features |
 | `shared/ui/` | jac-shadcn primitives — **registry-managed, import only** |
@@ -70,7 +70,7 @@ every cross-feature import as a promotion signal.
 Two rules, and neither is stylistic:
 
 - **Within a feature, use the sibling form.** `docs/DocsShell.jac` reaches its
-  server module with `sv import from .graph { doc_page }`. The whole
+  server module with `import from .graph { doc_page }`. The whole
   cross-codespace call is one dot, because both halves live together.
 - **Across packages, server modules use the no-dot absolute form.**
   `import from shared.github { untar }`, never `..shared.github`. A `..` that
@@ -82,19 +82,29 @@ Two rules, and neither is stylistic:
 
 ### Where the codespaces are
 
-Placement is inferred: JSX and string-path npm imports mark a declaration
-client, everything else defaults to server. Four things carry an explicit
-marker, and each has a reason:
+Nowhere in the source. Placement is inferred per declaration, and every
+import is a plain `import` — the compiler classifies each module by its
+anchors and takes the right edge (the audit that got here is DOGFOOD §L/§M):
 
-- `shared/ui/*.cl.jac` — as shipped by the jac-shadcn registry.
-- `shared/utils.cl.jac`, `shared/async_utils.cl.jac`,
-  `shared/jac_tokenizer.cl.jac`, `leaderboard/format.cl.jac`,
-  `landing/diagrams/motion.cl.jac` — pinned client because they are *pure*
-  modules with no JSX and no npm import, so inference would leave them on the
-  server, and a client module importing them fails with E5082 (DOGFOOD #36).
-- `examples/fullstack_todo.jac` — `cl` on the component is the point of the
-  sample.
-- `game/webgl_host.jac` needs no marker; its `@jac/wasm_host` import places it.
+- **Server-anchored** (Python imports, nodes/edges/walkers, `::py::`) —
+  `docs/graph.jac`, `leaderboard/board.jac`: `def:pub`s bridge to RPC stubs,
+  objs cross as wire types. What `sv import` used to spell, now inferred.
+- **Native-anchored** (clib externs, ownership marks, or a dep that has
+  them) — `game/arena.jac` and friends: a client import takes the cl→na
+  edge (wasm binding, `/static/arena.wasm`, nothing on the Python side);
+  a server import stays the ctypes crossing.
+- **Client-anchored** (JSX, npm string imports, browser globals) — the
+  components, `shared/utils.jac`, `leaderboard/format.jac` (`Date`),
+  `shared/async_utils.jac` (`Promise`/`setTimeout`).
+- **Unanchored pure logic** — `shared/jac_tokenizer.jac`,
+  `landing/diagrams/motion.jac`: codespace-polymorphic, compiled into
+  whichever side imports it; `def:pub` there means "exported", not
+  "endpoint".
+
+The explicit markers (`cl`/`sv`/`na` prefixes, `.cl.jac`/`.sv.jac`/`.na.jac`
+suffixes) still exist as intent overrides — this tree needs exactly one:
+`examples/fullstack_todo.jac` keeps `cl` on its component because the marker
+is the point of the teaching sample.
 
 ### Typed contracts, not dict payloads
 
@@ -122,7 +132,7 @@ in `DocPageView.toc`; the client renders them and never re-derives a slug.
 repo analyzer and scoring rubric (`leaderboard/board.test.jac`), the docs
 slugifier, route rewriter, TOC builder and nav parser plus the progress
 protocol (`docs/graph.test.jac`), and the Jac syntax highlighter
-(`shared/jac_tokenizer.cl.test.jac`) — 32 tests.
+(`shared/jac_tokenizer.test.jac`) — 32 tests.
 
 ## The centerpiece diagrams
 
@@ -149,21 +159,23 @@ protocol (`docs/graph.test.jac`), and the Jac syntax highlighter
 
 ## The game module
 
-`game/arena.na.jac` is the one explicitly-native module, and the browser host
-reaches it through the cl→na import edge:
+`game/arena.jac` carries no marker at all; the compiler classifies it native
+by its anchors (raylib externs in `platform_rl`, `own`/`&mut` throughout),
+and the browser host reaches it with a plain import:
 
 ```jac
-na import from .arena { init }
+import from .arena { init }
 ```
 
-That one line in `game/webgl_host.jac` is the whole wiring. It makes the
-client build compile the module to `/static/arena.wasm`, binds `init` to a
-generated stub that lazily instantiates the wasm on first call (via
-`@jac/wasm_host`), and compiles to nothing on the server — a plain import
-would mean the sv→na ctypes crossing and would execute raylib externs under
-the Python runtime (DOGFOOD A2). Because arena declares app FFI, the host
-registers its WebGL implementations first with `set_na_env("arena", sh,
-{"env": ...})`; an FFI-free na module would need no ceremony at all.
+That one line in `game/webgl_host.jac` is the whole wiring. Because the host
+is client code and the target is native-anchored, the import IS the cl→na
+edge: the client build compiles the module to `/static/arena.wasm`, binds
+`init` to a generated stub that lazily instantiates the wasm on first call
+(via `@jac/wasm_host`), and compiles to nothing on the server — the same
+import in a pure server module would still mean the ctypes crossing (DOGFOOD
+A2, §M). Because arena declares app FFI, the host registers its WebGL
+implementations first with `set_na_env("arena", sh, {"env": ...})`; an
+FFI-free native module would need no ceremony at all.
 
 Its memory story is the point: `[gc] default = "none"` builds it headerless —
 no reference counting, no collector, static drops only — and the build audits
@@ -178,7 +190,7 @@ as an opaque handle; every update pass borrows it `&mut` down the call tree.
 The same source also builds headlessly:
 
 ```bash
-jac nacompile game/arena.na.jac --target wasm32 --enforce-nogc --gc none --assert-no-rc
+jac nacompile game/arena.jac --target wasm32 --enforce-nogc --gc none --assert-no-rc
 ```
 
 `DOGFOOD.md` is the running log of everything this site hit while being built
