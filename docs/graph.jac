@@ -92,6 +92,12 @@ obj ShaCache {
 
 glob USER_AGENT: str = "jaclang.org docs sync",
      GH_REPO: str = os.environ.get("JAC_DOCS_GH_REPO", "jaseci-labs/jaseci"),
+     DOCS_LOCAL: str = os.environ.get(
+         "JAC_DOCS_LOCAL",
+         os.path.join("..", "..")
+             if os.path.isdir(os.path.join("..", "..", "docs", "docs"))
+             else ""
+     ),
      SHA_TTL_S: float = 600.0,
      DOC_VERSIONS: list[VersionSpec] = [
          VersionSpec(label="latest", git_ref="main"),
@@ -114,7 +120,9 @@ node DocsHub {
     has built_at: str = "";
 }
 
-node DocVersion {
+node DocContainer {}
+
+node DocVersion(DocContainer) {
     has label: str = "",
         git_ref: str = "",
         fetched_at: str = "",
@@ -122,16 +130,14 @@ node DocVersion {
         pages: int = 0;
 }
 
-node DocDir {
+node DocDir(DocContainer) {
     has name: str = "",
-        path: str = "",
         title: str = "",
         order: int = 9000;
 }
 
 node DocPage {
     has name: str = "",
-        path: str = "",
         title: str = "",
         order: int = 9000,
         md_lines: list[str] = [],
@@ -141,6 +147,35 @@ node DocPage {
 edge HasVersion {}
 
 edge Contains {}
+
+edge NextPage {}
+
+walker trace_route {
+    has segs: list[str] = [];
+
+    can name_page with DocPage entry {
+        if here.name != "index" {
+            self.segs.insert(0, here.name);
+        }
+        visit [<-:Contains:<-];
+    }
+
+    can climb_dir with DocDir entry {
+        self.segs.insert(0, here.name);
+        visit [<-:Contains:<-];
+    }
+
+    can arrive with DocVersion entry { }
+}
+
+def _route_up(target: object) -> str {
+    climbed = (target spawn trace_route()) as trace_route;
+    return "/".join(climbed.segs);
+}
+
+def _version(wanted: str) -> list[DocVersion] {
+    return [root.shared-->[?:DocsHub]->:HasVersion:->[?:DocVersion, label==wanted]];
+}
 
 def _cached_head_sha(ref: str) -> str {
     now = time.time();
@@ -180,6 +215,35 @@ def _fetch_bundle(ref: str, label: str) -> DocBundle {
             } elif sub.startswith("assets/") {
                 bundle.assets[sub[len("assets/"):]] = members[rel];
             }
+        }
+    }
+    return bundle;
+}
+
+def _local_bundle(src_root: str, label: str) -> DocBundle {
+    _job.mark(label, "read", "scanning local docs");
+    _job.note("reading local docs from " + os.path.abspath(src_root));
+    bundle = DocBundle();
+    docs_root = os.path.join(src_root, "docs", "docs");
+    for (cur, dirnames, filenames) in os.walk(docs_root) {
+        for fname in sorted(filenames) {
+            full = os.path.join(cur, fname);
+            rel = os.path.relpath(full, docs_root).replace(os.sep, "/");
+            if rel.startswith("assets/") {
+                with open(full, "rb") as fb {
+                    bundle.assets[rel[len("assets/"):]] = fb.read();
+                }
+            } elif fname.endswith(".md") {
+                with open(full, encoding="utf-8") as ft {
+                    bundle.pages[rel] = ft.read();
+                }
+            }
+        }
+    }
+    mk = os.path.join(src_root, "docs", "mkdocs.yml");
+    if os.path.exists(mk) {
+        with open(mk, encoding="utf-8") as fn {
+            bundle.nav_text = fn.read();
         }
     }
     return bundle;
@@ -377,9 +441,43 @@ def _get_hub -> DocsHub | None {
     return hubs[0] if hubs else None;
 }
 
+walker place_page {
+    has segs: list[str] = [],
+        name: str = "",
+        title: str = "",
+        order: int = 9000,
+        md_lines: list[str] = [],
+        toc: list[TocEntry] = [];
+
+    can place with DocContainer entry {
+        if self.segs {
+            nxt = self.segs[0];
+            self.segs = self.segs[1:];
+            visit [-->[?:DocDir, name==nxt]] else {
+                fresh = (
+                    here +>:Contains():+> DocDir(name=nxt, title=_pretty(nxt))
+                ) as DocDir;
+                grant(fresh, level=ReadPerm);
+                visit fresh;
+            }
+        } else {
+            pg = here +>:Contains():+> DocPage(
+                name=self.name,
+                title=self.title,
+                order=self.order,
+                md_lines=self.md_lines,
+                toc=self.toc
+            );
+            grant(pg, level=ReadPerm);
+        }
+    }
+}
+
 def _build_version(hub: DocsHub, label: str, ref: str) -> DocBundle {
-    sha = _cached_head_sha(ref) if ref == "main" else "";
-    bundle = _fetch_bundle(sha if sha != "" else ref, label);
+    sha = _cached_head_sha(ref) if ref == "main" and DOCS_LOCAL == "" else "";
+    bundle = _local_bundle(DOCS_LOCAL, label)
+        if DOCS_LOCAL != ""
+        else _fetch_bundle(sha if sha != "" else ref, label);
     files = bundle.pages;
     nav = _parse_nav(bundle.nav_text);
     _job.mark(label, "build", "0 of " + str(len(files)) + " pages");
@@ -389,27 +487,11 @@ def _build_version(hub: DocsHub, label: str, ref: str) -> DocBundle {
     );
     grant(ver, level=ReadPerm);
 
-    containers: dict[str, object] = {"": ver};
-    made_dirs: list[DocDir] = [];
     names = sorted([k for k in files.keys()]);
     fallback = 9000;
     built_ct = 0;
     for rel in names {
         parts = rel.split("/");
-        acc = "";
-        for di in range(len(parts) - 1) {
-            seg = parts[di];
-            parent = acc;
-            acc = seg if acc == "" else acc + "/" + seg;
-            if acc not in containers {
-                d = containers[parent] +>:Contains():+> DocDir(
-                    name=seg, path=acc, title=_pretty(seg)
-                );
-                grant(d, level=ReadPerm);
-                containers[acc] = d;
-                made_dirs.append(d as DocDir);
-            }
-        }
         raw = _clean_md(files[rel]);
         raw = _rewrite_links(raw, label, rel);
         meta = nav.get(rel);
@@ -419,15 +501,14 @@ def _build_version(hub: DocsHub, label: str, ref: str) -> DocBundle {
         }
         order = meta.order if meta is not None else fallback;
         fallback += 1;
-        pg = containers[os.path.dirname(rel).replace(os.sep, "/")] +>:Contains():+> DocPage(
+        (ver as DocVersion) spawn place_page(
+            segs=parts[:-1],
             name=parts[-1][:-3],
-            path=route_of(label, rel).replace("/docs/" + label, "").strip("/"),
             title=title,
             order=order,
             md_lines=raw.split("\n"),
             toc=toc_of(raw)
         );
-        grant(pg, level=ReadPerm);
         built_ct += 1;
         if built_ct % 25 == 0 {
             _job.mark(
@@ -436,20 +517,9 @@ def _build_version(hub: DocsHub, label: str, ref: str) -> DocBundle {
         }
     }
 
-    for i in range(len(made_dirs)) {
-        d = made_dirs[len(made_dirs) - 1 - i];
-        lo = 9000;
-        for kp in [d-->[?:DocPage]] {
-            if kp.order < lo {
-                lo = kp.order;
-            }
-        }
-        for kd in [d-->[?:DocDir]] {
-            if kd.order < lo {
-                lo = kd.order;
-            }
-        }
-        d.order = lo;
+    reading = (ver as DocVersion) spawn collect_tree();
+    for i in range(len(reading.seq) - 1) {
+        reading.seq[i] +>:NextPage():+> reading.seq[i + 1];
     }
     _job.mark(label, "done", str(len(files)) + " pages");
     return bundle;
@@ -457,18 +527,22 @@ def _build_version(hub: DocsHub, label: str, ref: str) -> DocBundle {
 
 def _ingest_all {
     _job.begin("sync");
-    for spec in DOC_VERSIONS {
+    specs = [VersionSpec(label="latest", git_ref="local")]
+        if DOCS_LOCAL != ""
+        else DOC_VERSIONS;
+    for spec in specs {
         _job.mark(spec.label, "wait", "queued");
     }
-    _job.note("contacting github.com/" + GH_REPO);
-    old = _get_hub();
-    if old is not None {
-        del old;
+    if DOCS_LOCAL != "" {
+        _job.note("using local docs tree — no network");
+    } else {
+        _job.note("contacting github.com/" + GH_REPO);
     }
+    old = [root.shared-->[?:DocsHub]];
     hub = (root.shared ++> DocsHub(built_at=now_iso())) as DocsHub;
     grant(hub, level=ReadPerm);
     latest_assets: dict[str, bytes] = {};
-    for spec in DOC_VERSIONS {
+    for spec in specs {
         b = _build_version(hub, spec.label, spec.git_ref);
         if spec.label == "latest" {
             latest_assets = b.assets;
@@ -478,14 +552,20 @@ def _ingest_all {
         _job.note("placing doc images and assets");
         _write_assets(latest_assets);
     }
+    for stale_hub in old {
+        del stale_hub;
+    }
     _job.finish();
     _job.note("docs graph ready — persists from here");
 }
 
-def _latest_stale(hub: DocsHub) -> bool {
-    vers = [hub-->[?:DocVersion, label=="latest"]];
+def _latest_stale -> bool {
+    vers = _version("latest");
     if not vers {
         return True;
+    }
+    if DOCS_LOCAL != "" {
+        return False;
     }
     head = _cached_head_sha("main");
     return head != "" and head != vers[0].sha;
@@ -495,7 +575,7 @@ def _refresh_latest(hub: DocsHub) {
     _job.begin("sync");
     _job.mark("latest", "wait", "queued");
     _job.note("main moved — refreshing latest");
-    olds = [hub-->[?:DocVersion, label=="latest"]];
+    olds = _version("latest");
     b = _build_version(hub, "latest", "main");
     _write_assets(b.assets);
     for v in olds {
@@ -506,51 +586,79 @@ def _refresh_latest(hub: DocsHub) {
     _job.note("latest refreshed");
 }
 
-def _version_list(hub: DocsHub) -> list[VersionInfo] {
-    out: list[VersionInfo] = [];
-    for v in [hub-->[?:DocVersion]] {
-        out.append(
-            VersionInfo(
-                label=v.label, git_ref=v.git_ref, pages=v.pages, fetched_at=v.fetched_at
-            )
-        );
-    }
-    return out;
+def _version_list -> list[VersionInfo] {
+    return [
+        VersionInfo(
+            label=v.label, git_ref=v.git_ref, pages=v.pages, fetched_at=v.fetched_at
+        ) for v in [root.shared-->[?:DocsHub]->:HasVersion:->[?:DocVersion]]
+    ];
 }
 
-def _tree_of(container: object) -> list[TreeNode] {
-    out: list[TreeNode] = [];
-    for d in [container-->[?:DocDir]] {
-        out.append(
-            TreeNode(
-                kind="dir",
-                name=d.name,
-                title=d.title,
-                path=d.path,
-                order=d.order,
-                children=_tree_of(d)
-            )
-        );
-    }
-    for p in [container-->[?:DocPage]] {
-        out.append(
-            TreeNode(
-                kind="page", name=p.name, title=p.title, path=p.path, order=p.order
-            )
-        );
-    }
-    out.sort(key=lambda (e: TreeNode) { e.order; });
-    return out;
-}
+walker collect_tree {
+    has folded: dict[str, TreeNode] = {},
+        folded_seq: dict[str, list[DocPage]] = {},
+        tree: list[TreeNode] = [],
+        seq: list[DocPage] = [];
 
-def _flatten(tree: list[TreeNode], acc: list[PageRef]) {
-    for it in tree {
-        if it.kind == "page" {
-            acc.append(PageRef(title=it.title, path=it.path));
-        } else {
-            _flatten(it.children, acc);
+    can scan with DocContainer entry {
+        visit [-->[?:DocDir]];
+    }
+
+    can fold_version with DocVersion exit {
+        (self.tree, self.seq) = self.fold_children(here);
+    }
+
+    can fold_dir with DocDir exit {
+        (kids, kid_pages) = self.fold_children(here);
+        here.order = kids[0].order if kids else 9000;
+        self.folded[jid(here)] = TreeNode(
+            kind="dir",
+            name=here.name,
+            title=here.title,
+            path=_route_up(here),
+            order=here.order,
+            children=kids
+        );
+        self.folded_seq[jid(here)] = kid_pages;
+    }
+
+    def fold_children(container: object) -> tuple[list[TreeNode], list[DocPage]] {
+        dirs = [container-->[?:DocDir]];
+        pages = [container-->[?:DocPage]];
+        dirs.sort(key=lambda (d: DocDir) { d.order; });
+        pages.sort(key=lambda (p: DocPage) { p.order; });
+        tree_out: list[TreeNode] = [];
+        seq_out: list[DocPage] = [];
+        (di, pi) = (0, 0);
+        while di < len(dirs) or pi < len(pages) {
+            take_dir = di < len(dirs)
+            and (pi >= len(pages) or dirs[di].order <= pages[pi].order);
+            if take_dir {
+                tree_out.append(self.folded[jid(dirs[di])]);
+                seq_out.extend(self.folded_seq[jid(dirs[di])]);
+                di += 1;
+            } else {
+                p = pages[pi];
+                tree_out.append(
+                    TreeNode(
+                        kind="page",
+                        name=p.name,
+                        title=p.title,
+                        path=_route_up(p),
+                        order=p.order
+                    )
+                );
+                seq_out.append(p);
+                pi += 1;
+            }
         }
+        return (tree_out, seq_out);
     }
+}
+
+def _tree_of(ver: DocVersion) -> list[TreeNode] {
+    walked = (ver spawn collect_tree()) as collect_tree;
+    return walked.tree;
 }
 
 def _status(hub: DocsHub | None, stale_check: bool) -> DocsStatus {
@@ -559,170 +667,134 @@ def _status(hub: DocsHub | None, stale_check: bool) -> DocsStatus {
     }
     return DocsStatus(
         ready=True,
-        stale=_latest_stale(hub) if stale_check else False,
+        stale=_latest_stale() if stale_check else False,
         building=_ingesting,
         built_at=hub.built_at,
-        versions=_version_list(hub),
+        versions=_version_list(),
         progress=_job
     );
 }
 
-walker:pub docs_status {
-    has probe: bool = True;
-
-    can run with Root entry {
-        report _status(_get_hub(), True);
-    }
+def:pub docs_status -> DocsStatus {
+    return _status(_get_hub(), True);
 }
 
-walker:pub ensure_docs {
-    has force: bool = False;
-
-    can run with Root entry {
-        hub = _get_hub();
-        needs_full = hub is None or self.force;
-        needs_latest = (not needs_full) and hub is not None and _latest_stale(hub);
-        if (needs_full or needs_latest) and not _ingesting {
-            _ingesting = True;
-            try {
-                if needs_full {
-                    _ingest_all();
-                } elif hub is not None {
-                    _refresh_latest(hub);
-                }
-            } except Exception as e {
-                _job.fail("sync failed — " + str(e));
-            } finally {
-                _ingesting = False;
+def:pub ensure_docs(force: bool = False) -> DocsStatus {
+    hub = _get_hub();
+    needs_full = hub is None or force;
+    needs_latest = (not needs_full) and hub is not None and _latest_stale();
+    if (needs_full or needs_latest) and not _ingesting {
+        _ingesting = True;
+        try {
+            if needs_full {
+                _ingest_all();
+            } elif hub is not None {
+                _refresh_latest(hub);
             }
-            hub = _get_hub();
+        } except Exception as e {
+            _job.fail("sync failed — " + str(e));
+        } finally {
+            _ingesting = False;
         }
-        report _status(hub, False);
+        hub = _get_hub();
     }
+    return _status(hub, False);
 }
 
-walker:pub doc_tree {
-    has version: str = "latest";
-
-    can run with Root entry {
-        hub = _get_hub();
-        if hub is None {
-            report None;
-            return;
-        }
-        vers = [hub-->[?:DocVersion, label==self.version]];
-        if not vers {
-            report None;
-            return;
-        }
-        report DocTree(version=self.version, tree=_tree_of(vers[0]));
+def:pub doc_tree(version: str = "latest") -> DocTree | None {
+    vers = _version(version);
+    if not vers {
+        return None;
     }
+    return DocTree(version=version, tree=_tree_of(vers[0]));
 }
 
 walker:pub doc_page {
     has version: str = "latest",
         path: str = "",
         segs: list[str] = [],
+        route: list[str] = [],
         crumbs: list[Crumb] = [],
-        missing: bool = False,
-        flat: list[PageRef] = [];
+        missing: bool = False;
 
     can start with Root entry {
-        hub = _get_hub();
-        if hub is None {
-            report None;
-            disengage;
-        }
-        vers = [hub-->[?:DocVersion, label==self.version]];
-        if not vers {
-            report None;
-            disengage;
-        }
-        _flatten(_tree_of(vers[0]), self.flat);
         self.segs = [
             s
             for s in self.path.split("/")
             if s
         ];
-        visit vers[0];
+        visit _version(self.version) else {
+            report None;
+        }
     }
 
-    can descend_version with DocVersion entry {
-        self.step(here);
+    can descend with DocContainer entry {
+        if self.segs {
+            nxt = self.segs[0];
+            self.segs = self.segs[1:];
+            visit [-->[?:DocDir, name==nxt]] else {
+                visit [-->[?:DocPage, name==nxt]] else {
+                    self.missing = True;
+                    self.segs = [];
+                    self.settle(here);
+                }
+            }
+            return;
+        }
+        self.settle(here);
     }
 
-    can descend_dir with DocDir entry {
-        self.crumbs.append(Crumb(title=here.title, path=here.path));
-        self.step(here);
+    can note_dir with DocDir entry {
+        self.route.append(here.name);
+        self.crumbs.append(Crumb(title=here.title, path="/".join(self.route)));
     }
 
     can deliver with DocPage entry {
-        idx = -1;
-        for i in range(len(self.flat)) {
-            if self.flat[i].path == here.path {
-                idx = i;
-            }
-        }
+        landed = self.route + ([here.name] if here.name != "index" else []);
+        prevs = [here<-:NextPage:<-[?:DocPage]];
+        nexts = [here->:NextPage:->[?:DocPage]];
         report DocPageView(
             version=self.version,
-            path=here.path,
+            path="/".join(landed),
             title=here.title,
             md_lines=here.md_lines,
             toc=here.toc,
             crumbs=self.crumbs,
             missing=self.missing,
-            prev_page=self.flat[idx - 1] if idx > 0 else None,
-            next_page=self.flat[idx + 1]
-                if (idx >= 0 and idx + 1 < len(self.flat))
+            prev_page=PageRef(title=prevs[0].title, path=_route_up(prevs[0]))
+                if prevs
+                else None,
+            next_page=PageRef(title=nexts[0].title, path=_route_up(nexts[0]))
+                if nexts
                 else None
         );
     }
 
-    def step(container: object) {
-        if len(self.segs) > 0 {
-            nxt = self.segs[0];
-            dirs = [container-->[?:DocDir, name==nxt]];
-            if dirs {
-                self.segs = self.segs[1:];
-                visit dirs[0];
-                return;
+    def settle(container: object) {
+        visit [container-->[?:DocPage, name=="index"]] else {
+            best_page: DocPage | None = None;
+            bp_order = 999999;
+            for p in [container-->[?:DocPage]] {
+                if p.order < bp_order {
+                    best_page = p;
+                    bp_order = p.order;
+                }
             }
-            pages = [container-->[?:DocPage, name==nxt]];
-            if pages {
-                self.segs = self.segs[1:];
-                visit pages[0];
-                return;
+            best_dir: DocDir | None = None;
+            bd_order = 999999;
+            for d in [container-->[?:DocDir]] {
+                if d.order < bd_order {
+                    best_dir = d;
+                    bd_order = d.order;
+                }
             }
-            self.missing = True;
-        }
-        idx = [container-->[?:DocPage, name=="index"]];
-        if idx {
-            visit idx[0];
-            return;
-        }
-
-        best_page: DocPage | None = None;
-        bp_order = 999999;
-        for p in [container-->[?:DocPage]] {
-            if p.order < bp_order {
-                best_page = p;
-                bp_order = p.order;
+            if best_page is not None and bp_order <= bd_order {
+                visit best_page as DocPage;
+            } elif best_dir is not None {
+                visit best_dir as DocDir;
+            } else {
+                report None;
             }
-        }
-        best_dir: DocDir | None = None;
-        bd_order = 999999;
-        for dd in [container-->[?:DocDir]] {
-            if dd.order < bd_order {
-                best_dir = dd;
-                bd_order = dd.order;
-            }
-        }
-        if best_page is not None and bp_order <= bd_order {
-            visit best_page as DocPage;
-        } elif best_dir is not None {
-            visit best_dir as DocDir;
-        } else {
-            report None;
         }
     }
 }

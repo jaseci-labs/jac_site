@@ -85,40 +85,33 @@ def:pub install_sh -> str {
     }
 }
 
-walker:pub ensure_install {
-    has probe: bool = True;
-
-    can run with Root entry {
-        meta = _get_meta();
-        if meta is None {
-            meta = (root.shared ++> InstallMeta()) as InstallMeta;
-        }
-        have_file = os.path.exists(asset_path());
-        if (_fresh(meta) and have_file) or _pulling {
-            report InstallStatus(
-                building=_pulling, sha=meta.sha, checked_at=meta.checked_at
-            );
-        } else {
-            _pulling = True;
-            updated = False;
-            try {
-                text = _fetch_script();
-                if text is not None {
-                    new_sha = hashlib.sha256(text.encode("utf-8")).hexdigest();
-                    if new_sha != meta.sha or not have_file {
-                        _write_asset(text);
-                        meta.sha = new_sha;
-                        meta.updated_at = now_iso();
-                        updated = True;
-                    }
-                    meta.checked_at = now_iso();
-                }
-            } finally {
-                _pulling = False;
-            }
-            report InstallStatus(
-                updated=updated, sha=meta.sha, checked_at=meta.checked_at
-            );
-        }
+def:pub ensure_install -> InstallStatus {
+    meta = _get_meta();
+    if meta is None {
+        meta = (root.shared ++> InstallMeta()) as InstallMeta;
     }
+    have_file = os.path.exists(asset_path());
+    if (_fresh(meta) and have_file) or _pulling {
+        return InstallStatus(
+            building=_pulling, sha=meta.sha, checked_at=meta.checked_at
+        );
+    }
+    _pulling = True;
+    updated = False;
+    try {
+        text = _fetch_script();
+        if text is not None {
+            new_sha = hashlib.sha256(text.encode("utf-8")).hexdigest();
+            if new_sha != meta.sha or not have_file {
+                _write_asset(text);
+                meta.sha = new_sha;
+                meta.updated_at = now_iso();
+                updated = True;
+            }
+            meta.checked_at = now_iso();
+        }
+    } finally {
+        _pulling = False;
+    }
+    return InstallStatus(updated=updated, sha=meta.sha, checked_at=meta.checked_at);
 }

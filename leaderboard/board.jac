@@ -116,18 +116,14 @@ node RepoEntry {
 
 edge OnBoard {}
 
-def _get_hub -> BoardHub | None {
-    hubs = [root.shared-->[?:BoardHub]];
-    return hubs[0] if hubs else None;
-}
-
 def _ensure_hub -> BoardHub {
-    hub = _get_hub();
-    if hub is None {
-        hub = (root.shared ++> BoardHub(created_at=now_iso())) as BoardHub;
-        grant(hub, level=ConnectPerm);
+    hubs = [root.shared-->[?:BoardHub]];
+    if hubs {
+        return hubs[0];
     }
-    return hub;
+    fresh = (root.shared ++> BoardHub(created_at=now_iso())) as BoardHub;
+    grant(fresh, level=ConnectPerm);
+    return fresh;
 }
 
 def parse_repo_url(url: str) -> tuple[str, str] | None {
@@ -289,13 +285,9 @@ def score(meta: RepoMeta, an: RepoAnalysis) -> ScoreBreakdown {
     );
 }
 
-def _find_entry(hub: BoardHub, full: str) -> RepoEntry | None {
-    for e in [hub-->[?:RepoEntry]] {
-        if e.full == full {
-            return e;
-        }
-    }
-    return None;
+def _find_entry(full_name: str) -> RepoEntry | None {
+    found = [root.shared-->[?:BoardHub]->:OnBoard:->[?:RepoEntry, full==full_name]];
+    return found[0] if found else None;
 }
 
 def _view_of(e: RepoEntry) -> BoardEntry {
@@ -323,8 +315,10 @@ def _view_of(e: RepoEntry) -> BoardEntry {
     );
 }
 
-def _board_list(hub: BoardHub) -> list[BoardEntry] {
-    entries = [_view_of(e) for e in [hub-->[?:RepoEntry]]];
+def _board_list -> list[BoardEntry] {
+    entries = [
+        _view_of(e) for e in [root.shared-->[?:BoardHub]->:OnBoard:->[?:RepoEntry]]
+    ];
     entries.sort(key=lambda (b: BoardEntry) { -b.score; });
     return entries;
 }
@@ -381,7 +375,7 @@ def _score_repo(hub: BoardHub, owner: str, name: str) -> SubmitResult {
         "scoring " + str(an.jac_files) + " .jac files · " + str(an.jac_lines) + " lines"
     );
     sc = score(meta, an);
-    entry = _find_entry(hub, full);
+    entry = _find_entry(full);
     if entry is None {
         entry = (
             hub +>:OnBoard():+> RepoEntry(full=full, submitted_at=now_iso())
@@ -410,69 +404,50 @@ def _score_repo(hub: BoardHub, owner: str, name: str) -> SubmitResult {
     return SubmitResult(ok=True, entry=_view_of(entry));
 }
 
-walker:pub submit_repo {
-    has url: str = "";
-
-    can run with Root entry {
-        parsed = parse_repo_url(self.url);
-        if parsed is None {
-            report SubmitResult(error="bad_url");
-        } elif _scoring {
-            report SubmitResult(error="busy");
+def:pub submit_repo(url: str = "") -> SubmitResult {
+    parsed = parse_repo_url(url);
+    if parsed is None {
+        return SubmitResult(error="bad_url");
+    }
+    if _scoring {
+        return SubmitResult(error="busy");
+    }
+    hub = _ensure_hub();
+    full = parsed[0] + "/" + parsed[1];
+    existing = _find_entry(full);
+    waited = seconds_since(existing.scored_at) if existing is not None else -1.0;
+    if existing is not None and waited >= 0.0 and waited < RESCORE_TTL_S {
+        return SubmitResult(
+            ok=True, cooldown=True, entry=_view_of(existing), board=_board_list()
+        );
+    }
+    _scoring = True;
+    _job.begin("scoring");
+    _job.note("queued " + full);
+    res = SubmitResult(error="internal");
+    try {
+        res = _score_repo(hub, parsed[0], parsed[1]);
+    } except Exception as e {
+        res = SubmitResult(error="internal");
+        _job.note("scoring failed — " + str(e));
+    } finally {
+        _scoring = False;
+        if res.ok {
+            _job.finish();
         } else {
-            hub = _ensure_hub();
-            full = parsed[0] + "/" + parsed[1];
-            existing = _find_entry(hub, full);
-            waited = seconds_since(existing.scored_at)
-                if existing is not None
-                else -1.0;
-            if existing is not None and waited >= 0.0 and waited < RESCORE_TTL_S {
-                report SubmitResult(
-                    ok=True,
-                    cooldown=True,
-                    entry=_view_of(existing),
-                    board=_board_list(hub)
-                );
-            } else {
-                _scoring = True;
-                _job.begin("scoring");
-                _job.note("queued " + full);
-                res = SubmitResult(error="internal");
-                try {
-                    res = _score_repo(hub, parsed[0], parsed[1]);
-                } except Exception as e {
-                    res = SubmitResult(error="internal");
-                    _job.note("scoring failed — " + str(e));
-                } finally {
-                    _scoring = False;
-                    if res.ok {
-                        _job.finish();
-                    } else {
-                        _job.fail(res.error);
-                    }
-                }
-                if res.ok {
-                    res.board = _board_list(hub);
-                }
-                report res;
-            }
+            _job.fail(res.error);
         }
     }
+    if res.ok {
+        res.board = _board_list();
+    }
+    return res;
 }
 
-walker:pub leaderboard {
-    has probe: bool = True;
-
-    can run with Root entry {
-        hub = _get_hub();
-        report BoardView(entries=_board_list(hub) if hub is not None else []);
-    }
+def:pub leaderboard -> BoardView {
+    return BoardView(entries=_board_list());
 }
 
-walker:pub board_status {
-    has probe: bool = True;
-
-    can run with Root entry {
-        report BoardStatus(scoring=_scoring, progress=_job);
-    }
+def:pub board_status -> BoardStatus {
+    return BoardStatus(scoring=_scoring, progress=_job);
 }

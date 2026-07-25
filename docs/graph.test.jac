@@ -98,3 +98,48 @@ test "progress_marks_are_keyed_by_label" {
     assert job.steps[0].detail == "412 pages";
     assert job.steps[1].state == "wait";
 }
+
+test "collect_tree_folds_orders_and_derives_paths_by_walking" {
+    ver = (root ++> DocVersion(label="t")) as DocVersion;
+    guide = (
+        ver +>:Contains():+> DocDir(name="guide", title="Guide", order=1)
+    ) as DocDir;
+    ver +>:Contains():+> DocPage(name="intro", title="Intro", order=0);
+    guide +>:Contains():+> DocPage(name="b", title="B", order=2);
+    guide +>:Contains():+> DocPage(name="a", title="A", order=1);
+    deep = (
+        guide +>:Contains():+> DocDir(name="deep", title="Deep", order=0)
+    ) as DocDir;
+    deep +>:Contains():+> DocPage(name="z", title="Z", order=5);
+
+    tw = (ver spawn collect_tree()) as collect_tree;
+    assert len(tw.tree) == 2;
+    assert tw.tree[0].kind == "page" and tw.tree[0].path == "intro";
+    assert tw.tree[1].kind == "dir" and tw.tree[1].name == "guide";
+    assert deep.order == 5;
+    kids = tw.tree[1].children;
+    assert [k.name for k in kids] == ["a", "b", "deep"];
+    assert kids[0].path == "guide/a";
+    assert kids[2].children[0].path == "guide/deep/z";
+    assert [p.name for p in tw.seq] == ["intro", "a", "b", "z"];
+
+    for i in range(len(tw.seq) - 1) {
+        tw.seq[i] +>:NextPage():+> tw.seq[i + 1];
+    }
+    after_a = [tw.seq[1]->:NextPage:->[?:DocPage]];
+    assert after_a[0].name == "b";
+    assert not [tw.seq[0]<-:NextPage:<-[?:DocPage]];
+    assert _route_up(tw.seq[3]) == "guide/deep/z";
+}
+
+test "place_page_builds_missing_dirs_by_walking" {
+    pv = (root ++> DocVersion(label="p")) as DocVersion;
+    pv spawn place_page(segs=["guide", "deep"], name="one", title="One", order=1);
+    pv spawn place_page(segs=["guide"], name="two", title="Two", order=2);
+    guides = [pv-->[?:DocDir, name=="guide"]];
+    assert len(guides) == 1;
+    deeps = [guides[0]-->[?:DocDir, name=="deep"]];
+    assert len(deeps) == 1;
+    assert [p.name for p in [deeps[0]-->[?:DocPage]]] == ["one"];
+    assert [p.name for p in [guides[0]-->[?:DocPage]]] == ["two"];
+}
