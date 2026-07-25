@@ -149,7 +149,7 @@ protocol (`docs/graph.test.jac`), and the Jac syntax highlighter
 - **Comments and docstrings do not survive.** `[check.lint]` selects the deslop
   rules, so `jac fmt --lintfix`, `jac precommit`, and CI strip them from every
   non-excluded `.jac`. Explanation belongs in commit messages, `AGENTS.md`,
-  this README, or `DOGFOOD.md`. The exclude list is short and each entry says
+  this README, or `misc/DOGFOOD.md`. The exclude list is short and each entry says
   why it is there.
 - **Never edit `shared/ui/`.** Fixes belong upstream in the jac-shadcn
   template; a local patch is a fork that silently diverges.
@@ -193,5 +193,5 @@ The same source also builds headlessly:
 jac nacompile game/arena.jac --target wasm32 --enforce-nogc --gc none --assert-no-rc
 ```
 
-`DOGFOOD.md` is the running log of everything this site hit while being built
+`misc/DOGFOOD.md` is the running log of everything this site hit while being built
 in Jac.
