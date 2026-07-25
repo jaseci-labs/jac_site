@@ -159,14 +159,27 @@ def:pub FloatingSource(
         document.addEventListener("mouseup", up);
     }
 
+    def reclamp_after_resize {
+        # the width/height transition runs 300ms; clamp once it settles so an
+        # expand near a viewport edge cannot push the titlebar off-screen
+        _ = setTimeout(
+            lambda { apply_offset(
+                (offX.current or 0) as float, (offY.current or 0) as float
+            ); },
+            320
+        );
+    }
+
     def toggle_expand(_e: MouseEvent) {
         expanded = not expanded;
+        reclamp_after_resize();
     }
 
     def maybe_toggle(e: MouseEvent) {
         tgt: any = e.target;
         if (floating or always_float) and tgt.closest(".code-titlebar") {
             expanded = not expanded;
+            reclamp_after_resize();
         }
     }
 
