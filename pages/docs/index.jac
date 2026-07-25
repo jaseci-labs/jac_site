@@ -1,4 +1,4 @@
-import from ...components.DocsShell { DocsShell }
+import from ...docs.DocsShell { DocsShell }
 
 def:pub page -> JsxPage {
     return <DocsShell/>;

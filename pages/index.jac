@@ -1,13 +1,13 @@
-import from ..components.Hero { Hero }
-import from ..components.StatsBand { StatsBand }
-import from ..components.WasmGame { WasmGame }
-import from ..components.WhyJac { WhyJac }
-import from ..components.Showcase { Showcase }
-import from ..components.Capabilities { Capabilities }
-import from ..components.OneBinary { OneBinary }
-import from ..components.Agents { Agents }
-import from ..components.BookSection { BookSection }
-import from ..components.ExplorerFinale { ExplorerFinale }
+import from ..landing.Hero { Hero }
+import from ..landing.StatsBand { StatsBand }
+import from ..landing.WasmGame { WasmGame }
+import from ..landing.WhyJac { WhyJac }
+import from ..landing.Showcase { Showcase }
+import from ..landing.Capabilities { Capabilities }
+import from ..landing.OneBinary { OneBinary }
+import from ..landing.Agents { Agents }
+import from ..landing.BookSection { BookSection }
+import from ..landing.ExplorerFinale { ExplorerFinale }
 
 def:pub page -> JsxPage {
     return
