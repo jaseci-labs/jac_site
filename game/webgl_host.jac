@@ -4,6 +4,7 @@ obj Shim {
     has gl: any = None,
         canvas: any = None,
         exports: any = None,
+        game: any = None,
         mem: any = None,
         heap: any = 0,
         proj: list = [],
@@ -272,59 +273,7 @@ def _build_env(sh: any) -> dict {
             float(b) / 255.0,
             1.0
         ]; },
-        "rlSetLineWidth": lambda (w: float) { sh.gl.lineWidth(w); },
-        "FileExists": lambda (p: int) { return 0; },
-        "LoadFileText": lambda (p: int) { return 0; },
-        "TextToInteger": lambda (p: int) { return 0; },
-        "SaveFileText": lambda (p: int, t: int) { return 0; },
-        "malloc": lambda (n: int) {
-            sz = Number(n);
-            p = sh.heap;
-            sh.heap = (sh.heap + sz + 7) & ~7;  # jac:ignore[E1055]
-            return p;
-        },
-        "calloc": lambda (c: int, s: int) {
-            n = Number(c) * Number(s);
-            p = sh.heap;
-            sh.heap = (sh.heap + n + 7) & ~7;  # jac:ignore[E1055]
-            new(Uint8Array, sh.mem.buffer).fill(0, p, p + n);
-            return p;
-        },
-        "free": lambda (p: int) { },
-        "malloc_usable_size": lambda (p: int) { return 0; },
-        "memcpy": lambda (d: int, s: int, n: int) {
-            sz = Number(n);
-            new(Uint8Array, sh.mem.buffer).copyWithin(d, s, s + sz);
-            return d;
-        },
-        "memcmp": lambda (a: int, b: int, n: int) {
-            u8 = new(Uint8Array, sh.mem.buffer);
-            sz = Number(n);
-            i = 0;
-            while i < sz {
-                df = u8[a + i] - u8[b + i];
-                if df != 0 {
-                    return df;
-                }
-                i = i + 1;
-            }
-            return 0;
-        },
-        "puts": lambda (p: int) { return 0; },
-        "printf": lambda (a: int) { return 0; },
-        "snprintf": lambda (a: int, b: int, c: int, d: int) { return 0; },
-        "getenv": lambda (p: int) { return 0; },
-        "fflush": lambda (p: int) { return 0; },
-        "abort": lambda { },
-        "__multi3": lambda (res: int, al: int, ah: int, bl: int, bh: int) {
-            k = (BigInt(1) << BigInt(64)) - BigInt(1);
-            a = (BigInt.asUintN(64, ah) << BigInt(64)) | BigInt.asUintN(64, al);
-            b = (BigInt.asUintN(64, bh) << BigInt(64)) | BigInt.asUintN(64, bl);
-            p = BigInt.asUintN(128, a * b);
-            dv = new(DataView, sh.mem.buffer);
-            dv.setBigUint64(res, p & k, True);
-            dv.setBigUint64(res + 8, (p >> BigInt(64)) & k, True);
-        }
+        "rlSetLineWidth": lambda (w: float) { sh.gl.lineWidth(w); }
     };
 }
 
@@ -421,7 +370,7 @@ def _frame_tick(sh: any, ts: float) {
         sh.dt = 0.05;
     }
     sh.time = now;
-    closed = sh.exports.frame();
+    closed = sh.exports.frame(sh.game);
 
     if sh.on_tick is not None {
         fps = Math.round(1.0 / sh.dt) if sh.dt > 0.0 else 0;
@@ -445,8 +394,8 @@ async def:pub run_game(canvas: any, on_tick: any = None) {
     _install_input(sh);
 
     inst: any = await instantiate_na_wasm(
-        "/static/main.wasm", sh, {"env": _build_env(sh)}
+        "/static/arena.wasm", sh, {"env": _build_env(sh)}
     );
-    inst.exports.init();
+    sh.game = inst.exports.init();
     requestAnimationFrame(lambda (ts: float) { _frame_tick(sh, ts); });
 }

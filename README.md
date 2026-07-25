@@ -3,8 +3,9 @@
 The marketing site, docs reader, and Ninja Leaderboard for the Jac programming
 language, built end to end in Jac (naturally). One language spans all three
 codespaces here: the pages and components compile to JavaScript, the
-endpoints compile to Python and serve over RPC, and the game in `main.jac` compiles
-through LLVM to `/static/main.wasm`.
+endpoints compile to Python and serve over RPC, and the game in
+`game/arena.na.jac` compiles through LLVM to `/static/arena.wasm` — fully
+borrow-checked, with zero reference counting in the artifact.
 
 Built on jac-shadcn (nova style, orange accent, Geist). Dark-first with a
 light-mode toggle. Visual-first: animated SVG diagrams drawn on scroll with
@@ -41,13 +42,13 @@ machine runs them, which is the tier boundary this language exists to erase.
 
 | Path | What it is |
 |---|---|
-| `main.jac` | Entry: `app`, global CSS, and the rlgl cube shooter compiled to wasm |
+| `main.jac` | Entry: `app`, global CSS, and the endpoint imports that register routes |
 | `pages/` | File-based routes — thin re-exports into features |
 | `landing/` | The marketing page: Hero, Showcase, Capabilities and friends |
 | `landing/diagrams/` | The four animated SVG arguments |
 | `docs/` | The docs reader: graph schema, ingest, read walkers, shell, sections, renderer |
 | `leaderboard/` | Submit, score, board: rubric, graph, shell, card |
-| `game/` | The wasm game's browser host (the game itself is still in `main.jac`) |
+| `game/` | The rlgl shooter (`arena.na.jac`, owned/borrowed, zero-GC) and its WebGL host |
 | `source/` | The live source browser and its floating window |
 | `shared/` | Earned its way in: used by two or more features |
 | `shared/ui/` | jac-shadcn primitives — **registry-managed, import only** |
@@ -146,12 +147,27 @@ protocol (`docs/graph.test.jac`), and the Jac syntax highlighter
   `this_is_jac` showcase, and the fundamentals book ("the ninja book").
   House style: "discontinuities", not "seams"; "the first…", not "the only…".
 
-## Known deviation
+## The game module
 
-The rlgl game still lives in `main.jac` (~950 of its lines). wasm emission is
-entry-module-only — `ViteCompiler._emit_na_wasm` is called once, with the entry
-module path — so `import`ing the game from `game/arena.jac` silently produces
-no `/static/main.wasm`. See DOGFOOD A2; the split is blocked on that fix.
+`game/arena.na.jac` is the one explicitly-native module, and it is deliberately
+**not imported by anything**. Importing it server-side would execute its raylib
+externs at glob-init under the Python runtime (DOGFOOD A2); instead
+`[client] wasm_modules` in `jac.toml` names it, and the client build compiles
+it standalone to `/static/arena.wasm`, which `game/webgl_host.jac` fetches and
+drives over WebGL.
+
+Its memory story is the point: `[gc] default = "none"` builds it headerless —
+no reference counting, no collector, static drops only — and
+`[gc.enforce] modules = ["arena*"]` puts it under the ownership checker's
+zero-RC contract, so any code shape that would need the RC world is an E140x
+compile error, not a runtime cost. Entity pools are index arenas (parallel
+scalar lists, the `own_rbtree` idiom) inside one `own Game` the browser holds
+as an opaque handle; every update pass borrows it `&mut` down the call tree.
+The same source also builds headlessly:
+
+```bash
+jac nacompile game/arena.na.jac --target wasm32 --enforce-nogc --gc none --assert-no-rc
+```
 
 `DOGFOOD.md` is the running log of everything this site hit while being built
 in Jac.
