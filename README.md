@@ -166,10 +166,13 @@ registers its WebGL implementations first with `set_na_env("arena", sh,
 {"env": ...})`; an FFI-free na module would need no ceremony at all.
 
 Its memory story is the point: `[gc] default = "none"` builds it headerless —
-no reference counting, no collector, static drops only — and
-`[gc.enforce] modules = ["arena*"]` puts it under the ownership checker's
-zero-RC contract, so any code shape that would need the RC world is an E140x
-compile error, not a runtime cost. Entity pools are index arenas (parallel
+no reference counting, no collector, static drops only — and the build audits
+the emitted IR for `__rc_*` machinery, so a wasm that re-entered the RC world
+fails to build rather than shipping. The ownership checker's source-level
+zero-RC contract (`[gc.enforce]`, E140x hard errors) ships disarmed until a
+release carries jaseci-labs/jac#7732 — the 0.34.x checker misfires E1401 on
+arena's raylib extern decls; jac.toml says exactly when and how to re-arm
+it. Entity pools are index arenas (parallel
 scalar lists, the `own_rbtree` idiom) inside one `own Game` the browser holds
 as an opaque handle; every update pass borrows it `&mut` down the call tree.
 The same source also builds headlessly:

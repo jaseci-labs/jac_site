@@ -46,14 +46,21 @@ exclude = [
 
 # The shooter (game/arena.na.jac) compiles to /static/arena.wasm with no
 # reference counting at all: [gc] default = "none" makes the native build
-# headerless (static drops, zero RC call sites), and [gc.enforce] puts the
-# module under the ownership checker's zero-RC contract (E140x hard errors),
-# so the wasm build fails rather than silently re-entering the RC world.
+# headerless (static drops, zero RC call sites), and the build audits the
+# emitted IR for __rc_* machinery, so a wasm that re-entered the RC world
+# fails to build rather than shipping.
 [gc]
 default = "none"
 
+# Ships disarmed: the released 0.34.x checker fires E1401 on clib extern-decl
+# params (i32/f32/u8 are missing from its scalar set), so enforcing here
+# fails CI's released-jac `jac check` on arena's raylib import block. Re-arm
+# the ownership contract (E140x hard errors at check time) with
+#   modules = ["arena*"]
+# once a release carries jaseci-labs/jac#7732. The artifact-level zero-RC
+# guarantee above does not wait for it.
 [gc.enforce]
-modules = ["arena*"]
+modules = []
 
 [jac-shadcn]
 style = "nova"
