@@ -9,18 +9,34 @@ def:pub TokenSpan(tk: Token) -> JsxElement {
 }
 
 def:pub CodeLines(
-    lines: list[str], lang: str = "jac", numbers: bool = False
+    lines: list[str],
+    lang: str = "jac",
+    numbers: bool = False,
+    start: int = 1,
+    hl_from: int = 0,
+    hl_to: int = -1
 ) -> JsxElement {
     line_toks = tokenize_lines(lines, lang);
     return
         <div className="code-plain font-mono text-[12px] leading-relaxed">
             {for (li, ltoks) in enumerate(line_toks) {
-                <div key={str(li)} className="flex min-h-[1.45em]">
+                <div
+                    key={str(li)}
+                    className={"flex min-h-[1.45em]" + (
+                        " bg-orange-400/[0.08]"
+                            if (start + li >= hl_from and start + li <= hl_to)
+                            else ""
+                    )}
+                >
                     {if numbers {
                         <span
-                            className="sticky left-0 w-10 shrink-0 select-none border-r border-white/5 bg-[#060607] pr-3 text-right text-white/25"
+                            className={"sticky left-0 w-10 shrink-0 select-none border-r border-white/5 bg-[#060607] pr-3 text-right " + (
+                                "text-orange-300/70"
+                                    if (start + li >= hl_from and start + li <= hl_to)
+                                    else "text-white/25"
+                            )}
                         >
-                            {str(li + 1)}
+                            {str(start + li)}
                         </span>
                     }}
                     <span className="whitespace-pre pl-3 pr-4">
