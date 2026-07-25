@@ -4,39 +4,16 @@ entry-point = "main.jac"
 kind = "web-app"
 
 [dev]
-# Run this site against the checked-out compiler source rather than the jac
-# binary's frozen payload. Without it the nearest jac.toml (this one) declares
-# no source, so `jac start` here silently runs the shipped jaclang.
 jaclang_source = "../../jac"
 
 [precommit]
-# The site is `jac check`-clean, so the hook type-checks as well as formats.
 typecheck = true
 
 [check.lint]
-# "all" turns on every autolint rule; the two strip-* entries are the opt-in
-# "deslop" rules (W3050/W3051), which only activate when named explicitly. With
-# them selected, `jac fmt --lintfix`, `jac precommit`, and CI's
-# `jac fmt --check --lintfix` strip comments and docstrings from every
-# non-excluded .jac file.
 select = ["all", "strip-comments", "strip-docstrings"]
 exclude = [
-    # Build output: bundler-generated .jac never belongs to the source tree.
     ".jac/*",
-    # Teaching samples rendered by landing/Showcase.jac. These are content,
-    # not site source: their comments ARE the explanation (so strip-comments
-    # must not touch them), and "all" turns on no-print (E3012), which a
-    # `with entry { print(...) }` sample is entitled to trip.
     "examples/*",
-    # These carry `# jac:ignore[...]` directives, which the parser reads into
-    # inline_suppressions -- deleting one silently re-arms the diagnostic it
-    # suppressed. jaclang <= 0.34.5 strips them along with real comments, so
-    # they stay lint-exempt until a release carrying the W3050 carve-out lands;
-    # drop these entries then.
-    #
-    # The two shells left this list when their browser-API calls moved into
-    # shared/async_utils.jac and leaderboard/format.jac -- each remaining
-    # suppression now lives in one small file owned by the feature that needs it.
     "source/FloatingSource.jac",
     "landing/Reveal.jac",
     "game/webgl_host.jac",
@@ -44,23 +21,9 @@ exclude = [
     "leaderboard/format.jac",
 ]
 
-# The shooter (game/arena.jac + sim + gmath + platform_rl) compiles to
-# /static/arena.wasm with no reference counting at all: [gc] default =
-# "none" makes the native build headerless (static drops, zero RC call
-# sites), and the build audits the emitted IR for __rc_* machinery, so a
-# wasm that re-entered the RC world fails to build rather than shipping.
 [gc]
 default = "none"
 
-# Armed: headerless (zero-RC) codegen only happens for ENFORCED modules --
-# [gc] default = "none" alone leaves RC on as a safe fallback, and the wasm
-# build's IR audit then rejects the artifact ("Skipped na->wasm" on boot;
-# jaseci-labs/jac#7735). The game is four na modules and all four must be
-# enforced together, because E1403 treats a call into a sibling module that
-# is NOT enforced as a heap value escaping the nogc world. Needs a jaclang
-# release carrying jaseci-labs/jac#7732 (clib extern-decl E1401 fix) and
-# jaseci-labs/jac#7737 (imported na modules inherit gc options); on older
-# releases `jac check` fails on platform_rl's raylib import block.
 [gc.enforce]
 modules = ["arena*", "sim*", "gmath*", "platform_rl*"]
 
@@ -72,6 +35,7 @@ font = "geist"
 radius = "default"
 menuAccent = "subtle"
 menuColor = "default"
+
 [dependencies]
 [dependencies.npm]
 embla-carousel-react = "*"
@@ -96,29 +60,14 @@ lib_imports = ["import tailwindcss from '@tailwindcss/vite'"]
 
 [serve]
 base_route_app = "app"
-# /install.sh is not an asset route. shared/install.jac mounts it as a
-# @restspec function, and function endpoints register ahead of the asset
-# catch-all, so the function answers. AssetResolver would now serve
-# assets/install.sh at that URL too, but as application/octet-stream and only
-# if the file already exists — the function types it text/x-shellscript and
-# materializes it on demand after a cold deploy.
 
 [client.assets]
-# STALE, and now redundant: this list used to REPLACE the dev server's
-# default extension set, so it had to restate the defaults or root-path fonts
-# (e.g. /geist-latin-wght-normal.woff2) 404'd. Both servers now share
-# AssetResolver and this key is additive, which makes a copy of the defaults
-# a no-op — jac warns about it on every boot and points at `extensions.add`.
-# Delete the block once the site pins a jaclang that carries the resolver.
 custom_extensions = [
     ".png", ".jpg", ".jpeg", ".gif", ".webp", ".svg", ".ico",
     ".woff", ".woff2", ".ttf", ".otf", ".eot", ".mp4", ".webm", ".mp3",
     ".wav", ".css", ".js", ".json",
 ]
 
-# Keep the source service in-process: without this, services/source.jac being
-# sv-imported from the client makes `jac start` auto-enter local microservice
-# mode (whose spawner passes a --no_client flag the CLI no longer accepts).
 [scale.microservices]
 enabled = false
 

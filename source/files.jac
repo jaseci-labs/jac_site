@@ -21,6 +21,17 @@ obj SourceView {
         raw_lines: list[str];
 }
 
+obj SourceSpan {
+    has path: str,
+        language: str,
+        total_lines: int,
+        start: int,
+        hl_from: int,
+        hl_to: int,
+        found: bool,
+        raw_lines: list[str];
+}
+
 def _language_of(name: str) -> str {
     ext = os.path.splitext(name)[1].lower();
     table = {".jac": "jac", ".toml": "toml", ".css": "css", ".md": "markdown"};
@@ -90,6 +101,42 @@ def:pub source_file(path: str) -> SourceView | None {
         size_bytes=os.path.getsize(full),
         lines=found.lines,
         raw_lines=text.split("\n"),
+    );
+}
+
+def:pub source_span(
+    path: str, needle: str, hl_lines: int = 1, before: int = 3, after: int = 12
+) -> SourceSpan | None {
+    view = source_file(path);
+    if view is None {
+        return None;
+    }
+    hit = -1;
+    for (i, ln) in enumerate(view.raw_lines) {
+        if needle in ln {
+            hit = i;
+            break;
+        }
+    }
+    found = hit >= 0;
+    anchor = hit if found else 0;
+    lo = anchor - before;
+    if lo < 0 {
+        lo = 0;
+    }
+    hi = anchor + hl_lines - 1 + after;
+    if hi > len(view.raw_lines) - 1 {
+        hi = len(view.raw_lines) - 1;
+    }
+    return SourceSpan(
+        path=path,
+        language=view.language,
+        total_lines=view.lines,
+        start=lo + 1,
+        hl_from=(anchor + 1) if found else 0,
+        hl_to=(anchor + hl_lines) if found else -1,
+        found=found,
+        raw_lines=view.raw_lines[lo:hi + 1],
     );
 }
 
