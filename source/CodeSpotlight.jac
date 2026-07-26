@@ -1,5 +1,10 @@
 sv import from .files { source_span, SourceSpan }
 import from ..shared.CodeBlock { CodeLines }
+import from "@hugeicons/react" { HugeiconsIcon }
+import from "@hugeicons/core-free-icons" { ArrowUpRight01Icon }
+
+glob CONTEXT_PAD: int = 60,
+     RETURN_DELAY_MS: int = 1400;
 
 def:pub CodeSpotlight(
     path: str,
@@ -7,18 +12,95 @@ def:pub CodeSpotlight(
     hl_lines: int = 1,
     before: int = 3,
     after: int = 12,
-    className: str = ""
+    className: str = "",
+    on_pop: any = None
 ) -> JsxElement {
     has span: SourceSpan | None = None,
-        failed: bool = False;
+        failed: bool = False,
+        scrollRef: Ref[any] = Ref(),
+        anchorTop: Ref[any] = Ref(0),
+        idleTimer: Ref[any] = Ref(0),
+        returning: Ref[any] = Ref(False);
 
     async can with entry {
-        got = await source_span(path, needle, hl_lines, before, after);
+        got = await source_span(
+            path, needle, hl_lines, before + CONTEXT_PAD, after + CONTEXT_PAD
+        );
         if got is None {
             failed = True;
         } else {
             span = got;
             failed = not got.found;
+        }
+    }
+
+    def settle_to_anchor {
+        el: any = scrollRef.current;
+        if not el or span is None {
+            return;
+        }
+        hl: any = el.querySelector("[class*='bg-orange-400']");
+        if not hl {
+            return;
+        }
+        sp = span as SourceSpan;
+        rows = sp.hl_to - sp.hl_from + 1;
+        target = (hl.offsetTop as float) - (
+            (el.clientHeight as float) - (hl.offsetHeight as float) * rows
+        ) * 0.35;
+        if target < 0.0 {
+            target = 0.0;
+        }
+        anchorTop.current = target;
+        el.scrollTop = target;
+    }
+
+    can with [span] entry {
+        if span is not None {
+            _ = setTimeout(
+                lambda {
+                    settle_to_anchor();
+                    el: any = scrollRef.current;
+                    if el {
+                        el.addEventListener("scroll", on_scroll);
+                    }
+                },
+                30
+            );
+        }
+    }
+
+    def on_scroll(_e: any) {
+        el: any = scrollRef.current;
+        if not el {
+            return;
+        }
+        if returning.current {
+            gap = (el.scrollTop as float) - (anchorTop.current as float);
+            if gap < 3.0 and gap > -3.0 {
+                returning.current = False;
+            }
+            return;
+        }
+        if idleTimer.current {
+            clearTimeout(idleTimer.current);
+        }
+        idleTimer.current = setTimeout(
+            lambda {
+                target: any = scrollRef.current;
+                if target {
+                    returning.current = True;
+                    target.scrollTo({"top": anchorTop.current, "behavior": "smooth"});
+                    _ = setTimeout(lambda { returning.current = False; }, 900);
+                }
+            },
+            RETURN_DELAY_MS
+        );
+    }
+
+    def pop_out(_e: MouseEvent) {
+        if on_pop is not None {
+            on_pop(path);
         }
     }
 
@@ -52,8 +134,24 @@ def:pub CodeSpotlight(
                     ></span>
                     live source
                 </span>
+                {if on_pop is not None {
+                    <button
+                        onClick={pop_out}
+                        title="Pop out into the file explorer"
+                        className="ml-2 flex size-6 shrink-0 cursor-pointer items-center justify-center rounded-md border border-white/10 text-white/45 transition-colors hover:border-primary/50 hover:text-white"
+                    >
+                        <HugeiconsIcon
+                            icon={ArrowUpRight01Icon}
+                            strokeWidth={2}
+                            className="size-3.5"
+                        />
+                    </button>
+                }}
             </div>
-            <div className="code-scroll min-h-[200px] overflow-auto pt-2 pb-3">
+            <div
+                ref={scrollRef}
+                className="code-scroll h-[360px] overflow-auto pt-2 pb-3"
+            >
                 {if failed {
                     <p className="pl-4 pt-3 pb-3 font-mono text-xs text-red-400">
                         {"anchor \""}{needle}{"\" not found in "}{path}

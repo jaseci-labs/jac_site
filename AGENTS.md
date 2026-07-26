@@ -35,11 +35,11 @@ again in CI as `.github/workflows/jac-check.yml`. `[check.lint]` in jac.toml
 selects the opt-in **deslop** rules, so comments and docstrings are stripped
 from every `.jac` file on commit: do not write explanatory comments in `.jac`
 here, they will not survive. Put the reasoning in the commit message, in this
-file, or in DOGFOOD.md.
+file, or in misc/DOGFOOD.md.
 
 `# jac:ignore[...]` directives are the exception -- the parser reads them as
 suppressions. They must sit on the exact line the diagnostic anchors to, which
-after formatting is often not the line you wrote them on (see DOGFOOD.md #35).
+after formatting is often not the line you wrote them on (see misc/DOGFOOD.md #35).
 The five files that carry them are listed in `[check.lint] exclude` because
 jaclang <= 0.34.5 strips them along with real comments.
 

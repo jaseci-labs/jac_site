@@ -24,7 +24,7 @@ def:pub WhySlide(
                     <h3
                         className="text-balance text-2xl font-bold tracking-tight sm:text-3xl"
                     >
-                        {title}
+                        {title}{" "}
                         {if accent != "" {
                             <span>
                                 <span className="text-gradient">{accent}</span>
