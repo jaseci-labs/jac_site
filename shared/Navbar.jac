@@ -88,7 +88,7 @@ def:pub Navbar -> JsxElement {
                         } }
                     </button>
                     <a
-                        href="https://github.com/jaseci-labs/jaseci"
+                        href="https://github.com/jaseci-labs/jac"
                         target="_blank"
                         rel="noreferrer"
                         title="GitHub"

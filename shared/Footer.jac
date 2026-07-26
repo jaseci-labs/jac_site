@@ -18,7 +18,7 @@ glob _COLS: list[dict] = [
          {
              "title": "Community",
              "links": [
-                 {"label": "GitHub", "href": "https://github.com/jaseci-labs/jaseci"},
+                 {"label": "GitHub", "href": "https://github.com/jaseci-labs/jac"},
                  {"label": "Discord", "href": "https://discord.gg/6j3QNdtcN6"},
                  {
                      "label": "Contributing",

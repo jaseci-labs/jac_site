@@ -91,7 +91,7 @@ obj ShaCache {
 }
 
 glob USER_AGENT: str = "jaclang.org docs sync",
-     GH_REPO: str = os.environ.get("JAC_DOCS_GH_REPO", "jaseci-labs/jaseci"),
+     GH_REPO: str = os.environ.get("JAC_DOCS_GH_REPO", "jaseci-labs/jac"),
      DOCS_LOCAL: str = os.environ.get(
          "JAC_DOCS_LOCAL",
          os.path.join("..", "..")
