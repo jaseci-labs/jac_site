@@ -54,6 +54,12 @@ section[id] { scroll-margin-top: 4.5rem; }
     color: transparent;
 }
 
+/* ---- docs graph map ---- */
+.docmap-halo {
+    transform-box: fill-box;
+    transform-origin: center;
+}
+
 /* ---- hero atmosphere ---- */
 .hero-glow {
     background:

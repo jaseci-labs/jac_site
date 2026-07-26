@@ -1,3 +1,4 @@
+import from react { useEffect }
 import from ..shared.ui.badge { Badge }
 import from ..landing.Reveal { Reveal }
 import from ..source.CodeSpotlight { CodeSpotlight }
@@ -10,7 +11,9 @@ import from ..landing.diagrams.PolypilerDiagram { PolypilerDiagram }
 glob GROUPS: list[dict] = [
          {
              "key": "synechic",
-             "title": "Synechic: one continuous medium",
+             "pre": "",
+             "hot": "Synechic",
+             "post": ": one continuous medium",
              "blurb": "One language compiled at every tier. The server, the browser, and native machine code are targets of the same source, and a function is an API because the compiler owns both sides of the wire.",
              "sections": [
                  {
@@ -27,12 +30,17 @@ glob GROUPS: list[dict] = [
                  {
                      "tag": "native codegen",
                      "title": "One import compiles to a game",
-                     "body": "The rocket arena on the landing page is native code, and nothing about this import says so. The compiler knows arena is a native module, so the edge itself decides: the build compiles the game and the three modules behind it to WebAssembly through Jac's own LLVM backend and wasm linker, serves the artifact from /static, and binds each name to a stub that instantiates it on first call.",
+                     "body": "The rocket arena on the landing page is native code, and nothing about this import says so. The compiler knows arena is a native module, so the edge itself decides: the build compiles the game and the three modules behind it to WebAssembly through Jac's own LLVM backend and wasm linker, serves the artifact from /static, and binds each name to a stub that instantiates it on first call. The second window is the payoff: the first call awaits instantiation, and after that init is just a function you call.",
                      "path": "game/webgl_host.jac",
                      "needle": "import from .arena { init }",
                      "hl": 1,
                      "before": 1,
                      "after": 12,
+                     "path2": "game/webgl_host.jac",
+                     "needle2": "sh.game = await init()",
+                     "hl2": 1,
+                     "before2": 4,
+                     "after2": 4,
 
                  },
                  {
@@ -63,7 +71,9 @@ glob GROUPS: list[dict] = [
          },
          {
              "key": "topokinetic",
-             "title": "Topokinetic: computation moves to the data",
+             "pre": "",
+             "hot": "Topokinetic",
+             "post": ": computation moves to the data",
              "blurb": "The docs and the leaderboard are persistent graphs, and the code that serves them travels: walkers descend, fold, and climb the topology instead of querying it from a distance.",
              "sections": [
                  {
@@ -171,18 +181,25 @@ glob GROUPS: list[dict] = [
          },
          {
              "key": "ownership",
-             "title": "Gradual ownership: a dial, not a divide",
+             "pre": "",
+             "hot": "Gradual ownership",
+             "post": ": a dial, not a divide",
              "blurb": "Managed semantics by default, borrow checking adopted one declaration at a time, all the way down to a game loop with no garbage collector and no reference counts.",
              "sections": [
                  {
                      "tag": "ownership",
                      "title": "Borrow-checked at 60Hz",
-                     "body": "The game's whole world is one owned value, threaded through the simulation as explicit borrows the compiler proves. The hot loop runs with zero garbage collection and zero reference counting: not tuned down, compiled out.",
+                     "body": "The game's whole world is one owned value, threaded through the simulation as explicit borrows the compiler proves. The hot loop runs with zero garbage collection and zero reference counting: not tuned down, compiled out. The second window is where the borrowing happens: the renderer takes the world as &Game, a read-only loan checked at compile time.",
                      "path": "game/impl/sim.impl.jac",
                      "needle": "w: own Game = Game()",
                      "hl": 1,
                      "before": 3,
                      "after": 12,
+                     "path2": "game/impl/arena.impl.jac",
+                     "needle2": "impl draw_enemies(w: &Game, alpha: float)",
+                     "hl2": 1,
+                     "before2": 1,
+                     "after2": 10,
 
                  },
                  {
@@ -202,7 +219,9 @@ glob GROUPS: list[dict] = [
          },
          {
              "key": "craft",
-             "title": "And the rest of the craft",
+             "pre": "And the rest of the ",
+             "hot": "craft",
+             "post": "",
              "blurb": "Tests as syntax, interfaces apart from implementations, and a page that can prove all of it by reading itself.",
              "sections": [
                  {
@@ -219,18 +238,23 @@ glob GROUPS: list[dict] = [
                  {
                      "tag": "decl vs impl",
                      "title": "The what and the how, apart",
-                     "body": "Any declaration can push its body into an impl file, and every directory of this site now keeps an impl folder holding its modules' implementations. A module reads as its interface; this impl file carries the how. The compiler stitches them back together as one unit.",
-                     "path": "landing/impl/Showcase.impl.jac",
-                     "needle": "impl Showcase.load_samples",
+                     "body": "Any declaration can push its body into an impl file, and every directory of this site now keeps an impl folder holding its modules' implementations. The first window is the what: a one-line decl inside the component, ending in a semicolon. The second is the how, living in the impl folder next door. The compiler stitches them back together as one unit.",
+                     "path": "landing/Showcase.jac",
+                     "needle": "async def load_samples -> None;",
                      "hl": 1,
-                     "before": 0,
-                     "after": 14,
+                     "before": 3,
+                     "after": 12,
+                     "path2": "landing/impl/Showcase.impl.jac",
+                     "needle2": "impl Showcase.load_samples",
+                     "hl2": 1,
+                     "before2": 0,
+                     "after2": 8,
 
                  },
                  {
                      "tag": "the-kicker-anchor",
                      "title": "This page, reading itself",
-                     "body": "Every section above is one entry in a list at the top of this page's own source, and the page is a loop over that list. This window resolved its own entry: the anchor it searched for is the tag printed beside this paragraph. Wait wuuut.",
+                     "body": "Every section above is one entry in a list at the top of this page's own source, and the page is a loop over that list. This window resolved its own entry: the anchor it searched for is the tag printed beside this paragraph. Wait, wuuut.",
                      "path": "pages/wait-wuuut.jac",
                      "needle": "the-kicker-anchor",
                      "hl": 1,
@@ -243,9 +267,141 @@ glob GROUPS: list[dict] = [
 
          },
 
+     ],
+     ABSENT: list[dict] = [
+         {
+             "thing": "a database",
+             "why": "The docs and the leaderboard live in a persistent graph. root outlives every request with no schema, no connection string, no setup."
+         },
+         {
+             "thing": "an ORM or migrations",
+             "why": "Nodes and edges are the data model. There is no mapping layer to write and nothing for it to drift out of sync with."
+         },
+         {
+             "thing": "API routes",
+             "why": "No router file, no controllers, no handlers. def:pub and spawnable walkers are the endpoints."
+         },
+         {
+             "thing": "fetch or axios",
+             "why": "The browser imports server functions and calls them. The compiler writes the wire code on both sides."
+         },
+         {
+             "thing": "serializers or DTOs",
+             "why": "Typed objects cross the wire as themselves, in both directions."
+         },
+         {
+             "thing": "an OpenAPI spec",
+             "why": "One compiler owns both ends of every call, so there is no contract to publish, version, or drift from."
+         },
+         {
+             "thing": "request validation",
+             "why": "The function signature is the schema. Arguments are typed and checked at the boundary."
+         },
+         {
+             "thing": "auth or session plumbing",
+             "why": "Every visitor gets an isolated root graph by default; root.shared is the one deliberately shared world."
+         },
+         {
+             "thing": "a package.json",
+             "why": "There is no node project to maintain. The toolchain derives the web build from the import graph."
+         },
+         {
+             "thing": "webpack or vite config",
+             "why": "Bundling, code splitting, static assets, and the dev server all come out of jac start."
+         },
+         {
+             "thing": "a wasm toolchain",
+             "why": "No emscripten, no wasm-pack, no linker scripts. The game compiles to WebAssembly because an import said so."
+         },
+         {
+             "thing": "TypeScript",
+             "why": "One type system spans server, browser, and native machine code. Nothing gets redeclared at the edges."
+         },
+         {
+             "thing": "a test framework",
+             "why": "test is a keyword and jac test is the runner. There is nothing to install or configure."
+         },
+
+     ],
+     NAV_ITEMS: list[dict] = [
+         {"id": "g-absent", "label": "won't see"},
+         {"id": "g-synechic", "label": "synechic"},
+         {"id": "g-topokinetic", "label": "topokinetic"},
+         {"id": "g-ownership", "label": "ownership"},
+         {"id": "g-craft", "label": "craft"},
+
      ];
 
-def GroupHeader(gkey: str, title: str, blurb: str) -> JsxElement {
+def AbsentSection -> JsxElement {
+    return
+        <div id="g-absent" className="scroll-mt-24">
+            <div className="mx-auto max-w-5xl pl-4 pr-4 pt-20 pb-6 sm:pl-6 sm:pr-6">
+                <Reveal>
+                    <div className="mx-auto max-w-2xl text-center">
+                        <h2
+                            className="text-balance text-3xl font-bold tracking-tight sm:text-4xl"
+                        >
+                            What you{" "}
+                            <span className="text-gradient">won't see</span>
+                        </h2>
+                        <p className="mt-3 text-balance text-muted-foreground">
+                            A full-stack site usually drags an entourage. Everything below is genuinely absent from this source tree: not generated and hidden, absorbed by the language.
+                        </p>
+                    </div>
+                    <div
+                        className="mx-auto mt-10 grid max-w-4xl grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3"
+                    >
+                        {for (i, a) in enumerate(ABSENT) {
+                            <div
+                                key={str(i)}
+                                className="rounded-xl border border-border/50 bg-card/40 p-4 text-left"
+                            >
+                                <p
+                                    className="font-mono text-sm text-muted-foreground/60 line-through decoration-primary/60"
+                                >
+                                    {a["thing"] as str}
+                                </p>
+                                <p className="mt-1.5 text-xs text-muted-foreground">
+                                    {a["why"] as str}
+                                </p>
+                            </div>
+                        }}
+                    </div>
+                </Reveal>
+            </div>
+        </div>;
+}
+
+def FloatNav(active: str, on_go: any) -> JsxElement {
+    return
+        <nav className="fixed left-5 top-1/2 z-30 hidden -translate-y-1/2 xl:block">
+            <div
+                className="flex flex-col gap-1 rounded-2xl border border-border/60 bg-card/80 p-1.5 shadow-lg backdrop-blur"
+            >
+                {for it in NAV_ITEMS {
+                    <button
+                        key={it["id"] as str}
+                        onClick={lambda (_e: MouseEvent) { on_go(it["id"] as str); }}
+                        className={"cursor-pointer rounded-xl pl-3 pr-3 pt-1.5 pb-1.5 text-left font-mono text-[11px] transition-colors " + (
+                            "bg-primary/10"
+                                if (it["id"] as str) == active
+                                else "text-muted-foreground hover:text-foreground"
+                        )}
+                    >
+                        {if (it["id"] as str) == active {
+                            <span className="text-gradient font-semibold">
+                                {it["label"] as str}
+                            </span>
+                        } else {
+                            <span>{it["label"] as str}</span>
+                        } }
+                    </button>
+                }}
+            </div>
+        </nav>;
+}
+
+def GroupHeader(gkey: str, pre: str, hot: str, post: str, blurb: str) -> JsxElement {
     return
         <div className="mx-auto max-w-5xl pl-4 pr-4 pt-24 pb-2 sm:pl-6 sm:pr-6">
             <Reveal>
@@ -253,7 +409,9 @@ def GroupHeader(gkey: str, title: str, blurb: str) -> JsxElement {
                     <h2
                         className="text-balance text-3xl font-bold tracking-tight sm:text-4xl"
                     >
-                        {title}
+                        {pre}
+                        <span className="text-gradient">{hot}</span>
+                        {post}
                     </h2>
                     <p className="mt-3 text-balance text-muted-foreground">{blurb}</p>
                 </div>
@@ -297,16 +455,45 @@ def FeatureSection(idx: int, data: dict, on_pop: any) -> JsxElement {
                         <p className="mt-3 font-mono text-xs text-muted-foreground/70">
                             {data["path"] as str}
                         </p>
+                        {if "path2" in data {
+                            <p
+                                className="mt-1 font-mono text-xs text-muted-foreground/70"
+                            >
+                                {"+ "}{data["path2"] as str}
+                            </p>
+                        }}
                     </div>
-                    <CodeSpotlight
-                        className="min-w-0 flex-1"
-                        path={data["path"] as str}
-                        needle={data["needle"] as str}
-                        hl_lines={data["hl"] as int}
-                        before={data["before"] as int}
-                        after={data["after"] as int}
-                        on_pop={on_pop}
-                    />
+                    {if "path2" in data {
+                        <div className="flex min-w-0 flex-1 flex-col gap-4">
+                            <CodeSpotlight
+                                path={data["path"] as str}
+                                needle={data["needle"] as str}
+                                hl_lines={data["hl"] as int}
+                                before={data["before"] as int}
+                                after={data["after"] as int}
+                                on_pop={on_pop}
+                            />
+                            <CodeSpotlight
+                                path={data["path2"] as str}
+                                needle={data["needle2"] as str}
+                                hl_lines={data["hl2"] as int}
+                                before={data["before2"] as int}
+                                after={data["after2"] as int}
+                                on_pop={on_pop}
+                                compact={True}
+                            />
+                        </div>
+                    } else {
+                        <CodeSpotlight
+                            className="min-w-0 flex-1"
+                            path={data["path"] as str}
+                            needle={data["needle"] as str}
+                            hl_lines={data["hl"] as int}
+                            before={data["before"] as int}
+                            after={data["after"] as int}
+                            on_pop={on_pop}
+                        />
+                    } }
                 </div>
             </Reveal>
         </section>;
@@ -314,12 +501,46 @@ def FeatureSection(idx: int, data: dict, on_pop: any) -> JsxElement {
 
 def:pub page -> JsxPage {
     has popped: str = "",
-        pop_seq: int = 0;
+        pop_seq: int = 0,
+        active_sec: str = "",
+        lastSecRef: Ref[any] = Ref("");
 
     def handle_pop(path: str) {
         popped = path;
         pop_seq = pop_seq + 1;
     }
+
+    def go_sec(sec_id: str) {
+        el: any = document.getElementById(sec_id);
+        if el {
+            el.scrollIntoView({"behavior": "smooth", "block": "start"});
+        }
+    }
+
+    useEffect(
+        lambda {
+            on_scroll = lambda (_e: any) {
+                best = "";
+                for it in NAV_ITEMS {
+                    el: any = document.getElementById(it["id"] as str);
+                    if el {
+                        r: any = el.getBoundingClientRect();
+                        if (r.top as float) < (window.innerHeight as float) * 0.45 {
+                            best = it["id"] as str;
+                        }
+                    }
+                }
+                if best != lastSecRef.current {
+                    lastSecRef.current = best;
+                    active_sec = best;
+                }
+            };
+            window.addEventListener("scroll", on_scroll);
+            on_scroll(None);
+            return lambda { window.removeEventListener("scroll", on_scroll); };
+        },
+        []
+    );
 
     bases: list[int] = [];
     running = 0;
@@ -337,7 +558,7 @@ def:pub page -> JsxPage {
                     <h1
                         className="text-balance text-4xl font-bold tracking-tight sm:text-6xl"
                     >
-                        Wait{" "}
+                        Wait,{" "}
                         <span className="text-gradient">Wuuut?!</span>
                     </h1>
                     <p className="mt-5 text-balance text-lg text-muted-foreground">
@@ -345,11 +566,19 @@ def:pub page -> JsxPage {
                     </p>
                 </div>
             </section>
+            <AbsentSection/>
+            <FloatNav active={active_sec} on_go={go_sec}/>
             {for (gi, grp) in enumerate(GROUPS) {
-                <div key={grp["key"] as str}>
+                <div
+                    key={grp["key"] as str}
+                    id={"g-" + (grp["key"] as str)}
+                    className="scroll-mt-24"
+                >
                     <GroupHeader
                         gkey={grp["key"] as str}
-                        title={grp["title"] as str}
+                        pre={grp["pre"] as str}
+                        hot={grp["hot"] as str}
+                        post={grp["post"] as str}
                         blurb={grp["blurb"] as str}
                     />
                     {for (si, s) in enumerate(grp["sections"] as list) {

@@ -15,7 +15,7 @@ import from .DocsArticle { DocsArticle, DocsArticleSkeleton }
 import from .DocsSidebar { DocsSidebar }
 import from .DocsSyncScreen { DocsSyncScreen }
 import from .DocsTocRail { DocsTocRail }
-import from ..source.FloatingSource { FloatingSource }
+import from .DocsGraphFloat { DocsGraphFloat }
 
 glob POLL_MS: int = 500,
      POLL_TRIES: int = 600;
@@ -72,6 +72,10 @@ def:pub DocsShell -> JsxElement {
         nav("/docs/" + v + "/" + cur_path);
     }
 
+    def handle_go(p: str) {
+        nav("/docs/" + version + "/" + p);
+    }
+
     can with [loc.pathname] entry {
         load(version, cur_path);
     }
@@ -114,6 +118,11 @@ def:pub DocsShell -> JsxElement {
                 </article>
                 <DocsTocRail toc={page.toc if page else []}/>
             </div>
-            <FloatingSource always_float={True} closable={True}/>
+            <DocsGraphFloat
+                tree={tree}
+                version={version}
+                cur_path={cur_path}
+                on_go={handle_go}
+            />
         </div>;
 }
