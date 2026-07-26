@@ -15,6 +15,7 @@ glob GROUPS: list[dict] = [
              "hot": "Synechic",
              "post": ": one continuous medium",
              "blurb": "One language compiled at every tier. The server, the browser, and native machine code are targets of the same source, and a function is an API because the compiler owns both sides of the wire.",
+             "define": "synechic",
              "sections": [
                  {
                      "tag": "rpc, gone",
@@ -55,6 +56,7 @@ glob GROUPS: list[dict] = [
 
                  },
                  {
+                     "define": "substrate",
                      "tag": "cl means client",
                      "title": "The highlighter is Jac too",
                      "body": "The syntax coloring in every window on this page happens in your browser, in Jac. Nothing marks this module as client code; it compiles to JavaScript because client components import it, the same way the game module compiles to wasm. One language, three targets, decided by the edges of the import graph.",
@@ -75,8 +77,10 @@ glob GROUPS: list[dict] = [
              "hot": "Topokinetic",
              "post": ": computation moves to the data",
              "blurb": "The docs and the leaderboard are persistent graphs, and the code that serves them travels: walkers descend, fold, and climb the topology instead of querying it from a distance.",
+             "define": "topokinetic",
              "sections": [
                  {
+                     "define": "osp",
                      "tag": "object-spatial",
                      "title": "The URL walks a graph",
                      "body": "The docs on this site are not files behind a router; they are nodes in a persistent graph. A walker spawns at the root and descends, and because version and directory nodes share a supertype, one polymorphic ability handles every hop. Whatever the walker lands on becomes the response: the URL is a path through the graph, literally.",
@@ -185,6 +189,7 @@ glob GROUPS: list[dict] = [
              "hot": "Gradual ownership",
              "post": ": a dial, not a divide",
              "blurb": "Managed semantics by default, borrow checking adopted one declaration at a time, all the way down to a game loop with no garbage collector and no reference counts.",
+             "define": "borrow",
              "sections": [
                  {
                      "tag": "ownership",
@@ -329,8 +334,133 @@ glob GROUPS: list[dict] = [
          {"id": "g-topokinetic", "label": "topokinetic"},
          {"id": "g-ownership", "label": "ownership"},
          {"id": "g-craft", "label": "craft"},
+         {"id": "g-lexicon", "label": "lexicon"},
 
-     ];
+     ],
+     DEFS: dict = {
+         "synechic": {
+             "term": "synechic",
+             "ipa": "/sɪˈnɛk.ɪk/",
+             "pos": "adj.",
+             "ety": "from Greek synechēs, continuous, unbroken; cf. Peirce's synechism",
+             "body": "The property of a language that presents a single continuous semantic medium across conventionally discrete ecosystems, tiers, and toolchains, with no glue at any crossing.",
+             "num": 1
+         },
+         "substrate": {
+             "term": "substrate transparency",
+             "ipa": "",
+             "pos": "n.",
+             "ety": "",
+             "body": "The property that the identity of the runtime, ecosystem, and toolchain at any program point has no bearing on how the program is expressed.",
+             "num": 2
+         },
+         "topokinetic": {
+             "term": "topokinetic",
+             "ipa": "/ˌtoʊ.poʊ.kɪˈnɛt.ɪk/",
+             "pos": "adj.",
+             "ety": "from Greek topos, place, and kinēsis, motion",
+             "body": "The property of a language in which the mobile locus of computation over a topology of data is a first-class semantic construct, inverting the convention of streaming data to a fixed site of compute.",
+             "num": 3
+         },
+         "osp": {
+             "term": "Object-Spatial Programming (OSP)",
+             "ipa": "",
+             "pos": "n.",
+             "ety": "",
+             "body": "The paradigm realizing topokinesis: programs expressed as walkers traversing a persistent topology of nodes and edges, with abilities triggered by arrival.",
+             "num": 4
+         },
+         "borrow": {
+             "term": "gradual borrow checking",
+             "ipa": "",
+             "pos": "n.",
+             "ety": "",
+             "body": "Memory discipline as a continuum within one language: managed semantics by default, ownership adoptable one declaration at a time, and a checked boundary mediating every crossing between the regimes.",
+             "num": 5
+         }
+     },
+     LEX_ORDER: list = ["synechic", "substrate", "topokinetic", "osp", "borrow"];
+
+def Definition(
+    term: str, pos: str, body: str, ipa: str = "", ety: str = "", num: int = 0
+) -> JsxElement {
+    return
+        <div
+            className="relative overflow-hidden rounded-xl border border-border/50 bg-card/40 pl-6 pr-5 pt-4 pb-4 text-left"
+        >
+            <div
+                className="absolute inset-y-0 left-0 w-[3px] bg-gradient-to-b from-[#f7931e] via-[#ff6b35] to-[#e8442c]"
+            ></div>
+            <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
+                <span className="text-gradient text-xl font-bold tracking-tight">
+                    {term}
+                </span>
+                {if ipa != "" {
+                    <span className="font-mono text-xs text-muted-foreground/60">
+                        {ipa}
+                    </span>
+                }}
+                <span className="text-xs italic text-muted-foreground/70">{pos}</span>
+                {if num > 0 {
+                    <span
+                        className="ml-auto font-mono text-[10px] uppercase tracking-widest text-muted-foreground/40"
+                    >
+                        {"dfn "}{str(num)}
+                    </span>
+                }}
+            </div>
+            {if ety != "" {
+                <p className="mt-1 text-xs italic text-muted-foreground/50">{ety}</p>
+            }}
+            <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{body}</p>
+        </div>;
+}
+
+def DefCard(k: str) -> JsxElement {
+    d = DEFS[k] as dict;
+    return
+        <Definition
+            term={d["term"] as str}
+            pos={d["pos"] as str}
+            body={d["body"] as str}
+            ipa={d["ipa"] as str}
+            ety={d["ety"] as str}
+            num={d["num"] as int}
+        />;
+}
+
+def LexiconSection -> JsxElement {
+    return
+        <div id="g-lexicon" className="scroll-mt-24">
+            <div className="mx-auto max-w-5xl pl-4 pr-4 pt-24 pb-8 sm:pl-6 sm:pr-6">
+                <Reveal>
+                    <div className="mx-auto max-w-2xl text-center">
+                        <h2
+                            className="text-balance text-3xl font-bold tracking-tight sm:text-4xl"
+                        >
+                            New ground needs{" "}
+                            <span className="text-gradient">new words</span>
+                        </h2>
+                        <p className="mt-3 text-balance text-muted-foreground">
+                            A language that only recombines familiar parts can be reviewed in familiar words. This page kept stopping to define its terms because the properties themselves are new: Jac does not just add features, it names things programming languages have not had to name before. The working lexicon, in one place:
+                        </p>
+                    </div>
+                    <div className="mx-auto mt-10 flex max-w-3xl flex-col gap-4">
+                        {for k in LEX_ORDER {
+                            <div key={k as str}>
+                                <DefCard k={k as str}/>
+                            </div>
+                        }}
+                    </div>
+                    <p
+                        className="mx-auto mt-8 max-w-2xl text-center text-sm text-muted-foreground/70"
+                    >
+                        Every definition above was demonstrated by running code from this site's own source before it was restated here.
+                    </p>
+                </Reveal>
+            </div>
+        </div>;
+}
 
 def AbsentSection -> JsxElement {
     return
@@ -581,16 +711,36 @@ def:pub page -> JsxPage {
                         post={grp["post"] as str}
                         blurb={grp["blurb"] as str}
                     />
+                    {if "define" in grp {
+                        <div
+                            className="mx-auto max-w-3xl pl-4 pr-4 pt-8 sm:pl-6 sm:pr-6"
+                        >
+                            <Reveal>
+                                <DefCard k={grp["define"] as str}/>
+                            </Reveal>
+                        </div>
+                    }}
                     {for (si, s) in enumerate(grp["sections"] as list) {
-                        <FeatureSection
-                            key={str(si)}
-                            idx={(bases[gi] as int) + si}
-                            data={s as dict}
-                            on_pop={handle_pop}
-                        />
+                        <div key={str(si)}>
+                            {if "define" in (s as dict) {
+                                <div
+                                    className="mx-auto max-w-3xl pl-4 pr-4 pt-10 pb-2 sm:pl-6 sm:pr-6"
+                                >
+                                    <Reveal>
+                                        <DefCard k={(s as dict)["define"] as str}/>
+                                    </Reveal>
+                                </div>
+                            }}
+                            <FeatureSection
+                                idx={(bases[gi] as int) + si}
+                                data={s as dict}
+                                on_pop={handle_pop}
+                            />
+                        </div>
                     }}
                 </div>
             }}
+            <LexiconSection/>
             {if popped != "" {
                 <FloatingSource
                     key={popped + str(pop_seq)}
