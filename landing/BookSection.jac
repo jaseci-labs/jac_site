@@ -130,7 +130,7 @@ def:pub BookSection -> JsxElement {
                                     />
                                 </a>
                                 <a
-                                    href="https://github.com/jaseci-labs/jaseci"
+                                    href="https://github.com/jaseci-labs/jac"
                                     target="_blank"
                                     rel="noreferrer"
                                     className={buttonVariants().call(

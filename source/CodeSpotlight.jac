@@ -13,7 +13,8 @@ def:pub CodeSpotlight(
     before: int = 3,
     after: int = 12,
     className: str = "",
-    on_pop: any = None
+    on_pop: any = None,
+    compact: bool = False
 ) -> JsxElement {
     has span: SourceSpan | None = None,
         failed: bool = False,
@@ -150,7 +151,9 @@ def:pub CodeSpotlight(
             </div>
             <div
                 ref={scrollRef}
-                className="code-scroll h-[360px] overflow-auto pt-2 pb-3"
+                className={"code-scroll overflow-auto pt-2 pb-3 " + (
+                    "h-[220px]" if compact else "h-[360px]"
+                )}
             >
                 {if failed {
                     <p className="pl-4 pt-3 pb-3 font-mono text-xs text-red-400">

@@ -122,7 +122,7 @@ def:pub ExplorerFinale -> JsxElement {
                         className="mt-8 flex flex-col items-center gap-3 sm:flex-row sm:flex-wrap sm:justify-center"
                     >
                         <a
-                            href="https://github.com/jaseci-labs/jaseci"
+                            href="https://github.com/jaseci-labs/jac"
                             target="_blank"
                             rel="noreferrer"
                             className={buttonVariants().call(None, {"size": "lg"})}

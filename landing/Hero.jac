@@ -54,7 +54,7 @@ def:pub Hero -> JsxElement {
                             className="anim-fade-up anim-d3 mt-8 flex flex-col items-center gap-3 sm:flex-row sm:flex-wrap lg:items-start"
                         >
                             <a
-                                href="https://github.com/jaseci-labs/jaseci"
+                                href="https://github.com/jaseci-labs/jac"
                                 target="_blank"
                                 rel="noreferrer"
                                 className={buttonVariants().call(None, {"size": "lg"})}

@@ -63,7 +63,15 @@ def:pub SourceBrowser(
                 <span className="size-2.5 rounded-full bg-white/15"></span>
                 <span className="size-2.5 rounded-full bg-white/15"></span>
                 <span className="ml-2 font-mono text-xs text-white/45">
-                    jaclang.org — this site, serving itself
+                    jaclang.org — this site, serving itself, for real,{" "}
+                    <a
+                        href="https://github.com/jaseci-labs/jac_site"
+                        target="_blank"
+                        rel="noreferrer"
+                        className="underline decoration-white/30 underline-offset-2 transition-colors hover:text-white/70"
+                    >
+                        see github
+                    </a>
                 </span>
                 <span
                     className="ml-auto flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-widest text-emerald-400"

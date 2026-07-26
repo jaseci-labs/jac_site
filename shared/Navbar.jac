@@ -52,7 +52,7 @@ def:pub Navbar -> JsxElement {
                         to="/wait-wuuut"
                         className="rounded-md pl-3 pr-3 pt-1.5 pb-1.5 text-sm text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
                     >
-                        Wait Wuuut?!
+                        Wait, Wuuut?!
                     </Link>
                     <Link
                         to="/leaderboard"
@@ -88,7 +88,7 @@ def:pub Navbar -> JsxElement {
                         } }
                     </button>
                     <a
-                        href="https://github.com/jaseci-labs/jaseci"
+                        href="https://github.com/jaseci-labs/jac"
                         target="_blank"
                         rel="noreferrer"
                         title="GitHub"
