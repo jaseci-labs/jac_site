@@ -438,11 +438,11 @@ def LexiconSection -> JsxElement {
                         <h2
                             className="text-balance text-3xl font-bold tracking-tight sm:text-4xl"
                         >
-                            New ground needs{" "}
-                            <span className="text-gradient">new words</span>
+                            Jac's contribution is{" "}
+                            <span className="text-gradient">fundamental</span>
                         </h2>
                         <p className="mt-3 text-balance text-muted-foreground">
-                            A language that only recombines familiar parts can be reviewed in familiar words. This page kept stopping to define its terms because the properties themselves are new: Jac does not just add features, it names things programming languages have not had to name before. The working lexicon, in one place:
+                            Jac is not a language that recombines familiar features, it introduces concepts programming languages have not had before. The working lexicon, in one place:
                         </p>
                     </div>
                     <div className="mx-auto mt-10 flex max-w-3xl flex-col gap-4">
