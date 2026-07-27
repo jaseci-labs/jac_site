@@ -185,6 +185,99 @@ impl untar(
     return out;
 }
 
+glob PROG_EXTS: set[str] = {
+         ".py",
+         ".ipynb",
+         ".js",
+         ".mjs",
+         ".cjs",
+         ".ts",
+         ".tsx",
+         ".jsx",
+         ".java",
+         ".c",
+         ".cc",
+         ".cpp",
+         ".cxx",
+         ".h",
+         ".hh",
+         ".hpp",
+         ".go",
+         ".rs",
+         ".rb",
+         ".php",
+         ".swift",
+         ".kt",
+         ".kts",
+         ".cs",
+         ".scala",
+         ".dart",
+         ".lua",
+         ".r",
+         ".jl",
+         ".zig",
+         ".m",
+         ".mm",
+         ".pl",
+         ".ex",
+         ".exs",
+         ".erl",
+         ".hs",
+         ".ml",
+         ".clj",
+         ".vue",
+         ".svelte"
+     },
+     SKIP_SEGS: set[str] = {
+         "node_modules",
+         ".venv",
+         "venv",
+         "__pycache__",
+         ".jac",
+         "dist",
+         "build",
+         "vendor",
+         "third_party"
+     };
+
+impl code_breakdown(data: bytes) -> tuple[int, int] {
+    jac_bytes = 0;
+    other_bytes = 0;
+    tf = tarfile.open(fileobj=io.BytesIO(data), mode="r:gz");
+    for m in tf.getmembers() {
+        if not m.isfile() {
+            continue;
+        }
+        segs = m.name.split("/");
+        if len(segs) < 2 {
+            continue;
+        }
+        rel_segs = segs[1:];
+        skipped = False;
+        for seg in rel_segs[:-1] {
+            if seg.lower() in SKIP_SEGS {
+                skipped = True;
+                break;
+            }
+        }
+        if skipped {
+            continue;
+        }
+        low = rel_segs[-1].lower();
+        dot = low.rfind(".");
+        if dot < 0 {
+            continue;
+        }
+        ext = low[dot:];
+        if ext == ".jac" {
+            jac_bytes += m.size;
+        } elif ext in PROG_EXTS {
+            other_bytes += m.size;
+        }
+    }
+    return (jac_bytes, other_bytes);
+}
+
 impl text_of(blob: bytes) -> str {
     return blob.decode("utf-8", errors="replace");
 }
