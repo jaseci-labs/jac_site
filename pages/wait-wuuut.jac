@@ -29,6 +29,22 @@ glob GROUPS: list[dict] = [
 
                  },
                  {
+                     "tag": "services, same trick",
+                     "title": "One import spawns a microservice",
+                     "body": "The same import that erases the client/server line erases the service line. The leaderboard's scorer does not run in this site's server: board.jac sv imports it, and the first submission spawns scoring_service.jac as its own process and routes every call to it. Submit a repo on the Ninja Scores page and its breakdown names the process that scored it — a pid this server has never owned.",
+                     "path": "leaderboard/board.jac",
+                     "needle": "sv import from scoring_service",
+                     "hl": 1,
+                     "before": 2,
+                     "after": 4,
+                     "path2": "scoring_service.jac",
+                     "needle2": "def:pub fetch_and_score",
+                     "hl2": 1,
+                     "before2": 1,
+                     "after2": 12,
+
+                 },
+                 {
                      "tag": "native codegen",
                      "title": "One import compiles to a game",
                      "body": "The rocket arena on the landing page is native code, and nothing about this import says so. The compiler knows arena is a native module, so the edge itself decides: the build compiles the game and the three modules behind it to WebAssembly through Jac's own LLVM backend and wasm linker, serves the artifact from /static, and binds each name to a stub that instantiates it on first call. The second window is the payoff: the first call awaits instantiation, and after that init is just a function you call.",
