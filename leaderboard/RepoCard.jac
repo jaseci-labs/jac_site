@@ -70,12 +70,16 @@ def:pub FeatureChips(features: RepoFeatures) -> JsxElement {
         </div>;
 }
 
-def:pub RepoCard(repo: BoardEntry, rank: int) -> JsxElement {
+def:pub RepoCard(
+    repo: BoardEntry, rank: int, onSelect: Callable[[MouseEvent], None]
+) -> JsxElement {
     key = str(rank);
     return
         <div
+            onClick={onSelect}
+            title="Click for the full score breakdown"
             className={cn(
-                "flex h-full flex-col gap-4 rounded-2xl border border-border/70 bg-card/40 pt-5 pb-5 pl-5 pr-5 transition-all hover:-translate-y-1 hover:border-primary/40",
+                "flex h-full cursor-pointer flex-col gap-4 rounded-2xl border border-border/70 bg-card/40 pt-5 pb-5 pl-5 pr-5 transition-all hover:-translate-y-1 hover:border-primary/40",
                 RANK_RING.get(key) or ""
             )}
         >
@@ -98,6 +102,7 @@ def:pub RepoCard(repo: BoardEntry, rank: int) -> JsxElement {
                         href={repo.html_url}
                         target="_blank"
                         rel="noreferrer"
+                        onClick={lambda (e: MouseEvent) { e.stopPropagation(); }}
                         className="block truncate text-sm font-semibold hover:text-primary"
                     >
                         {repo.name}
@@ -151,12 +156,21 @@ def:pub RepoCard(repo: BoardEntry, rank: int) -> JsxElement {
                     />
                     {str(repo.forks)}
                 </span>
-                <span>{str(repo.jac_lines)} jac lines</span>
+                <span>
+                    {str(repo.jac_lines)}{" "}
+                    jac lines
+                    {if repo.jac_pct > 0 {
+                        <span className="text-primary">
+                            {" · " + str(repo.jac_pct) + "% Jac"}
+                        </span>
+                    }}
+                </span>
                 {if repo.scored_sha != "" {
                     <a
                         href={repo.permalink}
                         target="_blank"
                         rel="noreferrer"
+                        onClick={lambda (e: MouseEvent) { e.stopPropagation(); }}
                         title="The repo exactly as it was scored"
                         className="ml-auto truncate transition-colors hover:text-primary"
                     >

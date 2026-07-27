@@ -2,6 +2,7 @@ import re;
 import math;
 import from shared.github {
     RepoMeta,
+    code_breakdown,
     download_tarball,
     head_sha,
     mb_of,
@@ -21,18 +22,29 @@ obj RepoFeatures {
         tests: bool = False;
 }
 
+obj ScorePart {
+    has category: str = "",
+        label: str = "",
+        pts: float = 0.0,
+        max: float = 0.0,
+        note: str = "";
+}
+
 obj ScoreBreakdown {
     has total: int = 0,
         belt: str = "white",
         substance: int = 0,
         breadth: int = 0,
         craft: int = 0,
-        community: int = 0;
+        community: int = 0,
+        details: list[ScorePart] = [];
 }
 
 obj RepoAnalysis {
     has jac_files: int = 0,
         jac_lines: int = 0,
+        jac_bytes: int = 0,
+        other_code_bytes: int = 0,
         features: RepoFeatures = RepoFeatures(),
         readme: bool = False,
         readme_lines: int = 0,
@@ -40,6 +52,8 @@ obj RepoAnalysis {
         license: bool = False,
         ci: bool = False,
         docs: bool = False;
+
+    def jac_pct -> int;
 }
 
 obj BoardEntry {
@@ -52,8 +66,10 @@ obj BoardEntry {
         permalink: str = "",
         stars: int = 0,
         forks: int = 0,
+        topics: list[str] = [],
         jac_files: int = 0,
         jac_lines: int = 0,
+        jac_pct: int = 0,
         features: RepoFeatures = RepoFeatures(),
         breakdown: ScoreBreakdown = ScoreBreakdown(),
         score: int = 0,
@@ -103,6 +119,7 @@ node RepoEntry {
         created_at: str = "",
         jac_files: int = 0,
         jac_lines: int = 0,
+        jac_pct: int = 0,
         features: RepoFeatures = RepoFeatures(),
         score: int = 0,
         breakdown: ScoreBreakdown = ScoreBreakdown(),
@@ -134,7 +151,10 @@ obj Scorer {
     has job: JobProgress = JobProgress(),
         scoring: bool = False;
 
-    def repo_sources(owner: str, name: str, ref: str) -> dict[str, str] | None;
+    def repo_sources(
+        owner: str, name: str, ref: str
+    ) -> tuple[dict[str, str], tuple[int, int]] | None;
+
     def score_repo(hub: BoardHub, owner: str, name: str) -> SubmitResult;
     def submit(url: str) -> SubmitResult;
 }

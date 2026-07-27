@@ -51,6 +51,8 @@ def untar(
     max_member_bytes: int = 0
 ) -> dict[str, bytes];
 
+def code_breakdown(data: bytes) -> tuple[int, int];
+
 def text_of(blob: bytes) -> str;
 
 def mb_of(byte_count: int) -> str;

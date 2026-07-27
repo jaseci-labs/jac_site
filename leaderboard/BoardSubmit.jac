@@ -5,6 +5,7 @@ import from .format { belt_class, belt_label }
 import from ..shared.ui.badge { Badge }
 import from ..shared.ui.input { Input }
 import from ..shared.ui.button { Button }
+import from "@jac/runtime" { Link }
 import from "@hugeicons/react" { HugeiconsIcon }
 import from "@hugeicons/core-free-icons" { Alert01Icon, ArrowRight01Icon, ChampionIcon }
 
@@ -85,7 +86,10 @@ def:pub BoardSubmit(
                 is in your Jac?
             </h1>
             <p className="mt-4 text-balance text-muted-foreground">
-                Drop any public GitHub repo. We download it, statically read the source (never run it), and score its Jac-ness — OSP, AI, codespaces, craft — not just its stars.
+                Drop any public GitHub repo. We download it, statically read the source (never run it), and score its Jac-ness — OSP, AI, codespaces, craft, and how much of the code is actually Jac — not just its stars.{" "}
+                <Link to="/methodology" className="text-primary hover:underline">
+                    How scoring works →
+                </Link>
             </p>
             <div className="mt-7 flex flex-col gap-2 sm:flex-row">
                 <Input

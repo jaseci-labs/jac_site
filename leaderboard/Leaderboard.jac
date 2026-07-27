@@ -13,6 +13,7 @@ import from ..shared.ui.skeleton { Skeleton }
 import from ..shared.GraphBackdrop { GraphBackdrop }
 import from .BoardSubmit { BoardSubmit }
 import from .RepoCard { RepoCard }
+import from .ScoreModal { ScoreModal }
 
 glob POLL_MS: int = 400,
      POLL_TRIES: int = 200,
@@ -43,6 +44,7 @@ def:pub Leaderboard -> JsxElement {
         sub_note: str = "",
         reveal: BoardEntry | None = None,
         reveal_score: int = 0,
+        detail: BoardEntry | None = None,
         sort_by: str = "score";
 
     async def load -> None;
@@ -175,10 +177,22 @@ def:pub Leaderboard -> JsxElement {
                         className="mt-6 grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-3"
                     >
                         {for (i, e) in enumerate(sorted_entries()) {
-                            <RepoCard key={e.full} repo={e} rank={rank_of(e.full)}/>
+                            <RepoCard
+                                key={e.full}
+                                repo={e}
+                                rank={rank_of(e.full)}
+                                onSelect={lambda (_ev: MouseEvent) { detail = e; }}
+                            />
                         }}
                     </div>
                 }  }
             </div>
+            {if detail {
+                <ScoreModal
+                    repo={detail}
+                    rank={rank_of(detail.full)}
+                    onClose={lambda (_ev: MouseEvent) { detail = None; }}
+                />
+            }}
         </section>;
 }

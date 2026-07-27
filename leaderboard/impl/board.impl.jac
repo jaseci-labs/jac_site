@@ -52,7 +52,7 @@ impl analyze(files: dict[str, str]) -> RepoAnalysis {
             or re.search(r"(?m)^\s*na\s*\{|^\s*na\s+import\b", text) {
                 an.features.na = True;
             }
-            if re.search(r"(?m)^\s*test\s+\w|^\s*test\s*\{", text) {
+            if re.search(r"(?m)^\s*test\s+\w|^\s*test\s*[\{\"]", text) {
                 an.features.tests = True;
             }
         } elif low == "readme.md" {
@@ -69,6 +69,14 @@ impl analyze(files: dict[str, str]) -> RepoAnalysis {
         }
     }
     return an;
+}
+
+impl RepoAnalysis.jac_pct -> int {
+    denom = self.jac_bytes + self.other_code_bytes;
+    if denom <= 0 {
+        return 100 if self.jac_files > 0 else 0;
+    }
+    return int(round(100.0 * self.jac_bytes / denom));
 }
 
 impl belt_for(total: int) -> str {
@@ -91,69 +99,159 @@ impl belt_for(total: int) -> str {
 }
 
 impl score(meta: RepoMeta, an: RepoAnalysis) -> ScoreBreakdown {
-    substance = min(22.0, (math.log10(an.jac_lines + 1) / math.log10(50000.0)) * 22.0);
-    total_sz = max(1, meta.size_kb);
-    jac_kb = an.jac_lines / 30.0;
-    substance += min(8.0, (jac_kb / total_sz) * 8.0);
+    parts: list[ScorePart] = [];
 
-    breadth = 0.0;
-    if an.features.osp {
-        breadth += 7.0;
+    def part(category: str, label: str, pts: float, mx: float, note: str) -> float {
+        parts.append(
+            ScorePart(
+                category=category, label=label, pts=round(pts, 1), max=mx, note=note
+            )
+        );
+        return pts;
     }
-    if an.features.ai {
-        breadth += 6.0;
-    }
-    if an.features.cl {
-        breadth += 5.0;
-    }
-    if an.features.sv {
-        breadth += 4.0;
-    }
-    if an.features.na {
-        breadth += 4.0;
-    }
-    if an.features.tests {
-        breadth += 3.0;
-    }
+
+    substance = part(
+        "substance",
+        "Jac volume",
+        min(18.0, (math.log10(an.jac_lines + 1) / math.log10(50000.0)) * 18.0),
+        18.0,
+        str(an.jac_lines) + " lines across " + str(an.jac_files) + " files (log scale, full at 50k)"
+    );
+    pct = an.jac_pct();
+    substance += part(
+        "substance",
+        "Jac share of the code",
+        (pct / 100.0) * 12.0,
+        12.0,
+        str(pct) + "% of the repo's programming-language bytes are Jac (markup, styles, shell, and config excluded)"
+    );
+
+    breadth = part(
+        "breadth",
+        "Object-spatial programming",
+        7.0 if an.features.osp else 0.0,
+        7.0,
+        "walkers, nodes, edges, or spawns in the source"
+    );
+    breadth += part(
+        "breadth",
+        "AI integration",
+        6.0 if an.features.ai else 0.0,
+        6.0,
+        "delegates work with `by llm`"
+    );
+    breadth += part(
+        "breadth",
+        "Client codespace",
+        5.0 if an.features.cl else 0.0,
+        5.0,
+        ".cl.jac files or cl blocks"
+    );
+    breadth += part(
+        "breadth",
+        "Server codespace",
+        4.0 if an.features.sv else 0.0,
+        4.0,
+        ".sv.jac files, sv blocks, or :pub endpoints"
+    );
+    breadth += part(
+        "breadth",
+        "Native codespace",
+        4.0 if an.features.na else 0.0,
+        4.0,
+        ".na.jac files or na blocks"
+    );
+    breadth += part(
+        "breadth",
+        "Tests",
+        3.0 if an.features.tests else 0.0,
+        3.0,
+        "test blocks in the source"
+    );
     spaces = (1 if an.features.cl else 0) + (1 if an.features.sv else 0) + (
         1 if an.features.na else 0
     );
-    if spaces >= 2 {
-        breadth += 3.0;
-    }
+    breadth += part(
+        "breadth",
+        "Multi-codespace bonus",
+        3.0 if spaces >= 2 else 0.0,
+        3.0,
+        "uses " + str(spaces) + " of the cl/sv/na codespaces"
+    );
     breadth = min(30.0, breadth);
 
-    craft = 0.0;
-    if an.readme {
-        craft += 2.0 + min(3.0, an.readme_lines / 60.0 * 3.0);
-    }
-    if an.toml {
-        craft += 4.0;
-    }
-    if an.license {
-        craft += 3.0;
-    }
-    if an.ci {
-        craft += 3.0;
-    }
-    if an.docs {
-        craft += 2.0;
-    }
+    craft = part(
+        "craft",
+        "README",
+        (2.0 + min(3.0, an.readme_lines / 60.0 * 3.0)) if an.readme else 0.0,
+        5.0,
+        (str(an.readme_lines) + " lines (full marks near 60)")
+            if an.readme
+            else "no README found"
+    );
+    craft += part(
+        "craft", "jac.toml", 4.0 if an.toml else 0.0, 4.0, "packaged as a Jac project"
+    );
+    craft += part(
+        "craft",
+        "License",
+        3.0 if an.license else 0.0,
+        3.0,
+        "LICENSE file present" if an.license else "no license file"
+    );
+    craft += part(
+        "craft",
+        "CI",
+        3.0 if an.ci else 0.0,
+        3.0,
+        "GitHub Actions workflows" if an.ci else "no .github/workflows"
+    );
+    craft += part(
+        "craft",
+        "Docs",
+        2.0 if an.docs else 0.0,
+        2.0,
+        "docs/ directory" if an.docs else "no docs/ directory"
+    );
     pushed_days = days_since(meta.pushed_at);
+    recency = 0.0;
     if pushed_days <= 30.0 {
-        craft += 3.0;
+        recency = 3.0;
     } elif pushed_days <= 90.0 {
-        craft += 2.0;
+        recency = 2.0;
     } elif pushed_days <= 365.0 {
-        craft += 1.0;
+        recency = 1.0;
     }
+    craft += part(
+        "craft",
+        "Recent upkeep",
+        recency,
+        3.0,
+        "last push " + str(int(pushed_days)) + " days ago"
+    );
     craft = min(20.0, craft);
 
-    community = min(12.0, (math.log10(meta.stars + 1) / math.log10(1000.0)) * 12.0);
-    community += min(5.0, (math.log10(meta.forks + 1) / math.log10(200.0)) * 5.0);
-    if len(meta.topics) > 0 {
-        community += 3.0;
-    }
+    community = part(
+        "community",
+        "Stars",
+        min(12.0, (math.log10(meta.stars + 1) / math.log10(1000.0)) * 12.0),
+        12.0,
+        str(meta.stars) + " stars (log scale, full at 1k)"
+    );
+    community += part(
+        "community",
+        "Forks",
+        min(5.0, (math.log10(meta.forks + 1) / math.log10(200.0)) * 5.0),
+        5.0,
+        str(meta.forks) + " forks (log scale, full at 200)"
+    );
+    community += part(
+        "community",
+        "Topics",
+        3.0 if len(meta.topics) > 0 else 0.0,
+        3.0,
+        (", ".join(meta.topics)) if meta.topics else "no topics set"
+    );
     community = min(20.0, community);
 
     total = int(round(substance + breadth + craft + community));
@@ -163,7 +261,8 @@ impl score(meta: RepoMeta, an: RepoAnalysis) -> ScoreBreakdown {
         substance=int(round(substance)),
         breadth=int(round(breadth)),
         craft=int(round(craft)),
-        community=int(round(community))
+        community=int(round(community)),
+        details=parts
     );
 }
 
@@ -185,8 +284,10 @@ impl RepoEntry.view -> BoardEntry {
             else self.html_url,
         stars=self.stars,
         forks=self.forks,
+        topics=self.topics,
         jac_files=self.jac_files,
         jac_lines=self.jac_lines,
+        jac_pct=self.jac_pct,
         features=self.features,
         breakdown=self.breakdown,
         score=self.score,
@@ -205,7 +306,9 @@ impl _board_list -> list[BoardEntry] {
     return entries;
 }
 
-impl Scorer.repo_sources(owner: str, name: str, ref: str) -> dict[str, str] | None {
+impl Scorer.repo_sources(
+    owner: str, name: str, ref: str
+) -> tuple[dict[str, str], tuple[int, int]] | None {
     def on_bytes(got: int) {
         self.job.note("downloading " + owner + "/" + name + " · " + mb_of(got));
     }
@@ -226,7 +329,7 @@ impl Scorer.repo_sources(owner: str, name: str, ref: str) -> dict[str, str] | No
     for rel in members.keys() {
         out[rel] = text_of(members[rel]);
     }
-    return out;
+    return (out, code_breakdown(blob));
 }
 
 impl Scorer.score_repo(hub: BoardHub, owner: str, name: str) -> SubmitResult {
@@ -244,14 +347,17 @@ impl Scorer.score_repo(hub: BoardHub, owner: str, name: str) -> SubmitResult {
     }
     ref = sha if sha != "" else meta.default_branch;
     self.job.note("downloading " + full + " (" + ref[:7] + ")");
-    files = self.repo_sources(real_owner, real_name, ref);
-    if files is None {
+    got = self.repo_sources(real_owner, real_name, ref);
+    if got is None {
         return SubmitResult(error="fetch_failed");
     }
+    files = got[0];
     self.job.note(
         "analyzing " + str(len(files)) + " files — statically, never executed"
     );
     an = analyze(files);
+    an.jac_bytes = got[1][0];
+    an.other_code_bytes = got[1][1];
     if an.jac_files == 0 {
         return SubmitResult(error="not_jac");
     }
@@ -278,6 +384,7 @@ impl Scorer.score_repo(hub: BoardHub, owner: str, name: str) -> SubmitResult {
     entry.created_at = meta.created_at;
     entry.jac_files = an.jac_files;
     entry.jac_lines = an.jac_lines;
+    entry.jac_pct = an.jac_pct();
     entry.features = an.features;
     entry.score = sc.total;
     entry.breakdown = sc;

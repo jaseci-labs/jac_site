@@ -3,7 +3,7 @@ glob SAMPLE: dict[str, str] = {
          "ui.cl.jac": "def:pub app -> JsxElement { return <div>hi</div>; }\n",
          "brain.jac": "def rank(t: str) -> int by llm();\n",
          "fast.na.jac": "def hot(n: i32) -> i32 { return n * 2; }\n",
-         "app.test.jac": "test adds { assert True; }\n",
+         "app.test.jac": "test \"adds two numbers\" { assert True; }\n",
          "jac.toml": "[project]\nname = \"x\"\n",
          "readme.md": "# x\n",
          "license": "MIT\n",
@@ -72,6 +72,8 @@ test "score_is_bounded_by_the_rubric" {
         pushed_at=now_iso()
     );
     an = analyze(SAMPLE);
+    an.jac_bytes = 100000;
+    an.other_code_bytes = 0;
     sc = score(meta, an);
     assert sc.substance <= 30;
     assert sc.breadth <= 30;
@@ -79,6 +81,63 @@ test "score_is_bounded_by_the_rubric" {
     assert sc.community <= 20;
     assert sc.total <= 100;
     assert sc.belt == belt_for(sc.total);
+}
+
+test "jac_share_is_a_major_substance_factor" {
+    meta = RepoMeta(full_name="a/b", size_kb=100);
+    pure = analyze(SAMPLE);
+    pure.jac_bytes = 9000;
+    pure.other_code_bytes = 0;
+    wrapper = analyze(SAMPLE);
+    wrapper.jac_bytes = 900;
+    wrapper.other_code_bytes = 8100;
+    assert pure.jac_pct() == 100;
+    assert wrapper.jac_pct() == 10;
+    gap = score(meta, pure).substance - score(meta, wrapper).substance;
+    assert gap >= 10;
+}
+
+test "jac_pct_handles_empty_and_jac_only" {
+    empty = RepoAnalysis();
+    assert empty.jac_pct() == 0;
+    jac_only = RepoAnalysis(jac_files=3, jac_bytes=0, other_code_bytes=0);
+    assert jac_only.jac_pct() == 100;
+}
+
+test "score_details_cover_every_category_and_sum_up" {
+    meta = RepoMeta(
+        full_name="a/b",
+        stars=50,
+        forks=5,
+        size_kb=10,
+        topics=["jac"],
+        pushed_at=now_iso()
+    );
+    an = analyze(SAMPLE);
+    an.jac_bytes = 5000;
+    an.other_code_bytes = 5000;
+    sc = score(meta, an);
+    assert len(sc.details) >= 14;
+    for cat in ["substance", "breadth", "craft", "community"] {
+        parts = [
+            p
+            for p in sc.details
+            if p.category == cat
+        ];
+        assert len(parts) > 0;
+        got = sum([p.pts for p in parts]);
+        want = {
+            "substance": sc.substance,
+            "breadth": sc.breadth,
+            "craft": sc.craft,
+            "community": sc.community
+        }[cat];
+        assert got + 0.6 >= want;
+        assert got - want <= 2.5;
+        for p in parts {
+            assert p.pts <= p.max + 0.001;
+        }
+    }
 }
 
 test "score_rewards_codespace_breadth" {
