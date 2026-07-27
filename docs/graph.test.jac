@@ -65,6 +65,43 @@ test "parse nav reads titles and order" {
     assert nav["guide/intro.md"].order == 1;
 }
 
+test "parse nav manifest flattens sections in document order" {
+    nav = SYNC.parse_nav_manifest(
+        '{"version": 1, "nav": ['
+        '{"title": "Start", "items": ['
+        '{"title": "Home", "page": "index.md"},'
+        '{"title": "Deep", "items": [{"title": "Inner", "page": "a/b.md"}]}'
+        ']},'
+        '{"title": "Ext", "url": "https://example.com"},'
+        '{"title": "Solo", "page": "solo.md"}'
+        ']}'
+    );
+    assert len(nav) == 3;
+    assert nav["index.md"].title == "Home";
+    assert nav["index.md"].order == 0;
+    assert nav["a/b.md"].title == "Inner";
+    assert nav["a/b.md"].order == 1;
+    assert nav["solo.md"].order == 2;
+    assert SYNC.parse_nav_manifest("not json") == {};
+}
+
+test "first prose skips headings fences and markup" {
+    lines = [
+        "# Title",
+        "",
+        "```jac",
+        "prose inside a fence;",
+        "```",
+        "!!! note",
+        "",
+        "The *real* first paragraph with a [link](x.md) in it.",
+        "More text."
+    ];
+    got = _first_prose(lines);
+    assert got == "The real first paragraph with a link in it.";
+    assert _first_prose(["# only a heading"]) == "";
+}
+
 test "clean md drops frontmatter and snippets" {
     got = SYNC.clean_md("---\ntitle: x\n---\n# Real\n--8<-- \"x.md\"\nbody\n");
     assert "title: x" not in got;

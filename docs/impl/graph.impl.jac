@@ -41,13 +41,32 @@ impl DocSync.fetch_bundle(ref: str, label: str) -> DocBundle {
     }
     self.job.mark(label, "extract", "unpacking " + mb_of(len(blob)));
     self.job.note("unpacking " + label + " · " + mb_of(len(blob)));
-    members = untar(blob, prefixes=["docs/docs/"], names=["docs/mkdocs.yml"]);
+    members = untar(
+        blob, prefixes=[CORPUS_DIR + "/", LEGACY_DIR + "/"], names=["docs/mkdocs.yml"]
+    );
     bundle = DocBundle();
+    corpus = CORPUS_DIR + "/";
+    legacy = LEGACY_DIR + "/";
+    is_corpus = any(
+        [(rel.startswith(corpus) and rel.endswith(".md")) for rel in members.keys()]
+    );
     for rel in members.keys() {
-        if rel == "docs/mkdocs.yml" {
+        if is_corpus {
+            if not rel.startswith(corpus) {
+                continue;
+            }
+            sub = rel[len(corpus):];
+            if sub == "nav.json" {
+                bundle.nav_json = text_of(members[rel]);
+            } elif sub.endswith(".md") {
+                bundle.pages[sub] = text_of(members[rel]);
+            } elif sub.startswith("assets/") {
+                bundle.assets[sub[len("assets/"):]] = members[rel];
+            }
+        } elif rel == "docs/mkdocs.yml" {
             bundle.nav_text = text_of(members[rel]);
-        } else {
-            sub = rel[len("docs/docs/"):];
+        } elif rel.startswith(legacy) {
+            sub = rel[len(legacy):];
             if sub.endswith(".md") {
                 bundle.pages[sub] = text_of(members[rel]);
             } elif sub.startswith("assets/") {
@@ -62,7 +81,10 @@ impl DocSync.local_bundle(src_root: str, label: str) -> DocBundle {
     self.job.mark(label, "read", "scanning local docs");
     self.job.note("reading local docs from " + os.path.abspath(src_root));
     bundle = DocBundle();
-    docs_root = os.path.join(src_root, "docs", "docs");
+    docs_root = os.path.join(src_root, *CORPUS_DIR.split("/"));
+    if not os.path.isdir(docs_root) {
+        docs_root = os.path.join(src_root, *LEGACY_DIR.split("/"));
+    }
     for (cur, dirnames, filenames) in os.walk(docs_root) {
         for fname in sorted(filenames) {
             full = os.path.join(cur, fname);
@@ -78,13 +100,55 @@ impl DocSync.local_bundle(src_root: str, label: str) -> DocBundle {
             }
         }
     }
+    nj = os.path.join(docs_root, "nav.json");
     mk = os.path.join(src_root, "docs", "mkdocs.yml");
-    if os.path.exists(mk) {
+    if os.path.exists(nj) {
+        with open(nj, encoding="utf-8") as fn {
+            bundle.nav_json = fn.read();
+        }
+    } elif os.path.exists(mk) {
         with open(mk, encoding="utf-8") as fn {
             bundle.nav_text = fn.read();
         }
     }
     return bundle;
+}
+
+impl _manifest_pages(items: list) -> list[dict] {
+    out: list[dict] = [];
+    for entry in items {
+        if not isinstance(entry, dict) {
+            continue;
+        }
+        if "page" in entry {
+            out.append(entry);
+        } elif "items" in entry {
+            out.extend(_manifest_pages(entry["items"] as list));
+        }
+    }
+    return out;
+}
+
+impl DocSync.parse_nav_manifest(text: str) -> dict[str, NavEntry] {
+    nav: dict[str, NavEntry] = {};
+    try {
+        manifest = json.loads(text);
+    } except ValueError {
+        return nav;
+    }
+    if not isinstance(manifest, dict) {
+        return nav;
+    }
+    order = 0;
+    for entry in _manifest_pages(manifest.get("nav", []) as list) {
+        path = str(entry.get("page", ""));
+        title = str(entry.get("title", "")).strip();
+        if path {
+            nav[path] = NavEntry(title=title, order=order);
+            order += 1;
+        }
+    }
+    return nav;
 }
 
 impl DocSync.parse_nav(text: str) -> dict[str, NavEntry] {
@@ -308,7 +372,9 @@ impl DocSync.build_version(hub: DocsHub, label: str, ref: str) -> DocBundle {
         if DOCS_LOCAL != ""
         else self.fetch_bundle(sha if sha != "" else ref, label);
     files = bundle.pages;
-    nav = self.parse_nav(bundle.nav_text);
+    nav = self.parse_nav_manifest(bundle.nav_json)
+        if bundle.nav_json != ""
+        else self.parse_nav(bundle.nav_text);
     self.job.mark(label, "build", "0 of " + str(len(files)) + " pages");
     self.job.note("growing the " + label + " graph · " + str(len(files)) + " pages");
     ver = hub +>:HasVersion():+> DocVersion(
@@ -607,4 +673,74 @@ impl doc_page.settle(container: object) {
             report None;
         }
     }
+}
+
+impl _flatten_tree_pages(nodes: list[TreeNode]) -> list[TreeNode] {
+    out: list[TreeNode] = [];
+    for n in nodes {
+        if n.kind == "page" {
+            out.append(n);
+        } else {
+            out.extend(_flatten_tree_pages(n.children));
+        }
+    }
+    return out;
+}
+
+impl _first_prose(md_lines: list[str]) -> str {
+    fenced = False;
+    for ln in md_lines {
+        s: str = ln.strip();
+        if s.startswith("```") {
+            fenced = not fenced;
+            continue;
+        }
+        if fenced or not s {
+            continue;
+        }
+        if s.startswith(("#", "!", "|", "<", ">", "-", "*", "=", "?")) {
+            continue;
+        }
+        s = re.sub(r"\[([^\]]*)\]\(([^)]*)\)", r"\1", s);
+        s = re.sub(r"[*_`]", "", s);
+        s = " ".join(s.split());
+        if len(s) > 160 {
+            s = s[:160].rsplit(" ", 1)[0].rstrip(" ,;:") + " ...";
+        }
+        return s;
+    }
+    return "";
+}
+
+impl llms_txt -> str {
+    vers = _version("latest");
+    if not vers {
+        return "# Jac\n\nThe docs index is still syncing; try again shortly.\n";
+    }
+    walked = (vers[0] spawn collect_tree()) as collect_tree;
+    by_route: dict[str, DocPage] = {};
+    for p in walked.seq {
+        by_route[_route_up(p)] = p;
+    }
+    lines: list[str] = [LLMS_HEADER];
+    for section in walked.tree {
+        entries = _flatten_tree_pages(section.children)
+            if section.kind == "dir"
+            else [section];
+        if not entries {
+            continue;
+        }
+        lines.append("## " + section.title);
+        lines.append("");
+        for pg in entries {
+            page = by_route.get(pg.path);
+            desc = _first_prose(page.md_lines) if page is not None else "";
+            url = SITE_ORIGIN + "/docs/latest/" + pg.path;
+            lines.append(
+                "- [" + pg.title + "](" + url + ")" + ((": " + desc) if desc else "")
+            );
+        }
+        lines.append("");
+    }
+    return "\n".join(lines);
 }

@@ -1,6 +1,8 @@
+import json;
 import os;
 import re;
 import time;
+import from http { HTTPMethod }
 import from shared.github {
     download_tarball,
     head_sha as gh_head_sha,
@@ -19,6 +21,7 @@ obj VersionSpec {
 obj DocBundle {
     has pages: dict[str, str] = {},
         nav_text: str = "",
+        nav_json: str = "",
         assets: dict[str, bytes] = {};
 }
 
@@ -92,10 +95,14 @@ obj ShaCache {
 
 glob USER_AGENT: str = "jaclang.org docs sync",
      GH_REPO: str = os.environ.get("JAC_DOCS_GH_REPO", "jaseci-labs/jac"),
+     CORPUS_DIR: str = "jac/jaclang/cli/docs",
+     LEGACY_DIR: str = "docs/docs",
+     SITE_ORIGIN: str = os.environ.get("JAC_SITE_ORIGIN", "https://www.jaclang.org"),
      DOCS_LOCAL: str = os.environ.get(
          "JAC_DOCS_LOCAL",
          os.path.join("..", "..")
-             if os.path.isdir(os.path.join("..", "..", "docs", "docs"))
+             if os.path.isdir(os.path.join("..", "..", "jac", "jaclang", "cli", "docs"))
+             or os.path.isdir(os.path.join("..", "..", "docs", "docs"))
              else ""
      ),
      SHA_TTL_S: float = 600.0,
@@ -185,6 +192,7 @@ obj DocSync {
     def fetch_bundle(ref: str, label: str) -> DocBundle;
     def local_bundle(src_root: str, label: str) -> DocBundle;
     def parse_nav(text: str) -> dict[str, NavEntry];
+    def parse_nav_manifest(text: str) -> dict[str, NavEntry];
     def clean_md(text: str) -> str;
     def first_h1(text: str) -> str;
     def rewrite_links(text: str, version: str, rel: str) -> str;
@@ -238,6 +246,38 @@ def:pub ensure_docs(force: bool = False) -> DocsStatus {
 }
 
 def:pub doc_tree(version: str = "latest") -> DocTree | None;
+
+def _manifest_pages(items: list) -> list[dict];
+
+def _flatten_tree_pages(nodes: list[TreeNode]) -> list[TreeNode];
+
+def _first_prose(md_lines: list[str]) -> str;
+
+glob LLMS_HEADER: str = (
+         "# Jac (the Jaseci stack)\n"
+         "\n"
+         "> Jac is a programming language designed for humans and AI to build"
+         " together. It compiles one Python-like syntax to Python bytecode,"
+         " JavaScript, and native machine code, with full access to the PyPI,"
+         " npm, and C ecosystems. AI calls (`by llm()`), persistent graphs, REST"
+         " APIs, React-style UIs (`cl` code), and Kubernetes deployment are"
+         " language features delivered through one self-contained `jac` binary.\n"
+         "\n"
+         "Key facts: statements end with `;`, blocks use `{ }`, fields are"
+         " declared with `has name: type;`, `node`/`edge`/`walker` archetypes"
+         " model domains as graphs, the graph under `root` persists"
+         " automatically, and `def f(...) -> T by llm();` delegates a function"
+         " to an LLM with the return type as the enforced output schema.\n"
+         "\n"
+         "Offline access: `jac guide` (bundled with the jac binary) serves this"
+         " entire documentation set from the command line, and the `jac mcp`"
+         " server exposes it to agents as jac://docs/* resources.\n"
+     );
+
+@restspec(
+    method=HTTPMethod.GET, path="/llms.txt", produces="text/plain", envelope=False
+)
+def:pub llms_txt -> str;
 
 walker:pub doc_page {
     has version: str = "latest",
