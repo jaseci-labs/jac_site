@@ -1,4 +1,5 @@
-import from .board { BoardEntry, ScorePart }
+import from .board { BoardEntry }
+import from .scoring { ScorePart }
 import from ..shared.utils { cn }
 import from .format { belt_class, belt_label, time_ago }
 import from "@jac/runtime" { Link }
@@ -207,6 +208,13 @@ def:pub ScoreModal(
                         >
                             {"scored @" + repo.scored_sha[:7]}
                         </a>
+                    }}
+                    {if repo.scored_by_pid > 0 {
+                        <span
+                            title="The scorer runs as its own Jac microservice; this is the service process that scored this repo."
+                        >
+                            {"by scorer service pid " + str(repo.scored_by_pid)}
+                        </span>
                     }}
                     <span>{time_ago(repo.scored_at)}</span>
                     <Link

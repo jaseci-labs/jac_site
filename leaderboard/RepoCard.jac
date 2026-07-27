@@ -1,4 +1,5 @@
-import from .board { BoardEntry, RepoFeatures }
+import from .board { BoardEntry }
+import from .scoring { RepoFeatures }
 import from ..shared.utils { cn }
 import from .format { belt_class, belt_label, time_ago }
 import from "@hugeicons/react" { HugeiconsIcon }

@@ -199,7 +199,9 @@ def:pub page -> JsxPage {
                 <p
                     className="mt-10 border-t border-border/40 pt-4 text-[13px] leading-6 text-muted-foreground"
                 >
-                    Fine print: analysis reads the default branch pinned to its head commit, so every score links to the exact tree it measured. Repos rescore at most once every 6 hours. Downloads are capped at 50 MB per repo and only the relevant slice of each archive is extracted. Click any card on the board for its point-by-point breakdown.
+                    Fine print: analysis reads the default branch pinned to its head commit, so every score links to the exact tree it measured. Repos rescore at most once every 6 hours. Downloads are capped at 50 MB per repo and only the relevant slice of each archive is extracted. Click any card on the board for its point-by-point breakdown. Scoring itself runs as a Jac microservice: this site's server consumes the scorer through one{" "}
+                    <code>sv import</code>
+                    , and the runtime spawns it as its own process and routes every call — no HTTP client code anywhere. Each card's breakdown names the service process that scored it.
                 </p>
             </div>
         </section>;
