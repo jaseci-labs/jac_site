@@ -122,9 +122,17 @@ glob USER_AGENT: str = "jaclang.org docs sync",
 
 node DocsHub {
     has built_at: str = "";
+
+    def __jac_access__ -> any {
+        return "WRITE";
+    }
 }
 
-node DocContainer {}
+node DocContainer {
+    def __jac_access__ -> any {
+        return "WRITE";
+    }
+}
 
 node DocVersion(DocContainer) {
     has label: str = "",
@@ -149,13 +157,35 @@ node DocPage {
         order: int = 9000,
         md_lines: list[str] = [],
         toc: list[TocEntry] = [];
+
+    def __jac_access__ -> any {
+        return "WRITE";
+    }
 }
 
-edge HasVersion {}
+edge HasHub {
+    def __jac_access__ -> any {
+        return "WRITE";
+    }
+}
 
-edge Contains {}
+edge HasVersion {
+    def __jac_access__ -> any {
+        return "WRITE";
+    }
+}
 
-edge NextPage {}
+edge Contains {
+    def __jac_access__ -> any {
+        return "WRITE";
+    }
+}
+
+edge NextPage {
+    def __jac_access__ -> any {
+        return "WRITE";
+    }
+}
 
 walker trace_route {
     has segs: list[str] = [];
@@ -167,8 +197,24 @@ walker trace_route {
 
 def _route_up(target: object) -> str;
 
+def _teardown_version(v: DocVersion);
+
+def _teardown_hub(hub: DocsHub);
+
+def _sweep_stale(keep: DocsHub);
+
 def _version(wanted: str) -> list[DocVersion] {
-    return [root.shared-->[?:DocsHub]->:HasVersion:->[?:DocVersion, label==wanted]];
+    vers = [root.shared-->[?:DocsHub]->:HasVersion:->[?:DocVersion, label==wanted]];
+    if not vers {
+        return [];
+    }
+    best = vers[0];
+    for v in vers {
+        if v.fetched_at > best.fetched_at {
+            best = v;
+        }
+    }
+    return [best];
 }
 
 def slugify(t: str) -> str;
@@ -198,6 +244,8 @@ obj DocSync {
     def rewrite_links(text: str, version: str, rel: str) -> str;
     def write_assets(assets: dict[str, bytes]);
     def build_version(hub: DocsHub, label: str, ref: str) -> DocBundle;
+    def effective_specs -> list[VersionSpec];
+    def specs_drifted -> bool;
     def ingest_all;
     def latest_stale -> bool;
     def refresh_latest(hub: DocsHub);
@@ -241,8 +289,8 @@ def:pub docs_status -> DocsStatus {
     return SYNC.status(True);
 }
 
-def:pub ensure_docs(force: bool = False) -> DocsStatus {
-    return SYNC.ensure(force);
+def:pub ensure_docs -> DocsStatus {
+    return SYNC.ensure(False);
 }
 
 def:pub doc_tree(version: str = "latest") -> DocTree | None;
