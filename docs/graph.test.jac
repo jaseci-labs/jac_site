@@ -195,9 +195,7 @@ test "version list dedupes to newest per label and picks newest hub" {
 
 test "teardown hub removes versions dirs and pages" {
     hv = (root +>:HasHub():+> DocsHub(built_at="teardown-probe")) as DocsHub;
-    tv = (
-        hv +>:HasVersion():+> DocVersion(label="tz", fetched_at="1")
-    ) as DocVersion;
+    tv = (hv +>:HasVersion():+> DocVersion(label="tz", fetched_at="1")) as DocVersion;
     gd = (tv +>:Contains():+> DocDir(name="g", title="G")) as DocDir;
     gd +>:Contains():+> DocPage(name="p1", title="P1");
     tv +>:Contains():+> DocPage(name="p0", title="P0");
