@@ -1,4 +1,4 @@
-import from react { useEffect }
+import from "react" { useEffect }
 import from ..shared.ui.badge { Badge }
 import from ..shared.SectionRail { SectionRail }
 import from ..landing.Reveal { Reveal }

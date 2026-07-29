@@ -1,7 +1,7 @@
 import from ..shared.ui.button { buttonVariants }
 import from .utils { cn }
 import from "@jac/runtime" { Link }
-import from react { useEffect }
+import from "react" { useEffect }
 import from .install { ensure_install }
 import from "@hugeicons/react" { HugeiconsIcon }
 import from "@hugeicons/core-free-icons" {

@@ -1,4 +1,4 @@
-import from react { useEffect }
+import from "react" { useEffect }
 import from ..shared.utils { cn }
 
 def:pub Reveal(

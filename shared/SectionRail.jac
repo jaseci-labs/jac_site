@@ -1,4 +1,4 @@
-import from react { useEffect }
+import from "react" { useEffect }
 
 def:pub SectionRail(items: list[dict]) -> JsxElement {
     has active: str = "",
