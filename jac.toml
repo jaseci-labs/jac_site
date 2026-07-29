@@ -86,3 +86,7 @@ og_site_name = "jaclang.org"
 og_image = "https://jaclang.org/static/assets/jac-logo.png"
 twitter_card = "summary"
 twitter_image = "https://jaclang.org/static/assets/jac-logo.png"
+
+# The service cut: scoring runs as its own process, routed by the gateway.
+[scale.microservices.routes]
+"scoring_service" = "/scoring_service"

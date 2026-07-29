@@ -12,7 +12,7 @@ def:pub get_todos -> list[Todo] {
     return [root-->][?:Todo];
 }
 
-cl def:pub todo_app -> JsxElement {
+def:pub todo_app -> JsxElement {
     has todos: list[Todo] = [];
 
     async can with entry {

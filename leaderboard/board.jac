@@ -4,7 +4,7 @@ import from shared.timefmt { now_iso, seconds_since }
 import from shared.github { RepoMeta }
 import from .scoring { RepoAnalysis, RepoFeatures, ScoreBreakdown, ScorePart }
 
-sv import from scoring_service { ScoredPayload, fetch_and_score }
+import from scoring_service { ScoredPayload, fetch_and_score }
 
 obj BoardEntry {
     has full: str = "",
