@@ -169,6 +169,55 @@ test "collect tree folds orders and derives paths by walking" {
     assert _route_up(tw.seq[3]) == "guide/deep/z";
 }
 
+test "version list dedupes to newest per label and picks newest hub" {
+    h1 = (root +>:HasHub():+> DocsHub(built_at="2026-01-01T00:00:00Z")) as DocsHub;
+    h2 = (root +>:HasHub():+> DocsHub(built_at="2026-01-02T00:00:00Z")) as DocsHub;
+    h1 +>:HasVersion():+> DocVersion(
+        label="latest", git_ref="main", fetched_at="2026-01-01T00:00:00Z", pages=10
+    );
+    h1 +>:HasVersion():+> DocVersion(
+        label="v0.33", git_ref="v0.33.0", fetched_at="2026-01-01T00:00:00Z", pages=20
+    );
+    h2 +>:HasVersion():+> DocVersion(
+        label="latest", git_ref="main", fetched_at="2026-01-02T00:00:00Z", pages=11
+    );
+    got = SYNC.version_list();
+    assert [v.label for v in got] == ["latest", "v0.33"];
+    assert got[0].pages == 11;
+    assert (_get_hub() as DocsHub).built_at == "2026-01-02T00:00:00Z";
+    assert _version("latest")[0].pages == 11;
+    _sweep_stale(h2);
+    assert not [root-->[?:DocsHub, built_at=="2026-01-01T00:00:00Z"]];
+    assert [root-->[?:DocsHub, built_at=="2026-01-02T00:00:00Z"]];
+    assert not _version("v0.33");
+    assert _version("latest")[0].pages == 11;
+}
+
+test "teardown hub removes versions dirs and pages" {
+    hv = (root +>:HasHub():+> DocsHub(built_at="teardown-probe")) as DocsHub;
+    tv = (
+        hv +>:HasVersion():+> DocVersion(label="tz", fetched_at="1")
+    ) as DocVersion;
+    gd = (tv +>:Contains():+> DocDir(name="g", title="G")) as DocDir;
+    gd +>:Contains():+> DocPage(name="p1", title="P1");
+    tv +>:Contains():+> DocPage(name="p0", title="P0");
+    _teardown_hub(hv);
+    assert not [root-->[?:DocsHub, built_at=="teardown-probe"]];
+    assert not _version("tz");
+}
+
+test "specs drift detects missing versions" {
+    hd = (root +>:HasHub():+> DocsHub(built_at="drift-probe")) as DocsHub;
+    for spec in SYNC.effective_specs() {
+        hd +>:HasVersion():+> DocVersion(
+            label=spec.label, git_ref=spec.git_ref, fetched_at="9999"
+        );
+    }
+    assert not SYNC.specs_drifted();
+    _teardown_hub(hd);
+    assert SYNC.specs_drifted();
+}
+
 test "place page builds missing dirs by walking" {
     pv = (root ++> DocVersion(label="p")) as DocVersion;
     pv spawn place_page(segs=["guide", "deep"], name="one", title="One", order=1);

@@ -338,9 +338,70 @@ impl DocSync.write_assets(assets: dict[str, bytes]) {
     }
 }
 
+impl _teardown_version(v: DocVersion) {
+    containers: list = [v];
+    dirs: list[DocDir] = [];
+    pages: list[DocPage] = [];
+    i = 0;
+    while i < len(containers) {
+        cur = containers[i];
+        i += 1;
+        for d in [cur-->[?:DocDir]] {
+            dirs.append(d);
+            containers.append(d);
+        }
+        for p in [cur-->[?:DocPage]] {
+            pages.append(p);
+        }
+    }
+    for p in pages {
+        del p;
+    }
+    for d in dirs {
+        del d;
+    }
+    del v;
+}
+
+impl _teardown_hub(hub: DocsHub) {
+    for v in [hub->:HasVersion:->[?:DocVersion]] {
+        _teardown_version(v);
+    }
+    del hub;
+}
+
+impl _sweep_stale(keep: DocsHub) {
+    for h in [root.shared-->[?:DocsHub]] {
+        if jid(h) != jid(keep) {
+            _teardown_hub(h);
+        }
+    }
+    best: dict[str, DocVersion] = {};
+    for v in [keep->:HasVersion:->[?:DocVersion]] {
+        cur = best.get(v.label);
+        if cur is None or v.fetched_at > cur.fetched_at {
+            best[v.label] = v;
+        }
+    }
+    for v in [keep->:HasVersion:->[?:DocVersion]] {
+        if jid(best[v.label]) != jid(v) {
+            _teardown_version(v);
+        }
+    }
+}
+
 impl _get_hub -> DocsHub | None {
     hubs = [root.shared-->[?:DocsHub]];
-    return hubs[0] if hubs else None;
+    if not hubs {
+        return None;
+    }
+    best = hubs[0];
+    for h in hubs {
+        if h.built_at > best.built_at {
+            best = h;
+        }
+    }
+    return best;
 }
 
 impl place_page.place with DocContainer entry {
@@ -351,18 +412,16 @@ impl place_page.place with DocContainer entry {
             fresh = (
                 here +>:Contains():+> DocDir(name=nxt, title=_pretty(nxt))
             ) as DocDir;
-            grant(fresh, level=ReadPerm);
             visit fresh;
         }
     } else {
-        pg = here +>:Contains():+> DocPage(
+        here +>:Contains():+> DocPage(
             name=self.name,
             title=self.title,
             order=self.order,
             md_lines=self.md_lines,
             toc=self.toc
         );
-        grant(pg, level=ReadPerm);
     }
 }
 
@@ -380,7 +439,6 @@ impl DocSync.build_version(hub: DocsHub, label: str, ref: str) -> DocBundle {
     ver = hub +>:HasVersion():+> DocVersion(
         label=label, git_ref=ref, fetched_at=now_iso(), pages=len(files), sha=sha
     );
-    grant(ver, level=ReadPerm);
 
     names = sorted([k for k in files.keys()]);
     fallback = 9000;
@@ -420,11 +478,28 @@ impl DocSync.build_version(hub: DocsHub, label: str, ref: str) -> DocBundle {
     return bundle;
 }
 
-impl DocSync.ingest_all{
-    self.job.begin("sync");
-    specs = [VersionSpec(label="latest", git_ref="local")]
+impl DocSync.effective_specs -> list[VersionSpec] {
+    return [VersionSpec(label="latest", git_ref="local")]
         if DOCS_LOCAL != ""
         else DOC_VERSIONS;
+}
+
+impl DocSync.specs_drifted -> bool {
+    have: dict[str, str] = {};
+    for v in self.version_list() {
+        have[v.label] = v.git_ref;
+    }
+    for spec in self.effective_specs() {
+        if have.get(spec.label) != spec.git_ref {
+            return True;
+        }
+    }
+    return False;
+}
+
+impl DocSync.ingest_all{
+    self.job.begin("sync");
+    specs = self.effective_specs();
     for spec in specs {
         self.job.mark(spec.label, "wait", "queued");
     }
@@ -433,9 +508,7 @@ impl DocSync.ingest_all{
     } else {
         self.job.note("contacting github.com/" + GH_REPO);
     }
-    old = [root.shared-->[?:DocsHub]];
-    hub = (root.shared ++> DocsHub(built_at=now_iso())) as DocsHub;
-    grant(hub, level=ReadPerm);
+    hub = (root.shared +>:HasHub():+> DocsHub(built_at=now_iso())) as DocsHub;
     latest_assets: dict[str, bytes] = {};
     for spec in specs {
         b = self.build_version(hub, spec.label, spec.git_ref);
@@ -447,9 +520,7 @@ impl DocSync.ingest_all{
         self.job.note("placing doc images and assets");
         self.write_assets(latest_assets);
     }
-    for stale_hub in old {
-        del stale_hub;
-    }
+    _sweep_stale(hub);
     self.job.finish();
     self.job.note("docs graph ready — persists from here");
 }
@@ -470,22 +541,41 @@ impl DocSync.refresh_latest(hub: DocsHub) {
     self.job.begin("sync");
     self.job.mark("latest", "wait", "queued");
     self.job.note("main moved — refreshing latest");
-    olds = _version("latest");
     b = self.build_version(hub, "latest", "main");
     self.write_assets(b.assets);
-    for v in olds {
-        del v;
-    }
     hub.built_at = now_iso();
+    _sweep_stale(hub);
     self.job.finish();
     self.job.note("latest refreshed");
 }
 
 impl DocSync.version_list -> list[VersionInfo] {
+    best: dict[str, DocVersion] = {};
+    for v in [root.shared-->[?:DocsHub]->:HasVersion:->[?:DocVersion]] {
+        cur = best.get(v.label);
+        if cur is None or v.fetched_at > cur.fetched_at {
+            best[v.label] = v;
+        }
+    }
+    known = [spec.label for spec in DOC_VERSIONS];
+    labels = [
+        l
+        for l in known
+        if l in best
+    ] + sorted(
+        [
+            l
+            for l in best.keys()
+            if l not in known
+        ]
+    );
     return [
         VersionInfo(
-            label=v.label, git_ref=v.git_ref, pages=v.pages, fetched_at=v.fetched_at
-        ) for v in [root.shared-->[?:DocsHub]->:HasVersion:->[?:DocVersion]]
+            label=best[l].label,
+            git_ref=best[l].git_ref,
+            pages=best[l].pages,
+            fetched_at=best[l].fetched_at
+        ) for l in labels
     ];
 }
 
@@ -567,7 +657,7 @@ impl DocSync.status(stale_check: bool) -> DocsStatus {
 
 impl DocSync.ensure(force: bool = False) -> DocsStatus {
     hub = _get_hub();
-    needs_full = hub is None or force;
+    needs_full = hub is None or force or self.specs_drifted();
     needs_latest = (not needs_full) and hub is not None and self.latest_stale();
     if (needs_full or needs_latest) and not self.ingesting {
         self.ingesting = True;
