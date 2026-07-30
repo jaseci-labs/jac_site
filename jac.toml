@@ -2,6 +2,7 @@
 name = "jac_site"
 entry-point = "main.jac"
 kind = "web-app"
+jac-version = "0.35.0"
 
 [dev]
 jaclang_source = "../../jac"
