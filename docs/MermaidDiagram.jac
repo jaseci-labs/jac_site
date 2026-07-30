@@ -1,4 +1,4 @@
-import from react { useEffect }
+import from "react" { useEffect }
 import from "mermaid" { default as mermaid }
 import from ..shared.CodeBlock { CodeLines }
 

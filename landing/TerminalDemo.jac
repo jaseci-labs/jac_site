@@ -1,4 +1,4 @@
-import from react { useEffect }
+import from "react" { useEffect }
 
 glob _SCRIPT: list[dict] = [
          {"k": "cmd", "t": "jac create trailmate --use jac-shadcn"},
