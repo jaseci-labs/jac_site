@@ -3,6 +3,9 @@ import os;
 import re;
 import time;
 import from http { HTTPMethod }
+# Explicit import keeps this deployable on the pinned jac runtime; on jac
+# releases after 0.35 the ambient AccessLevel makes this import unnecessary.
+import from jaclang.jac0core.archetype { AccessLevel }
 import from shared.github {
     download_tarball,
     head_sha as gh_head_sha,
@@ -120,19 +123,26 @@ glob USER_AGENT: str = "jaclang.org docs sync",
          "quick-guide": "Quick Guide"
      };
 
-node DocsHub {
+# The docs graph is a public machine-generated cache on root.shared: any
+# request context (including an anonymous visitor triggering a stale refresh)
+# must be able to rebuild it, so its archetypes open WRITE to all users.
+node PublicNode {
+    def __jac_access__ -> AccessLevel {
+        return AccessLevel.WRITE;
+    }
+}
+
+edge PublicEdge {
+    def __jac_access__ -> AccessLevel {
+        return AccessLevel.WRITE;
+    }
+}
+
+node DocsHub(PublicNode) {
     has built_at: str = "";
-
-    def __jac_access__ -> any {
-        return "WRITE";
-    }
 }
 
-node DocContainer {
-    def __jac_access__ -> any {
-        return "WRITE";
-    }
-}
+node DocContainer(PublicNode) {}
 
 node DocVersion(DocContainer) {
     has label: str = "",
@@ -151,41 +161,21 @@ node DocDir(DocContainer) {
         order: int = 9000;
 }
 
-node DocPage {
+node DocPage(PublicNode) {
     has name: str = "",
         title: str = "",
         order: int = 9000,
         md_lines: list[str] = [],
         toc: list[TocEntry] = [];
-
-    def __jac_access__ -> any {
-        return "WRITE";
-    }
 }
 
-edge HasHub {
-    def __jac_access__ -> any {
-        return "WRITE";
-    }
-}
+edge HasHub(PublicEdge) {}
 
-edge HasVersion {
-    def __jac_access__ -> any {
-        return "WRITE";
-    }
-}
+edge HasVersion(PublicEdge) {}
 
-edge Contains {
-    def __jac_access__ -> any {
-        return "WRITE";
-    }
-}
+edge Contains(PublicEdge) {}
 
-edge NextPage {
-    def __jac_access__ -> any {
-        return "WRITE";
-    }
-}
+edge NextPage(PublicEdge) {}
 
 walker trace_route {
     has segs: list[str] = [];
