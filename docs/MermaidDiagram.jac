@@ -1,8 +1,7 @@
-import from react { useEffect }
-import from "mermaid" { default as mermaid }
+import from mermaid { default as mermaid, Mermaid }
 import from ..shared.CodeBlock { CodeLines }
 
-glob _mm: any = mermaid,
+glob _mm: Mermaid = mermaid as Mermaid,
      _mm_ready: bool = False,
      _mm_seq: int = 0;
 
@@ -10,48 +9,46 @@ def:pub MermaidDiagram(code: str) -> JsxElement {
     has svg_html: str = "",
         failed: bool = False;
 
-    useEffect(
-        lambda {
-            if not _mm_ready {
-                _mm.initialize(
-                    {
-                        "startOnLoad": False,
-                        "theme": "base",
-                        "themeVariables": {
-                            "darkMode": True,
-                            "background": "#0d0c0e",
-                            "primaryColor": "#1f1712",
-                            "primaryTextColor": "#e7e5e4",
-                            "primaryBorderColor": "#ff6b35",
-                            "secondaryColor": "#171412",
-                            "secondaryTextColor": "#d6d3d1",
-                            "secondaryBorderColor": "#57534e",
-                            "tertiaryColor": "#121014",
-                            "tertiaryTextColor": "#d6d3d1",
-                            "tertiaryBorderColor": "#44403c",
-                            "lineColor": "#a8a29e",
-                            "textColor": "#e7e5e4",
-                            "clusterBkg": "#131110",
-                            "clusterBorder": "#44403c",
-                            "edgeLabelBackground": "#1c1917",
-                            "fontFamily": "Geist Mono Variable, ui-monospace, monospace",
-                            "fontSize": "13px",
+    async can with [code] entry {
+        if not _mm_ready {
+            _mm.initialize(
+                {
+                    "startOnLoad": False,
+                    "theme": "base",
+                    "themeVariables": {
+                        "darkMode": True,
+                        "background": "#0d0c0e",
+                        "primaryColor": "#1f1712",
+                        "primaryTextColor": "#e7e5e4",
+                        "primaryBorderColor": "#ff6b35",
+                        "secondaryColor": "#171412",
+                        "secondaryTextColor": "#d6d3d1",
+                        "secondaryBorderColor": "#57534e",
+                        "tertiaryColor": "#121014",
+                        "tertiaryTextColor": "#d6d3d1",
+                        "tertiaryBorderColor": "#44403c",
+                        "lineColor": "#a8a29e",
+                        "textColor": "#e7e5e4",
+                        "clusterBkg": "#131110",
+                        "clusterBorder": "#44403c",
+                        "edgeLabelBackground": "#1c1917",
+                        "fontFamily": "Geist Mono Variable, ui-monospace, monospace",
+                        "fontSize": "13px",
 
-                        },
+                    },
 
-                    }
-                );
-                _mm_ready = True;
-            }
-            _mm_seq = _mm_seq + 1;
-            p: any = _mm.render("mmdg" + str(_mm_seq), code);
-            p.then(lambda (r: any) { svg_html = r.svg; }).catch(
-                lambda (_e: any) { failed = True; }
+                }
             );
-            return lambda { };
-        },
-        [code]
-    );
+            _mm_ready = True;
+        }
+        _mm_seq = _mm_seq + 1;
+        try {
+            r = await _mm.render("mmdg" + str(_mm_seq), code);
+            svg_html = r.svg;
+        } except Exception {
+            failed = True;
+        }
+    }
 
     if failed {
         return
