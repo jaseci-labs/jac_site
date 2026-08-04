@@ -12,10 +12,12 @@ impl DocsShell.load(want_version: str, want_path: str) -> None {
         waiting = False;
         versions = st.versions;
     }
-    branch = await doc_tree(version=want_version);
-    if branch is not None {
-        tree = branch.tree;
-        tree_version = want_version;
+    if tree_version != want_version {
+        branch = await doc_tree(version=want_version);
+        if branch is not None {
+            tree = branch.tree;
+            tree_version = want_version;
+        }
     }
     p = root spawn doc_page(version=want_version, path=want_path);
     page = (p.reports[0] if p.reports else None) as DocPageView | None;
