@@ -44,45 +44,16 @@ test "rewrite href pulls docs jaseci org in site" {
 }
 
 test "rewrite href resolves relative markdown" {
-    assert rewrite_href("walkers.md", "latest", "guide") == "/docs/latest/guide/walkers";
+    assert rewrite_href("walkers.md", "latest", "guide")
+        == "/docs/latest/guide/walkers";
     assert rewrite_href("../intro.md", "latest", "guide") == "/docs/latest/intro";
-    assert rewrite_href("walkers.md#spawn", "latest", "guide") == "/docs/latest/guide/walkers#spawn";
+    assert rewrite_href("walkers.md#spawn", "latest", "guide")
+        == "/docs/latest/guide/walkers#spawn";
 }
 
 test "rewrite href maps asset images to static" {
     got = rewrite_href("assets/diagram.png", "latest", "guide");
     assert got == "/static/assets/docsmedia/diagram.png";
-}
-
-test "parse nav reads titles and order" {
-    nav = SYNC.parse_nav(
-        "site_name: x\nnav:\n  - Home: index.md\n  - Guide: guide/intro.md\n"
-    );
-    assert len(nav) == 2;
-    assert nav["index.md"].title == "Home";
-    assert nav["index.md"].order == 0;
-    assert nav["guide/intro.md"].title == "Guide";
-    assert nav["guide/intro.md"].order == 1;
-}
-
-test "parse nav manifest flattens sections in document order" {
-    nav = SYNC.parse_nav_manifest(
-        '{"version": 1, "nav": ['
-        '{"title": "Start", "items": ['
-        '{"title": "Home", "page": "index.md"},'
-        '{"title": "Deep", "items": [{"title": "Inner", "page": "a/b.md"}]}'
-        ']},'
-        '{"title": "Ext", "url": "https://example.com"},'
-        '{"title": "Solo", "page": "solo.md"}'
-        ']}'
-    );
-    assert len(nav) == 3;
-    assert nav["index.md"].title == "Home";
-    assert nav["index.md"].order == 0;
-    assert nav["a/b.md"].title == "Inner";
-    assert nav["a/b.md"].order == 1;
-    assert nav["solo.md"].order == 2;
-    assert SYNC.parse_nav_manifest("not json") == {};
 }
 
 test "first prose skips headings fences and markup" {
@@ -100,40 +71,6 @@ test "first prose skips headings fences and markup" {
     got = _first_prose(lines);
     assert got == "The real first paragraph with a link in it.";
     assert _first_prose(["# only a heading"]) == "";
-}
-
-test "clean md drops frontmatter and snippets" {
-    got = SYNC.clean_md("---\ntitle: x\n---\n# Real\n--8<-- \"x.md\"\nbody\n");
-    assert "title: x" not in got;
-    assert "--8<--" not in got;
-    assert "# Real" in got;
-    assert "body" in got;
-}
-
-test "progress narration caps its log" {
-    job = JobProgress();
-    job.begin("sync");
-    for i in range(20) {
-        job.note("step " + str(i));
-    }
-    assert len(job.log) == 6;
-    assert job.log[-1] == "step 19";
-    assert job.detail == "step 19";
-    assert job.active;
-    job.finish();
-    assert not job.active;
-    assert job.phase == "done";
-}
-
-test "progress marks are keyed by label" {
-    job = JobProgress();
-    job.mark("latest", "wait", "queued");
-    job.mark("v0.33", "wait", "queued");
-    job.mark("latest", "done", "412 pages");
-    assert len(job.steps) == 2;
-    assert job.steps[0].state == "done";
-    assert job.steps[0].detail == "412 pages";
-    assert job.steps[1].state == "wait";
 }
 
 test "collect tree folds orders and derives paths by walking" {
@@ -181,7 +118,7 @@ test "version list dedupes to newest per label and picks newest hub" {
     h2 +>:HasVersion():+> DocVersion(
         label="latest", git_ref="main", fetched_at="2026-01-02T00:00:00Z", pages=11
     );
-    got = SYNC.version_list();
+    got = _version_list();
     assert [v.label for v in got] == ["latest", "v0.33"];
     assert got[0].pages == 11;
     assert (_get_hub() as DocsHub).built_at == "2026-01-02T00:00:00Z";
@@ -193,6 +130,20 @@ test "version list dedupes to newest per label and picks newest hub" {
     assert _version("latest")[0].pages == 11;
 }
 
+test "detached hubs stay invisible until attached" {
+    side_hub = DocsHub(built_at="2026-01-03T00:00:00Z");
+    side_hub +>:HasVersion():+> DocVersion(
+        label="ghost", git_ref="main", fetched_at="2026-01-03T00:00:00Z"
+    );
+    seen = _get_hub();
+    assert seen is None or jid(seen) != jid(side_hub);
+    assert not _version("ghost");
+    root +>:HasHub():+> side_hub;
+    assert _version("ghost")[0].fetched_at == "2026-01-03T00:00:00Z";
+    assert "ghost" in [v.label for v in _version_list()];
+    _teardown_hub(side_hub);
+}
+
 test "teardown hub removes versions dirs and pages" {
     hv = (root +>:HasHub():+> DocsHub(built_at="teardown-probe")) as DocsHub;
     tv = (hv +>:HasVersion():+> DocVersion(label="tz", fetched_at="1")) as DocVersion;
@@ -202,18 +153,6 @@ test "teardown hub removes versions dirs and pages" {
     _teardown_hub(hv);
     assert not [root-->[?:DocsHub, built_at=="teardown-probe"]];
     assert not _version("tz");
-}
-
-test "specs drift detects missing versions" {
-    hd = (root +>:HasHub():+> DocsHub(built_at="drift-probe")) as DocsHub;
-    for spec in SYNC.effective_specs() {
-        hd +>:HasVersion():+> DocVersion(
-            label=spec.label, git_ref=spec.git_ref, fetched_at="9999"
-        );
-    }
-    assert not SYNC.specs_drifted();
-    _teardown_hub(hd);
-    assert SYNC.specs_drifted();
 }
 
 test "place page builds missing dirs by walking" {

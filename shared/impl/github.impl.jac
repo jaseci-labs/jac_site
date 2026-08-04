@@ -2,6 +2,8 @@ import io;
 import os;
 import json;
 import tarfile;
+import time;
+import urllib.error;
 import urllib.request;
 
 impl headers(agent: str, accept_json: bool = True) -> dict[str, str] {
@@ -19,17 +21,25 @@ impl headers(agent: str, accept_json: bool = True) -> dict[str, str] {
 impl fetch(
     url: str, agent: str, accept_json: bool = False, timeout: int = 10
 ) -> bytes | None {
-    try {
-        req = urllib.request.Request(url, headers=headers(agent, accept_json));
-        resp = urllib.request.urlopen(req, timeout=timeout);
-        try {
-            return resp.read();
-        } finally {
-            resp.close();
+    for attempt in range(3) {
+        if attempt > 0 {
+            time.sleep(0.5 * attempt);
         }
-    } except Exception {
-        return None;
+        try {
+            req = urllib.request.Request(url, headers=headers(agent, accept_json));
+            resp = urllib.request.urlopen(req, timeout=timeout);
+            try {
+                return resp.read();
+            } finally {
+                resp.close();
+            }
+        } except urllib.error.HTTPError as e {
+            if e.code < 500 {
+                return None;
+            }
+        } except Exception { }
     }
+    return None;
 }
 
 impl repo_meta(repo: str, agent: str) -> RepoMeta | None {
@@ -90,33 +100,41 @@ impl download_tarball(
     on_bytes: Callable[[int], None] | None = None
 ) -> bytes | None {
     url = CODELOAD_ROOT + repo + "/tar.gz/" + ref;
-    try {
-        req = urllib.request.Request(url, headers={"User-Agent": agent});
-        resp = urllib.request.urlopen(req, timeout=60);
-        chunks: list[bytes] = [];
-        got = 0;
-        try {
-            while True {
-                chunk = resp.read(CHUNK_BYTES);
-                if not chunk {
-                    break;
-                }
-                got += len(chunk);
-                if max_bytes > 0 and got > max_bytes {
-                    return None;
-                }
-                chunks.append(chunk);
-                if on_bytes is not None {
-                    on_bytes(got);
-                }
-            }
-        } finally {
-            resp.close();
+    for attempt in range(2) {
+        if attempt > 0 {
+            time.sleep(1.0);
         }
-        return bytes().join(chunks);
-    } except Exception {
-        return None;
+        try {
+            req = urllib.request.Request(url, headers={"User-Agent": agent});
+            resp = urllib.request.urlopen(req, timeout=60);
+            chunks: list[bytes] = [];
+            got = 0;
+            try {
+                while True {
+                    chunk = resp.read(CHUNK_BYTES);
+                    if not chunk {
+                        break;
+                    }
+                    got += len(chunk);
+                    if max_bytes > 0 and got > max_bytes {
+                        return None;
+                    }
+                    chunks.append(chunk);
+                    if on_bytes is not None {
+                        on_bytes(got);
+                    }
+                }
+            } finally {
+                resp.close();
+            }
+            return bytes().join(chunks);
+        } except urllib.error.HTTPError as e {
+            if e.code < 500 {
+                return None;
+            }
+        } except Exception { }
     }
+    return None;
 }
 
 impl _wanted(
