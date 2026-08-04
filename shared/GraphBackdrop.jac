@@ -35,7 +35,8 @@ glob _NODES: list[dict] = [
 def:pub GraphBackdrop(className: str = "") -> JsxElement {
     return
         <div
-            className={"pointer-events-none absolute inset-0 overflow-hidden " + className}
+            className={"pointer-events-none absolute inset-0 overflow-hidden "
+                + className}
             aria-hidden="true"
         >
             <svg

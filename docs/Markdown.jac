@@ -156,7 +156,7 @@ def _parse_blocks(lines: list[str], anchors: list[str] | None = None) -> list[di
                 i = i + 1;
                 tbody: list[str] = [];
                 while i < n
-                and (lines[i].strip() == "" or lines[i].startswith("    ")) {
+                    and (lines[i].strip() == "" or lines[i].startswith("    ")) {
                     tbody.append(lines[i][4:] if lines[i].startswith("    ") else "");
                     i = i + 1;
                 }
@@ -200,14 +200,14 @@ def _parse_blocks(lines: list[str], anchors: list[str] | None = None) -> list[di
         if _is_list_line(ln) {
             items: list[dict] = [];
             while i < n
-            and (
-                _is_list_line(lines[i])
-                or (
-                    lines[i].strip() != ""
-                    and _leading_spaces(lines[i]) >= 2
-                    and not lines[i].strip().startswith("```")
-                )
-            ) {
+                and (
+                    _is_list_line(lines[i])
+                    or (
+                        lines[i].strip() != ""
+                        and _leading_spaces(lines[i]) >= 2
+                        and not lines[i].strip().startswith("```")
+                    )
+                ) {
                 cur = lines[i];
                 if _is_list_line(cur) {
                     indent = _leading_spaces(cur);
@@ -255,15 +255,15 @@ def _parse_blocks(lines: list[str], anchors: list[str] | None = None) -> list[di
         while i < n {
             t = lines[i].strip();
             if t == ""
-            or t.startswith("```")
-            or t.startswith("#")
-            or t.startswith(">")
-            or t.startswith("!!! ")
-            or t.startswith("??? ")
-            or t.startswith("???+ ")
-            or t.startswith('=== "')
-            or _is_list_line(lines[i])
-            or (t.startswith("|") and i + 1 < n and _is_table_sep(lines[i + 1])) {
+                or t.startswith("```")
+                or t.startswith("#")
+                or t.startswith(">")
+                or t.startswith("!!! ")
+                or t.startswith("??? ")
+                or t.startswith("???+ ")
+                or t.startswith('=== "')
+                or _is_list_line(lines[i])
+                or (t.startswith("|") and i + 1 < n and _is_table_sep(lines[i + 1])) {
                 break;
             }
             para.append(t);
@@ -581,22 +581,24 @@ def:pub MDBlocks(blocks: list[dict]) -> JsxElement {
                         <details
                             key={str(bi)}
                             open={b["open"] as bool}
-                            className={"md-details my-5 rounded-r-lg border-l-2 " + (
-                                (
-                                    (_ADMON_STYLES[b["kind"]] as list[str])[0] + " " + (
-                                        _ADMON_STYLES[b["kind"]] as list[str]
-                                    )[1]
-                                )
-                                    if b["kind"] in _ADMON_STYLES
-                                    else "border-border bg-muted/30"
-                            )}
+                            className={"md-details my-5 rounded-r-lg border-l-2 "
+                                + (
+                                    (
+                                        (_ADMON_STYLES[b["kind"]] as list[str])[0]
+                                        + " "
+                                        + (_ADMON_STYLES[b["kind"]] as list[str])[1]
+                                    )
+                                        if b["kind"] in _ADMON_STYLES
+                                        else "border-border bg-muted/30"
+                                )}
                         >
                             <summary
-                                className={"flex cursor-pointer select-none items-center gap-2 pt-4 pb-4 pl-5 pr-5 text-xs font-semibold uppercase tracking-widest " + (
-                                    (_ADMON_STYLES[b["kind"]] as list[str])[2]
-                                        if b["kind"] in _ADMON_STYLES
-                                        else "text-muted-foreground"
-                                )}
+                                className={"flex cursor-pointer select-none items-center gap-2 pt-4 pb-4 pl-5 pr-5 text-xs font-semibold uppercase tracking-widest "
+                                    + (
+                                        (_ADMON_STYLES[b["kind"]] as list[str])[2]
+                                            if b["kind"] in _ADMON_STYLES
+                                            else "text-muted-foreground"
+                                    )}
                             >
                                 <span
                                     className="md-chev inline-block transition-transform duration-200"
@@ -612,22 +614,24 @@ def:pub MDBlocks(blocks: list[dict]) -> JsxElement {
                     } else {
                         <div
                             key={str(bi)}
-                            className={"my-5 rounded-r-lg border-l-2 pt-4 pb-4 pl-5 pr-5 " + (
-                                (
-                                    (_ADMON_STYLES[b["kind"]] as list[str])[0] + " " + (
-                                        _ADMON_STYLES[b["kind"]] as list[str]
-                                    )[1]
-                                )
-                                    if b["kind"] in _ADMON_STYLES
-                                    else "border-border bg-muted/30"
-                            )}
+                            className={"my-5 rounded-r-lg border-l-2 pt-4 pb-4 pl-5 pr-5 "
+                                + (
+                                    (
+                                        (_ADMON_STYLES[b["kind"]] as list[str])[0]
+                                        + " "
+                                        + (_ADMON_STYLES[b["kind"]] as list[str])[1]
+                                    )
+                                        if b["kind"] in _ADMON_STYLES
+                                        else "border-border bg-muted/30"
+                                )}
                         >
                             <p
-                                className={"mb-2 text-xs font-semibold uppercase tracking-widest " + (
-                                    (_ADMON_STYLES[b["kind"]] as list[str])[2]
-                                        if b["kind"] in _ADMON_STYLES
-                                        else "text-muted-foreground"
-                                )}
+                                className={"mb-2 text-xs font-semibold uppercase tracking-widest "
+                                    + (
+                                        (_ADMON_STYLES[b["kind"]] as list[str])[2]
+                                            if b["kind"] in _ADMON_STYLES
+                                            else "text-muted-foreground"
+                                    )}
                             >
                                 {b["title"]}
                             </p>
@@ -709,8 +713,8 @@ def:pub Markdown(
     if len(blocks) > 0 and skip_title != "" {
         first = blocks[0];
         if first["k"] == "h"
-        and first["level"] == 1
-        and (first["text"] as str).strip() == skip_title.strip() {
+            and first["level"] == 1
+            and (first["text"] as str).strip() == skip_title.strip() {
             blocks = blocks[1:];
         }
     }

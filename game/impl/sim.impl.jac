@@ -292,9 +292,8 @@ impl tick_player(w: &mut Game) {
 impl tick_enemies(w: &mut Game) {
     for i in range(MAX_ENEMIES) {
         if w.enemies.alive[i] == 1 {
-            w.enemies.y[i] = w.enemies.base_y[i] + 0.4 * jsin(
-                w.time * 1.5 + w.enemies.phase[i]
-            );
+            w.enemies.y[i] = w.enemies.base_y[i]
+                + 0.4 * jsin(w.time * 1.5 + w.enemies.phase[i]);
 
             dx = w.player.x - w.enemies.x[i];
             dz = w.player.z - w.enemies.z[i];
@@ -308,12 +307,14 @@ impl tick_enemies(w: &mut Game) {
                     w.enemies.strafe_dir[i] = rand_sign(&mut w.rng);
                     w.enemies.strafe_t[i] = rand_range(&mut w.rng, 1.0, 2.6);
                 }
-                w.enemies.x[i] += -nz * w.enemies.strafe_dir[
-                    i
-                ] * ENEMY_STRAFE_SPEED * TICK_DT;
-                w.enemies.z[i] += nx * w.enemies.strafe_dir[
-                    i
-                ] * ENEMY_STRAFE_SPEED * TICK_DT;
+                w.enemies.x[i] += -nz
+                    * w.enemies.strafe_dir[i]
+                    * ENEMY_STRAFE_SPEED
+                    * TICK_DT;
+                w.enemies.z[i] += nx
+                    * w.enemies.strafe_dir[i]
+                    * ENEMY_STRAFE_SPEED
+                    * TICK_DT;
 
                 if dist > ENEMY_FAR_DIST {
                     w.enemies.x[i] += nx * ENEMY_ADVANCE_SPEED * TICK_DT;
@@ -501,7 +502,7 @@ impl process_events(w: &mut Game) {
     while ki < w.events.kill_n {
         slot = w.events.kill_slot[ki];
         if w.enemies.alive[slot] == 1
-        and w.enemies.gen[slot] == w.events.kill_gen[ki] {
+            and w.enemies.gen[slot] == w.events.kill_gen[ki] {
             w.enemies.alive[slot] = 0;
             w.enemies.gen[slot] += 1;
             w.enemies.respawn_t[slot] = rand_range(&mut w.rng, 1.2, 2.6);

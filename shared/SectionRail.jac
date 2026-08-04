@@ -80,9 +80,8 @@ def:pub SectionRail(items: list[dict]) -> JsxElement {
                 hoverRef.current = False;
                 schedule_fade();
             }}
-            className={"fixed left-5 top-1/2 z-30 hidden -translate-y-1/2 transition-opacity duration-500 xl:block " + (
-                "opacity-100" if visible else "opacity-0"
-            )}
+            className={"fixed left-5 top-1/2 z-30 hidden -translate-y-1/2 transition-opacity duration-500 xl:block "
+                + ("opacity-100" if visible else "opacity-0")}
         >
             <div
                 className="flex flex-col gap-1 rounded-2xl border border-border/60 bg-card/80 p-1.5 shadow-lg backdrop-blur"
@@ -91,11 +90,12 @@ def:pub SectionRail(items: list[dict]) -> JsxElement {
                     <button
                         key={it["id"] as str}
                         onClick={lambda (_e: MouseEvent) { go(it["id"] as str); }}
-                        className={"cursor-pointer rounded-xl pl-3 pr-3 pt-1.5 pb-1.5 text-left font-mono text-[11px] transition-colors " + (
-                            "bg-primary/10"
-                                if (it["id"] as str) == active
-                                else "text-muted-foreground hover:text-foreground"
-                        )}
+                        className={"cursor-pointer rounded-xl pl-3 pr-3 pt-1.5 pb-1.5 text-left font-mono text-[11px] transition-colors "
+                            + (
+                                "bg-primary/10"
+                                    if (it["id"] as str) == active
+                                    else "text-muted-foreground hover:text-foreground"
+                            )}
                     >
                         {if (it["id"] as str) == active {
                             <span className="text-gradient font-semibold">

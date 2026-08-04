@@ -1,8 +1,6 @@
 test "parse_repo_url_accepts_every_shape" {
-    assert parse_repo_url("https://github.com/jaseci-labs/jac") == (
-        "jaseci-labs",
-        "jac"
-    );
+    assert parse_repo_url("https://github.com/jaseci-labs/jac")
+        == ("jaseci-labs", "jac");
     assert parse_repo_url("github.com/jaseci-labs/jac.git") == ("jaseci-labs", "jac");
     assert parse_repo_url("jaseci-labs/jac") == ("jaseci-labs", "jac");
     assert parse_repo_url("  github.com/jaseci-labs/jac/  ") == ("jaseci-labs", "jac");

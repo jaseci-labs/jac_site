@@ -22,19 +22,24 @@ def:pub CodeLines(
             {for (li, ltoks) in enumerate(line_toks) {
                 <div
                     key={str(li)}
-                    className={"flex min-h-[1.45em]" + (
-                        " bg-orange-400/[0.08]"
-                            if (start + li >= hl_from and start + li <= hl_to)
-                            else ""
-                    )}
+                    className={"flex min-h-[1.45em]"
+                        + (
+                            " bg-orange-400/[0.08]"
+                                if (start + li >= hl_from and start + li <= hl_to)
+                                else ""
+                        )}
                 >
                     {if numbers {
                         <span
-                            className={"sticky left-0 w-10 shrink-0 select-none border-r border-white/5 bg-[#060607] pr-3 text-right " + (
-                                "text-orange-300/70"
-                                    if (start + li >= hl_from and start + li <= hl_to)
-                                    else "text-white/25"
-                            )}
+                            className={"sticky left-0 w-10 shrink-0 select-none border-r border-white/5 bg-[#060607] pr-3 text-right "
+                                + (
+                                    "text-orange-300/70"
+                                        if (
+                                            start + li >= hl_from
+                                            and start + li <= hl_to
+                                        )
+                                        else "text-white/25"
+                                )}
                         >
                             {str(start + li)}
                         </span>

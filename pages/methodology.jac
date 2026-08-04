@@ -187,9 +187,8 @@ def:pub page -> JsxPage {
                                 </span>
                             }}
                             <span
-                                className={"rounded-full pl-2.5 pr-2.5 pt-0.5 pb-0.5 text-xs font-semibold " + belt_class(
-                                    step[0]
-                                )}
+                                className={"rounded-full pl-2.5 pr-2.5 pt-0.5 pb-0.5 text-xs font-semibold "
+                                    + belt_class(step[0])}
                             >
                                 {belt_label(step[0])}
                             </span>

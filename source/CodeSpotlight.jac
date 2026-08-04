@@ -46,9 +46,8 @@ def:pub CodeSpotlight(
         }
         sp = span as SourceSpan;
         rows = sp.hl_to - sp.hl_from + 1;
-        target = (hl.offsetTop as float) - (
-            (el.clientHeight as float) - (hl.offsetHeight as float) * rows
-        ) * 0.35;
+        target = (hl.offsetTop as float)
+            - ((el.clientHeight as float) - (hl.offsetHeight as float) * rows) * 0.35;
         if target < 0.0 {
             target = 0.0;
         }
@@ -107,7 +106,8 @@ def:pub CodeSpotlight(
 
     return
         <div
-            className={"code-window flex flex-col overflow-hidden rounded-xl text-left " + className}
+            className={"code-window flex flex-col overflow-hidden rounded-xl text-left "
+                + className}
         >
             <div
                 className="code-titlebar flex items-center gap-2 pl-4 pr-4 pt-2.5 pb-2.5"
@@ -151,9 +151,8 @@ def:pub CodeSpotlight(
             </div>
             <div
                 ref={scrollRef}
-                className={"code-scroll overflow-auto pt-2 pb-3 " + (
-                    "h-[220px]" if compact else "h-[360px]"
-                )}
+                className={"code-scroll overflow-auto pt-2 pb-3 "
+                    + ("h-[220px]" if compact else "h-[360px]")}
             >
                 {if failed {
                     <p className="pl-4 pt-3 pb-3 font-mono text-xs text-red-400">
