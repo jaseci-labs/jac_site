@@ -1,37 +1,8 @@
-import json;
 import os;
 import re;
-import time;
 import from http { HTTPMethod }
-# Explicit import keeps this deployable on the pinned jac runtime; on jac
-# releases after 0.35 the ambient AccessLevel makes this import unnecessary.
+
 import from jaclang.jac0core.archetype { AccessLevel }
-import from shared.github {
-    download_tarball,
-    head_sha as gh_head_sha,
-    mb_of,
-    text_of,
-    untar
-}
-import from shared.progress { JobProgress }
-import from shared.timefmt { now_iso }
-
-obj VersionSpec {
-    has label: str = "",
-        git_ref: str = "";
-}
-
-obj DocBundle {
-    has pages: dict[str, str] = {},
-        nav_text: str = "",
-        nav_json: str = "",
-        assets: dict[str, bytes] = {};
-}
-
-obj NavEntry {
-    has title: str = "",
-        order: int = 9000;
-}
 
 obj TocEntry {
     has level: int = 2,
@@ -67,11 +38,8 @@ obj VersionInfo {
 
 obj DocsStatus {
     has ready: bool = False,
-        stale: bool = True,
-        building: bool = False,
         built_at: str = "",
-        versions: list[VersionInfo] = [],
-        progress: JobProgress = JobProgress();
+        versions: list[VersionInfo] = [];
 }
 
 obj DocTree {
@@ -91,30 +59,9 @@ obj DocPageView {
         next_page: PageRef | None = None;
 }
 
-obj ShaCache {
-    has sha: str = "",
-        at: float = 0.0;
-}
-
-glob USER_AGENT: str = "jaclang.org docs sync",
-     GH_REPO: str = os.environ.get("JAC_DOCS_GH_REPO", "jaseci-labs/jac"),
-     CORPUS_DIR: str = "jac/jaclang/cli/docs",
-     LEGACY_DIR: str = "docs/docs",
-     SITE_ORIGIN: str = os.environ.get("JAC_SITE_ORIGIN", "https://www.jaclang.org"),
-     DOCS_LOCAL: str = os.environ.get(
-         "JAC_DOCS_LOCAL",
-         os.path.join("..", "..")
-             if os.path.isdir(os.path.join("..", "..", "jac", "jaclang", "cli", "docs"))
-             or os.path.isdir(os.path.join("..", "..", "docs", "docs"))
-             else ""
+glob SITE_ORIGIN: str = os.environ.get(
+         "JAC_SITE_ORIGIN", "https://www.jaclang.org"
      ),
-     SHA_TTL_S: float = 600.0,
-     DOC_VERSIONS: list[VersionSpec] = [
-         VersionSpec(label="latest", git_ref="main"),
-         VersionSpec(label="v0.33", git_ref="v0.33.0"),
-         VersionSpec(label="v0.32", git_ref="v0.32.1"),
-         VersionSpec(label="v0.31", git_ref="v0.31.3")
-     ],
      DIR_TITLES: dict[str, str] = {
          "js": "JS",
          "cli": "CLI",
@@ -123,18 +70,15 @@ glob USER_AGENT: str = "jaclang.org docs sync",
          "quick-guide": "Quick Guide"
      };
 
-# The docs graph is a public machine-generated cache on root.shared: any
-# request context (including an anonymous visitor triggering a stale refresh)
-# must be able to rebuild it, so its archetypes open WRITE to all users.
 node PublicNode {
     def __jac_access__ -> AccessLevel {
-        return AccessLevel.WRITE;
+        return AccessLevel.READ;
     }
 }
 
 edge PublicEdge {
     def __jac_access__ -> AccessLevel {
-        return AccessLevel.WRITE;
+        return AccessLevel.READ;
     }
 }
 
@@ -219,32 +163,7 @@ def rewrite_href(href: str, version: str, cur_dir: str) -> str;
 
 def _get_hub -> DocsHub | None;
 
-obj DocSync {
-    has job: JobProgress = JobProgress(),
-        ingesting: bool = False,
-        head_cache: dict[str, ShaCache] = {};
-
-    def cached_head_sha(ref: str) -> str;
-    def fetch_bundle(ref: str, label: str) -> DocBundle;
-    def local_bundle(src_root: str, label: str) -> DocBundle;
-    def parse_nav(text: str) -> dict[str, NavEntry];
-    def parse_nav_manifest(text: str) -> dict[str, NavEntry];
-    def clean_md(text: str) -> str;
-    def first_h1(text: str) -> str;
-    def rewrite_links(text: str, version: str, rel: str) -> str;
-    def write_assets(assets: dict[str, bytes]);
-    def build_version(hub: DocsHub, label: str, ref: str) -> DocBundle;
-    def effective_specs -> list[VersionSpec];
-    def specs_drifted -> bool;
-    def ingest_all;
-    def latest_stale -> bool;
-    def refresh_latest(hub: DocsHub);
-    def version_list -> list[VersionInfo];
-    def status(stale_check: bool) -> DocsStatus;
-    def ensure(force: bool = False) -> DocsStatus;
-}
-
-glob SYNC: DocSync = DocSync();
+def _version_list -> list[VersionInfo];
 
 walker place_page {
     has segs: list[str] = [],
@@ -276,16 +195,14 @@ walker collect_tree {
 }
 
 def:pub docs_status -> DocsStatus {
-    return SYNC.status(True);
-}
-
-def:pub ensure_docs -> DocsStatus {
-    return SYNC.ensure(False);
+    hub = _get_hub();
+    if hub is None {
+        return DocsStatus();
+    }
+    return DocsStatus(ready=True, built_at=hub.built_at, versions=_version_list());
 }
 
 def:pub doc_tree(version: str = "latest") -> DocTree | None;
-
-def _manifest_pages(items: list) -> list[dict];
 
 def _flatten_tree_pages(nodes: list[TreeNode]) -> list[TreeNode];
 

@@ -54,7 +54,8 @@ def:pub SourceBrowser(
 
     return
         <div
-            className={"code-window flex h-full flex-col overflow-hidden rounded-xl text-left " + className}
+            className={"code-window flex h-full flex-col overflow-hidden rounded-xl text-left "
+                + className}
         >
             <div
                 className="code-titlebar flex shrink-0 items-center gap-2 pl-4 pr-4 pt-2.5 pb-2.5"
@@ -96,17 +97,19 @@ def:pub SourceBrowser(
                                     style={{
                                         "paddingLeft": str(
                                             10 + (row["depth"] as int) * 12
-                                        ) + "px"
+                                        )
+                                            + "px"
                                     }}
                                 >
                                     <HugeiconsIcon
                                         icon={ArrowRight01Icon}
                                         strokeWidth={2}
-                                        className={"size-3 shrink-0 text-white/35 transition-transform" + (
-                                            ""
-                                                if row["path"] in closed
-                                                else " rotate-90"
-                                        )}
+                                        className={"size-3 shrink-0 text-white/35 transition-transform"
+                                            + (
+                                                ""
+                                                    if row["path"] in closed
+                                                    else " rotate-90"
+                                            )}
                                     />
                                     <HugeiconsIcon
                                         icon={Folder01Icon}
@@ -119,22 +122,25 @@ def:pub SourceBrowser(
                                 <button
                                     key={str(ri)}
                                     onClick={lambda { open_path(row["path"] as str); }}
-                                    className={"flex w-full cursor-pointer items-center gap-1.5 pt-1 pb-1 pr-2 font-mono text-[11px] transition-colors hover:bg-white/5 " + (
-                                        "bg-white/10 text-orange-300"
-                                            if (view and view.path == row["path"])
-                                            else "text-white/45 hover:text-white/85"
-                                    )}
+                                    className={"flex w-full cursor-pointer items-center gap-1.5 pt-1 pb-1 pr-2 font-mono text-[11px] transition-colors hover:bg-white/5 "
+                                        + (
+                                            "bg-white/10 text-orange-300"
+                                                if (view and view.path == row["path"])
+                                                else "text-white/45 hover:text-white/85"
+                                        )}
                                     style={{
                                         "paddingLeft": str(
                                             24 + (row["depth"] as int) * 12
-                                        ) + "px"
+                                        )
+                                            + "px"
                                     }}
                                 >
                                     <span
-                                        className={"size-1.5 shrink-0 rounded-[2px] " + (
-                                            (_DOT_COLORS[row["lang"]] as str)
-                                            or "bg-zinc-500"
-                                        )}
+                                        className={"size-1.5 shrink-0 rounded-[2px] "
+                                            + (
+                                                (_DOT_COLORS[row["lang"]] as str)
+                                                or "bg-zinc-500"
+                                            )}
                                     ></span>
                                     <span className="truncate">{row["name"]}</span>
                                 </button>
@@ -163,7 +169,8 @@ def:pub SourceBrowser(
                             >
                                 {str(view.lines)}{" lines · "}{f"{(
                                     view.size_bytes as float
-                                ) / 1024:.1f}"}{" kB"}
+                                )
+                                    / 1024:.1f}"}{" kB"}
                             </span>
                         } else {
                             <span className="font-mono text-[11px] text-white/35">
@@ -172,9 +179,8 @@ def:pub SourceBrowser(
                         } }
                     </div>
                     <div
-                        className={"min-h-0 flex-1 overflow-auto transition-opacity" + (
-                            " opacity-40" if busy else ""
-                        )}
+                        className={"min-h-0 flex-1 overflow-auto transition-opacity"
+                            + (" opacity-40" if busy else "")}
                     >
                         {if view {
                             <div key={view.path} className="anim-fade-in pt-2 pb-4">

@@ -20,6 +20,14 @@ jac start          # serves on http://localhost:8000
 jac start --dev    # hot-reload dev loop
 ```
 
+Docs content syncs in the background: a scheduled in-server job
+(`docs/sync.jac`) ingests the documentation graph shortly after first boot
+and keeps `latest` fresh by watching main's head sha. Requests never trigger
+a sync — they only read whatever the job last committed, and the graph
+persists across restarts. Set `JAC_DOCS_LOCAL=<monorepo-root>` to feed the
+job from a local docs tree instead of GitHub (no network), and `GITHUB_TOKEN`
+in deploys to lift the anonymous API rate limit.
+
 ## Checks
 
 The same two gates CI runs (`.github/workflows/jac-check.yml`):
@@ -27,7 +35,7 @@ The same two gates CI runs (`.github/workflows/jac-check.yml`):
 ```bash
 git ls-files -z '*.jac' | xargs -0 jac fmt --check --lintfix   # format + deslop autolint
 jac check . --nowarn                                           # type check
-JAC_TEST_JOBS=0 jac test docs/graph.jac leaderboard/board.jac shared/jac_tokenizer.jac
+JAC_TEST_JOBS=0 jac test docs/graph.jac docs/sync.jac leaderboard/board.jac shared/jac_tokenizer.jac shared/progress.jac
 ```
 
 `jac precommit --install` wires the first two as a git hook.
@@ -46,7 +54,7 @@ machine runs them, which is the tier boundary this language exists to erase.
 | `pages/` | File-based routes — thin re-exports into features |
 | `landing/` | The marketing page: Hero, Showcase, Capabilities and friends |
 | `landing/diagrams/` | The four animated SVG arguments |
-| `docs/` | The docs reader: graph schema, ingest, read walkers, shell, sections, renderer |
+| `docs/` | The docs reader: `graph.jac` is the read model (schema + walkers), `sync.jac` the scheduled writer that ingests it; shell, sections, renderer |
 | `leaderboard/` | Submit, score, board: rubric, graph, shell, card |
 | `game/` | The rlgl shooter (`arena.jac`, owned/borrowed, zero-GC) and its WebGL host |
 | `source/` | The live source browser and its floating window |
@@ -119,7 +127,7 @@ feature owns its view models:
 - `leaderboard/board.jac` — `BoardView`, `BoardEntry`, `ScoreBreakdown`,
   `RepoFeatures`, `SubmitResult`, `BoardStatus`
 - `shared/progress.jac` — `JobProgress` / `JobStep`, the live-narration
-  protocol both long-running jobs report through
+  protocol the leaderboard's scoring job reports through
 - `shared/github.jac` — `RepoMeta` plus the shared tarball/API plumbing
 - `source/files.jac` — `SourceFile`, `SourceView`
 
@@ -130,9 +138,10 @@ in `DocPageView.toc`; the client renders them and never re-derives a slug.
 
 `jac test` covers the pure logic on both sides of the wire: the URL parser,
 repo analyzer and scoring rubric (`leaderboard/board.test.jac`), the docs
-slugifier, route rewriter, TOC builder and nav parser plus the progress
-protocol (`docs/graph.test.jac`), and the Jac syntax highlighter
-(`shared/jac_tokenizer.test.jac`) — 32 tests.
+slugifier, route rewriter, TOC builder and swap-commit protocol
+(`docs/graph.test.jac`), the nav parsers and drift check
+(`docs/sync.test.jac`), the progress protocol (`shared/progress.test.jac`),
+and the Jac syntax highlighter (`shared/jac_tokenizer.test.jac`) — 46 tests.
 
 ## The centerpiece diagrams
 

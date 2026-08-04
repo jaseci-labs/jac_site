@@ -48,9 +48,8 @@ def:pub PartRow(p: ScorePart) -> JsxElement {
                             "bg-primary" if earned else "bg-transparent"
                         )}
                         style={{
-                            "width": str(
-                                Math.round(p.pts * 100 / Math.max(p.max, 1))
-                            ) + "%"
+                            "width": str(Math.round(p.pts * 100 / Math.max(p.max, 1)))
+                                + "%"
                         }}
                     ></div>
                 </div>

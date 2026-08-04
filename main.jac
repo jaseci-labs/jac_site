@@ -7,7 +7,8 @@ import from source.files {
     SourceView,
     SourceSpan
 }
-import from docs.graph { ensure_docs, docs_status, doc_tree, doc_page, llms_txt }
+import from docs.graph { docs_status, doc_tree, doc_page, llms_txt }
+import from docs.sync { docs_sync_tick }
 import from shared.install { ensure_install, install_sh }
 import from leaderboard.board { submit_repo, leaderboard, board_status }
 

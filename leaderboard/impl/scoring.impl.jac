@@ -15,17 +15,17 @@ impl analyze(files: dict[str, str]) -> RepoAnalysis {
                 an.features.ai = True;
             }
             if low.endswith(".cl.jac")
-            or re.search(r"(?m)^\s*cl\s*\{|^\s*cl\s+import\b", text) {
+                or re.search(r"(?m)^\s*cl\s*\{|^\s*cl\s+import\b", text) {
                 an.features.cl = True;
             }
             if low.endswith(".sv.jac")
-            or re.search(
-                r"(?m)^\s*sv\s*\{|^\s*sv\s+import\b|walker:pub|def:pub", text
-            ) {
+                or re.search(
+                    r"(?m)^\s*sv\s*\{|^\s*sv\s+import\b|walker:pub|def:pub", text
+                ) {
                 an.features.sv = True;
             }
             if low.endswith(".na.jac")
-            or re.search(r"(?m)^\s*na\s*\{|^\s*na\s+import\b", text) {
+                or re.search(r"(?m)^\s*na\s*\{|^\s*na\s+import\b", text) {
                 an.features.na = True;
             }
             if re.search(r"(?m)^\s*test\s+\w|^\s*test\s*[\{\"]", text) {
@@ -91,7 +91,10 @@ impl score(meta: RepoMeta, an: RepoAnalysis) -> ScoreBreakdown {
         "Jac volume",
         min(18.0, (math.log10(an.jac_lines + 1) / math.log10(50000.0)) * 18.0),
         18.0,
-        str(an.jac_lines) + " lines across " + str(an.jac_files) + " files (log scale, full at 50k)"
+        str(an.jac_lines)
+            + " lines across "
+            + str(an.jac_files)
+            + " files (log scale, full at 50k)"
     );
     pct = an.jac_pct();
     substance += part(
@@ -99,7 +102,8 @@ impl score(meta: RepoMeta, an: RepoAnalysis) -> ScoreBreakdown {
         "Jac share of the code",
         (pct / 100.0) * 12.0,
         12.0,
-        str(pct) + "% of the repo's programming-language bytes are Jac (markup, styles, shell, and config excluded)"
+        str(pct)
+            + "% of the repo's programming-language bytes are Jac (markup, styles, shell, and config excluded)"
     );
 
     breadth = part(
@@ -144,9 +148,9 @@ impl score(meta: RepoMeta, an: RepoAnalysis) -> ScoreBreakdown {
         3.0,
         "test blocks in the source"
     );
-    spaces = (1 if an.features.cl else 0) + (1 if an.features.sv else 0) + (
-        1 if an.features.na else 0
-    );
+    spaces = (1 if an.features.cl else 0)
+        + (1 if an.features.sv else 0)
+        + (1 if an.features.na else 0);
     breadth += part(
         "breadth",
         "Multi-codespace bonus",

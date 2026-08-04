@@ -79,7 +79,7 @@ def:pub FloatingSource(
             if nav_pos == "fixed" or nav_pos == "sticky" {
                 nav_rect: any = nav.getBoundingClientRect();
                 if (nav_rect.top as float) <= gap
-                and (nav_rect.bottom as float) > 0.0 {
+                    and (nav_rect.bottom as float) > 0.0 {
                     top_guard = (nav_rect.bottom as float) + gap;
                 }
             }
@@ -120,9 +120,11 @@ def:pub FloatingSource(
         active = floating or always_float or pulled;
         if winRef.current {
             if active {
-                winRef.current.style.transform = "translate(" + str(offX.current) + "px, " + str(
-                    offY.current
-                ) + "px)";
+                winRef.current.style.transform = "translate("
+                    + str(offX.current)
+                    + "px, "
+                    + str(offY.current)
+                    + "px)";
                 apply_offset(
                     (offX.current or 0) as float, (offY.current or 0) as float
                 );
@@ -177,9 +179,9 @@ def:pub FloatingSource(
             bar: any = el.querySelector(".code-titlebar");
             bar_h = (bar.offsetHeight as float) if bar else 40.0;
             apply_offset(
-                (detached["x"] as float) - ((rect.left as float) - cur_x) - (
-                    rect.width as float
-                ) / 2.0,
+                (detached["x"] as float)
+                    - ((rect.left as float) - cur_x)
+                    - (rect.width as float) / 2.0,
                 (detached["y"] as float) - ((rect.top as float) - cur_y) - bar_h / 2.0,
                 True
             );
@@ -267,13 +269,15 @@ def:pub FloatingSource(
                 className={cn(
                     "relative h-[540px] w-full [&_.code-titlebar]:cursor-move",
                     is_float
-                    and cn(
-                        "float-in fixed z-40 h-auto w-auto shadow-2xl [&_.code-titlebar]:cursor-move",
-                        "bottom-6 right-6 max-h-[calc(100vh-6rem)] max-w-[calc(100vw-3rem)]",
-                        "transition-opacity duration-500",
-                        yielded and "pointer-events-none opacity-0" or "opacity-100",
-                    )
-                    or ""
+                        and cn(
+                            "float-in fixed z-40 h-auto w-auto shadow-2xl [&_.code-titlebar]:cursor-move",
+                            "bottom-6 right-6 max-h-[calc(100vh-6rem)] max-w-[calc(100vw-3rem)]",
+                            "transition-opacity duration-500",
+                            yielded
+                                and "pointer-events-none opacity-0"
+                                or "opacity-100",
+                        )
+                        or ""
                 )}
             >
                 <div
@@ -281,10 +285,12 @@ def:pub FloatingSource(
                         "h-full",
                         size_anim and "transition-[width,height] duration-300" or "",
                         is_float
-                        and (
-                            expanded and "h-[620px] w-[860px]" or "h-[340px] w-[470px]"
-                        )
-                        or "w-full"
+                            and (
+                                expanded
+                                and "h-[620px] w-[860px]"
+                                or "h-[340px] w-[470px]"
+                            )
+                            or "w-full"
                     )}
                 >
                     <SourceBrowser className="h-full" initial_path={initial_path}/>

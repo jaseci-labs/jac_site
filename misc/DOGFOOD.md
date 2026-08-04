@@ -531,3 +531,31 @@ suites.
     was legacy install naming the handler keeps a fallback for. Renamed to
     match the registry -- imports never carried the suffix, so nothing else
     moved.
+
+## N. The docs-sync clean break (2026-08-03)
+
+65. **A `@schedule` job's post-creation field writes never reach the local
+    store.** The docs re-arch moved ingestion into a scheduled in-server
+    function; everything it *created* persisted, but every field assigned
+    after creation (`hub.built_at = now_iso()` as a commit stamp) stayed at
+    its construction value in `anchor_store.db` while the live L1 anchor
+    carried the new one. The mismatch also made every later request's
+    commit sweep re-flag those anchors dirty and retry the write-back --
+    denied under the archetypes' READ hook, so each response carried a
+    stack of `field_write` permission warnings, and a restarted server saw
+    only the un-stamped rows. Worked around by never mutating after
+    construction: each `DocVersion` subtree is built *detached* with every
+    field final, and the only visibility flip is attaching the finished
+    hub to `root.shared` -- reachability is the commit, a crashed build is
+    unreachable and never persists, and restarts load the graph clean.
+    **open** as a runtime issue: late field writes from a scheduler-context
+    function should persist like everything else it creates.
+
+66. **`create_internal_user('__system__')` fails silently on the local
+    path.** `_setup_scheduler` swallows the exception, `main.db` ends up
+    with only `__guest__`, and scheduled tasks resolve to the all-zeros
+    super root (`get_root_id('__system__')` hardcodes `SUPER_ROOT_UUID`).
+    Fine for the docs job -- super root owns the cache and the READ hook
+    serves readers -- but anyone expecting a real `__system__` identity
+    (role checks, audit trails) is running as something else without a
+    single log line saying so. **open**.

@@ -130,10 +130,10 @@ def:pub scan_line(line: str, mode: str = "") -> LineScan {
         s = "";
         while i < n {
             if line[i] == q
-            and i + 2 < n + 1
-            and i + 2 <= n - 1
-            and line[i + 1] == q
-            and line[i + 2] == q {
+                and i + 2 < n + 1
+                and i + 2 <= n - 1
+                and line[i + 1] == q
+                and line[i + 2] == q {
                 s = s + q + q + q;
                 i = i + 3;
                 mode = "";
@@ -205,9 +205,9 @@ def:pub scan_line(line: str, mode: str = "") -> LineScan {
                 closed = False;
                 while j < n {
                     if line[j] == c
-                    and j + 2 <= n - 1
-                    and line[j + 1] == c
-                    and line[j + 2] == c {
+                        and j + 2 <= n - 1
+                        and line[j + 1] == c
+                        and line[j + 2] == c {
                         s = s + c + c + c;
                         j = j + 3;
                         closed = True;
@@ -254,13 +254,13 @@ def:pub scan_line(line: str, mode: str = "") -> LineScan {
             num = "";
             j = i;
             while j < n
-            and (
-                _is_digit(line[j])
-                or line[j] == "."
-                or line[j] == "x"
-                or ("a" <= line[j] and line[j] <= "f")
-                or ("A" <= line[j] and line[j] <= "F")
-            ) {
+                and (
+                    _is_digit(line[j])
+                    or line[j] == "."
+                    or line[j] == "x"
+                    or ("a" <= line[j] and line[j] <= "f")
+                    or ("A" <= line[j] and line[j] <= "F")
+                ) {
                 num = num + line[j];
                 j = j + 1;
             }
@@ -283,14 +283,14 @@ def:pub scan_line(line: str, mode: str = "") -> LineScan {
             op = "";
             j = i;
             while j < n
-            and (
-                line[j] == "+"
-                or line[j] == "-"
-                or line[j] == "<"
-                or line[j] == ">"
-                or line[j] == "&"
-                or line[j] == "="
-            ) {
+                and (
+                    line[j] == "+"
+                    or line[j] == "-"
+                    or line[j] == "<"
+                    or line[j] == ">"
+                    or line[j] == "&"
+                    or line[j] == "="
+                ) {
                 op = op + line[j];
                 j = j + 1;
             }

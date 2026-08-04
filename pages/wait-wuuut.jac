@@ -554,9 +554,8 @@ def FeatureSection(idx: int, data: dict, on_pop: any) -> JsxElement {
         <section className="border-t border-border/40 pt-14 pb-14">
             <Reveal>
                 <div
-                    className={"mx-auto flex max-w-7xl flex-col gap-8 pl-4 pr-4 sm:pl-6 sm:pr-6 lg:items-center lg:gap-14 lg:pl-8 lg:pr-8 " + (
-                        "lg:flex-row-reverse" if flipped else "lg:flex-row"
-                    )}
+                    className={"mx-auto flex max-w-7xl flex-col gap-8 pl-4 pr-4 sm:pl-6 sm:pr-6 lg:items-center lg:gap-14 lg:pl-8 lg:pr-8 "
+                        + ("lg:flex-row-reverse" if flipped else "lg:flex-row")}
                 >
                     <div className="shrink-0 lg:w-[38%]">
                         <Badge variant="outline" className="mb-4 font-mono">

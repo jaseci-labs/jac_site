@@ -6,19 +6,15 @@ import from .graph {
     VersionInfo,
     doc_page,
     doc_tree,
-    docs_status,
-    ensure_docs
+    docs_status
 }
-import from ..shared.progress { JobProgress }
 import from "@jac/runtime" { Navigate, useLocation, useNavigate }
+import from ..shared.GraphBackdrop { GraphBackdrop }
 import from .DocsArticle { DocsArticle, DocsArticleSkeleton }
 import from .DocsSidebar { DocsSidebar }
-import from .DocsSyncScreen { DocsSyncScreen }
 import from .DocsTocRail { DocsTocRail }
-import from .DocsGraphFloat { DocsGraphFloat }
 
-glob POLL_MS: int = 500,
-     POLL_TRIES: int = 600;
+glob NOT_READY_POLL_MS: int = 4000;
 
 def:pub DocsShell -> JsxElement {
     has versions: list[VersionInfo] = [],
@@ -26,9 +22,7 @@ def:pub DocsShell -> JsxElement {
         tree_version: str = "",
         page: DocPageView | None = None,
         loading: bool = True,
-        syncing: bool = False,
-        sync_error: bool = False,
-        progress: JobProgress | None = None,
+        waiting: bool = False,
         q: str = "",
         closed: list[str] = [];
 
@@ -43,14 +37,6 @@ def:pub DocsShell -> JsxElement {
     cur_path: str = "/".join(parts[2:]) if len(parts) > 2 else "";
 
     async def load(want_version: str, want_path: str) -> None;
-
-    async def kick_ingest -> None;
-
-    def retry_sync(_e: MouseEvent) {
-        sync_error = False;
-        progress = None;
-        load(version, cur_path);
-    }
 
     def toggle_dir(d: str) {
         if d in closed {
@@ -83,13 +69,41 @@ def:pub DocsShell -> JsxElement {
     if len(parts) <= 1 {
         return <Navigate to="/docs/latest" replace={True}/>;
     }
-    if syncing {
+    if waiting {
         return
-            <DocsSyncScreen
-                progress={progress}
-                error={sync_error}
-                onRetry={retry_sync}
-            />;
+            <div
+                className="relative flex min-h-[80vh] items-center justify-center overflow-hidden"
+            >
+                <div className="hero-glow absolute inset-0"></div>
+                <GraphBackdrop/>
+                <div
+                    className="relative flex w-full max-w-md flex-col items-center gap-6 pl-6 pr-6 text-center"
+                >
+                    <div className="relative flex size-24 items-center justify-center">
+                        <span
+                            className="pulse-ring absolute inset-0 rounded-full bg-primary/10"
+                        ></span>
+                        <img
+                            src="/static/assets/jac-logo.png"
+                            alt=""
+                            className="size-14"
+                        />
+                    </div>
+                    <div>
+                        <p
+                            className="text-balance text-xl font-semibold tracking-tight sm:text-2xl"
+                        >
+                            The docs graph is still growing.
+                        </p>
+                        <p className="mt-2 text-balance text-sm text-muted-foreground">
+                            The server syncs the docs in the background — this page takes over the moment it lands.
+                        </p>
+                    </div>
+                    <p className="font-mono text-[11px] text-muted-foreground/70">
+                        {"root.shared ++> DocsHub ++> DocVersion × 4"}
+                    </p>
+                </div>
+            </div>;
     }
     return
         <div
@@ -108,6 +122,7 @@ def:pub DocsShell -> JsxElement {
                     onVersionChange={handle_version}
                     onFilter={handle_filter}
                     onToggle={toggle_dir}
+                    onGo={handle_go}
                 />
                 <article className="min-w-0">
                     {if page {
@@ -118,11 +133,5 @@ def:pub DocsShell -> JsxElement {
                 </article>
                 <DocsTocRail toc={page.toc if page else []}/>
             </div>
-            <DocsGraphFloat
-                tree={tree}
-                version={version}
-                cur_path={cur_path}
-                on_go={handle_go}
-            />
         </div>;
 }

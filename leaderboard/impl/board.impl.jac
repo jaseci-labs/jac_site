@@ -109,7 +109,11 @@ impl Scorer.score_repo(hub: BoardHub, owner: str, name: str) -> SubmitResult {
     sc = as_breakdown(p.breakdown);
     full = meta.full_name or (owner + "/" + name);
     self.job.note(
-        "service pid " + str(p.service_pid) + " scored " + full + " — writing it to the board"
+        "service pid "
+            + str(p.service_pid)
+            + " scored "
+            + full
+            + " — writing it to the board"
     );
     entry = _find_entry(full);
     if entry is None {
@@ -139,9 +143,14 @@ impl Scorer.score_repo(hub: BoardHub, owner: str, name: str) -> SubmitResult {
     entry.scored_by_pid = p.service_pid;
     entry.scored_at = now_iso();
     self.job.note(
-        full + " scored " + str(entry.score) + " — " + entry.belt + " belt (service pid " + str(
-            p.service_pid
-        ) + ")"
+        full
+            + " scored "
+            + str(entry.score)
+            + " — "
+            + entry.belt
+            + " belt (service pid "
+            + str(p.service_pid)
+            + ")"
     );
     return SubmitResult(ok=True, entry=entry.view());
 }
