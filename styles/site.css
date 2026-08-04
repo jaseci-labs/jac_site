@@ -27,6 +27,8 @@ section[id] { scroll-margin-top: 4.5rem; }
     border: 3px solid transparent;
     background-clip: padding-box;
 }
+.no-scrollbar { scrollbar-width: none; -ms-overflow-style: none; }
+.no-scrollbar::-webkit-scrollbar { display: none; }
 
 /* inside code windows: slimmer, always dark */
 .code-window * {

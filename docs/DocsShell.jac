@@ -13,7 +13,6 @@ import from ..shared.GraphBackdrop { GraphBackdrop }
 import from .DocsArticle { DocsArticle, DocsArticleSkeleton }
 import from .DocsSidebar { DocsSidebar }
 import from .DocsTocRail { DocsTocRail }
-import from .DocsGraphFloat { DocsGraphFloat }
 
 glob NOT_READY_POLL_MS: int = 4000;
 
@@ -123,6 +122,7 @@ def:pub DocsShell -> JsxElement {
                     onVersionChange={handle_version}
                     onFilter={handle_filter}
                     onToggle={toggle_dir}
+                    onGo={handle_go}
                 />
                 <article className="min-w-0">
                     {if page {
@@ -133,11 +133,5 @@ def:pub DocsShell -> JsxElement {
                 </article>
                 <DocsTocRail toc={page.toc if page else []}/>
             </div>
-            <DocsGraphFloat
-                tree={tree}
-                version={version}
-                cur_path={cur_path}
-                on_go={handle_go}
-            />
         </div>;
 }
