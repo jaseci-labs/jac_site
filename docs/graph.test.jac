@@ -106,28 +106,39 @@ test "collect tree folds orders and derives paths by walking" {
     assert _route_up(tw.seq[3]) == "guide/deep/z";
 }
 
-test "version list dedupes to newest per label and picks newest hub" {
+test "version list orders releases desc then dev and dedupes per label" {
     h1 = (root +>:HasHub():+> DocsHub(built_at="2026-01-01T00:00:00Z")) as DocsHub;
     h2 = (root +>:HasHub():+> DocsHub(built_at="2026-01-02T00:00:00Z")) as DocsHub;
     h1 +>:HasVersion():+> DocVersion(
-        label="latest", git_ref="main", fetched_at="2026-01-01T00:00:00Z", pages=10
+        label="dev", git_ref="main", fetched_at="2026-01-01T00:00:00Z", pages=10
     );
     h1 +>:HasVersion():+> DocVersion(
         label="v0.33", git_ref="v0.33.0", fetched_at="2026-01-01T00:00:00Z", pages=20
     );
     h2 +>:HasVersion():+> DocVersion(
-        label="latest", git_ref="main", fetched_at="2026-01-02T00:00:00Z", pages=11
+        label="dev", git_ref="main", fetched_at="2026-01-02T00:00:00Z", pages=11
     );
     got = _version_list();
-    assert [v.label for v in got] == ["latest", "v0.33"];
-    assert got[0].pages == 11;
+    assert [v.label for v in got] == ["v0.33", "dev"];
+    assert got[1].pages == 11;
     assert (_get_hub() as DocsHub).built_at == "2026-01-02T00:00:00Z";
-    assert _version("latest")[0].pages == 11;
+    assert _version("dev")[0].pages == 11;
+    assert _version("latest")[0].pages == 20;
     _sweep_stale(h2);
     assert not [root-->[?:DocsHub, built_at=="2026-01-01T00:00:00Z"]];
     assert [root-->[?:DocsHub, built_at=="2026-01-02T00:00:00Z"]];
     assert not _version("v0.33");
     assert _version("latest")[0].pages == 11;
+}
+
+test "latest alias resolves to newest release label" {
+    assert _latest_label(["dev", "v0.33", "v0.35", "v0.34"]) == "v0.35";
+    assert _latest_label(["v0.9", "v0.35"]) == "v0.35";
+    assert _latest_label(["dev"]) == "dev";
+    assert _latest_label([]) == "";
+    assert _series_of("v0.35") == (0, 35);
+    assert _series_of("dev") is None;
+    assert _series_of("v0.35.1") is None;
 }
 
 test "detached hubs stay invisible until attached" {

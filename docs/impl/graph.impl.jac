@@ -171,6 +171,33 @@ impl _get_hub -> DocsHub | None {
     return best;
 }
 
+impl _series_of(label: str) -> tuple[int, int] | None {
+    m = re.match(r"^v(\d+)\.(\d+)$", label);
+    if not m {
+        return None;
+    }
+    return (int(m.group(1)), int(m.group(2)));
+}
+
+impl _latest_label(labels: list[str]) -> str {
+    best: tuple[int, int] | None = None;
+    best_label = "";
+    for l in labels {
+        mm = _series_of(l);
+        if mm is None {
+            continue;
+        }
+        if best is None or mm > best {
+            best = mm;
+            best_label = l;
+        }
+    }
+    if best_label != "" {
+        return best_label;
+    }
+    return "dev" if "dev" in labels else "";
+}
+
 impl _version_list -> list[VersionInfo] {
     best: dict[str, DocVersion] = {};
     for v in [root.shared-->[?:DocsHub]->:HasVersion:->[?:DocVersion]] {
@@ -179,14 +206,21 @@ impl _version_list -> list[VersionInfo] {
             best[v.label] = v;
         }
     }
-    labels = (["latest"] if "latest" in best else [])
+    labels = sorted(
+        [
+            l
+            for l in best.keys()
+            if _series_of(l) is not None
+        ],
+        key=lambda (l: str) { _series_of(l) as tuple[int, int]; },
+        reverse=True
+    )
         + sorted(
             [
                 l
                 for l in best.keys()
-                if l != "latest"
-            ],
-            reverse=True
+                if _series_of(l) is None
+            ]
         );
     return [
         VersionInfo(

@@ -1,15 +1,13 @@
+import io;
 import json;
 import logging;
 import os;
 import re;
+import shutil;
+import subprocess;
+import tarfile;
 import time;
-import from shared.github {
-    download_tarball,
-    head_sha as gh_head_sha,
-    mb_of,
-    text_of,
-    untar
-}
+import from shared.github { text_of }
 import from shared.timefmt { now_iso }
 import from .graph {
     DocsHub,
@@ -44,30 +42,46 @@ obj NavEntry {
         order: int = 9000;
 }
 
-obj ShaCache {
-    has sha: str = "",
-        at: float = 0.0;
-}
-
-glob USER_AGENT: str = "jaclang.org docs sync",
-     GH_REPO: str = os.environ.get("JAC_DOCS_GH_REPO", "jaseci-labs/jac"),
+glob GH_REPO: str = os.environ.get("JAC_DOCS_GH_REPO", "jaseci-labs/jac"),
      CORPUS_DIR: str = "jac/jaclang/cli/docs",
      LEGACY_DIR: str = "docs/docs",
+     MKDOCS_FILE: str = "docs/mkdocs.yml",
      DOCS_LOCAL: str = os.environ.get("JAC_DOCS_LOCAL", ""),
-     SHA_TTL_S: float = 600.0,
+     CLONE_DIR: str = os.environ.get(
+         "JAC_DOCS_CLONE_DIR", os.path.join(os.getcwd(), ".jac", "data", "docs-repo")
+     ),
+     RELEASE_FLOOR: tuple[int, int] = (0, 31),
+     RELEASE_CEIL: tuple[int, int] = (2, 0),
+     FETCH_GATE_S: float = 600.0,
      SYNC_TICK_S: float = 30.0,
-     DOC_VERSIONS: list[VersionSpec] = [
-         VersionSpec(label="latest", git_ref="main"),
-         VersionSpec(label="v0.33", git_ref="v0.33.0"),
-         VersionSpec(label="v0.32", git_ref="v0.32.1"),
-         VersionSpec(label="v0.31", git_ref="v0.31.3")
-     ],
-     HEAD_CACHE: dict[str, ShaCache] = {},
+     GIT_STATE: dict[str, float] = {},
      log: logging.Logger = logging.getLogger("docs.sync");
 
-def cached_head_sha(ref: str) -> str;
+def clone_url -> str;
 
-def fetch_bundle(ref: str, label: str) -> DocBundle;
+def git_out(args: list[str], timeout_s: int = 120) -> tuple[int, bytes];
+
+def git_text(args: list[str], timeout_s: int = 120) -> tuple[int, str];
+
+def self_heal;
+
+def ensure_repo -> bool;
+
+def fetch_repo;
+
+def sync_ref(ref: str) -> str;
+
+def head_sha_of(ref: str) -> str;
+
+def pick_releases(tags: list[str]) -> list[VersionSpec];
+
+def release_specs -> list[VersionSpec];
+
+def untar_members(data: bytes) -> dict[str, bytes];
+
+def archive_members(ref: str) -> dict[str, bytes];
+
+def git_bundle(ref: str, label: str) -> DocBundle;
 
 def local_bundle(src_root: str, label: str) -> DocBundle;
 
@@ -93,9 +107,9 @@ def specs_drifted -> bool;
 
 def ingest_all;
 
-def latest_stale -> bool;
+def dev_stale -> bool;
 
-def refresh_latest(hub: DocsHub);
+def refresh_dev(hub: DocsHub);
 
 @schedule(trigger=ScheduleTrigger.STATIC, interval=SYNC_TICK_S)
 def docs_sync_tick;

@@ -18,6 +18,7 @@ glob NOT_READY_POLL_MS: int = 4000;
 
 def:pub DocsShell -> JsxElement {
     has versions: list[VersionInfo] = [],
+        latest_label: str = "",
         tree: list[TreeNode] = [],
         tree_version: str = "",
         page: DocPageView | None = None,
@@ -35,6 +36,9 @@ def:pub DocsShell -> JsxElement {
     ];
     version: str = (parts[1] if len(parts) > 1 else "latest") as str;
     cur_path: str = "/".join(parts[2:]) if len(parts) > 2 else "";
+    shown: str = latest_label
+        if version == "latest" and latest_label != ""
+        else version;
 
     async def load(want_version: str, want_path: str) -> None;
 
@@ -59,7 +63,7 @@ def:pub DocsShell -> JsxElement {
     }
 
     def handle_go(p: str) {
-        nav("/docs/" + version + "/" + p);
+        nav("/docs/" + shown + "/" + p);
     }
 
     can with [loc.pathname] entry {
@@ -100,7 +104,7 @@ def:pub DocsShell -> JsxElement {
                         </p>
                     </div>
                     <p className="font-mono text-[11px] text-muted-foreground/70">
-                        {"root.shared ++> DocsHub ++> DocVersion × 4"}
+                        {"root.shared ++> DocsHub ++> DocVersion × (dev + releases)"}
                     </p>
                 </div>
             </div>;
@@ -115,7 +119,7 @@ def:pub DocsShell -> JsxElement {
                 <DocsSidebar
                     versions={versions}
                     tree={tree}
-                    version={version}
+                    version={shown}
                     cur_path={cur_path}
                     q={q}
                     closed={closed}
@@ -126,7 +130,7 @@ def:pub DocsShell -> JsxElement {
                 />
                 <article className="min-w-0">
                     {if page {
-                        <DocsArticle page={page} version={version} loading={loading}/>
+                        <DocsArticle page={page} version={shown} loading={loading}/>
                     } else {
                         <DocsArticleSkeleton/>
                     } }

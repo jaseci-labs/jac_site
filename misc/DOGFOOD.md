@@ -559,3 +559,31 @@ suites.
     serves readers -- but anyone expecting a real `__system__` identity
     (role checks, audit trails) is running as something else without a
     single log line saying so. **open**.
+
+## O. The docs-transport clean break (2026-08-09)
+
+67. **The GitHub API/tarball transport is gone; docs sync reads a git
+    clone.** One `--filter=tree:0 --no-checkout --single-branch` clone
+    replaces the per-version codeload tarball (the whole repo, downloaded
+    once per version per ingest) and the API head-sha poll (anonymous
+    60/hr limit, `GITHUB_TOKEN` in deploys). Mechanics that made it work:
+    GitHub honors the partial-clone filter but `file://` remotes silently
+    ignore it, so a local probe "succeeding" proves nothing about clone
+    size; `git archive <ref> <path>` exits 128 when the pathspec is absent
+    at that ref, which is exactly how the corpus move (`docs/docs` through
+    v0.34, `jac/jaclang/cli/docs` from v0.35) gets handled -- archive each
+    candidate root separately and merge the tars; `git fetch --tags` on a
+    single-branch clone still brings every tag in; and refs must be read
+    as `origin/main`, never `main` -- the local branch in a no-checkout
+    clone stays frozen at clone time. The clone is a cache, not state: any
+    git failure `rm -rf`s it and the next tick re-clones.
+
+68. **The repo's tag history is a semver minefield: `v2.3.28`
+    version-sorts above `v0.35.1`.** Jaseci-era tags survive upstream, so
+    "latest release" cannot be the highest version-sorted tag. Releases
+    are the newest patch per minor series inside a `[v0.31, v2.0)`
+    window, each series one menu entry, and the version list is now
+    discovered from tags at ingest -- the hardcoded `DOC_VERSIONS` list
+    (already stale at v0.33 while v0.35.1 was out) is deleted. `latest`
+    became a resolve-time alias for the newest release label, main ships
+    as `dev`, and `/docs` lands on the stable release rather than head.

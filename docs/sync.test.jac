@@ -42,6 +42,41 @@ test "first h1 skips headings inside fences" {
     assert first_h1("plain text only\n") == "";
 }
 
+test "pick releases keeps newest patch per series inside the window" {
+    specs = pick_releases(
+        [
+            "v0.30.9",
+            "v0.31.0",
+            "v0.31.3",
+            "v0.34.13",
+            "v0.34.4",
+            "v0.35.0",
+            "v0.35.1",
+            "v2.3.28",
+            "not-a-tag",
+            ""
+        ]
+    );
+    assert [s.label for s in specs] == ["v0.35", "v0.34", "v0.31"];
+    assert [s.git_ref for s in specs] == ["v0.35.1", "v0.34.13", "v0.31.3"];
+}
+
+test "untar members keeps full paths and skips directories" {
+    buf = io.BytesIO();
+    blob = "# hi\n".encode("utf-8");
+    with tarfile.open(fileobj=buf, mode="w") as tf {
+        info = tarfile.TarInfo(name="jac/jaclang/cli/docs/index.md");
+        info.size = len(blob);
+        tf.addfile(info, io.BytesIO(blob));
+        sub = tarfile.TarInfo(name="jac/jaclang/cli/docs/sub");
+        sub.type = tarfile.DIRTYPE as bytes;
+        tf.addfile(sub);
+    }
+    got = untar_members(buf.getvalue());
+    assert list(got.keys()) == ["jac/jaclang/cli/docs/index.md"];
+    assert got["jac/jaclang/cli/docs/index.md"] == blob;
+}
+
 test "specs drift detects missing versions" {
     hd = (root +>:HasHub():+> DocsHub(built_at="2026-01-01T00:00:00Z")) as DocsHub;
     for spec in effective_specs() {

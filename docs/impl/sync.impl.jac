@@ -1,25 +1,171 @@
-impl cached_head_sha(ref: str) -> str {
-    now = time.time();
-    ent = HEAD_CACHE.get(ref);
-    if ent is not None and (now - ent.at) < SHA_TTL_S {
-        return ent.sha;
+impl clone_url -> str {
+    if "://" in GH_REPO or GH_REPO.startswith("git@") {
+        return GH_REPO;
     }
-    sha = gh_head_sha(GH_REPO, ref, USER_AGENT);
-    if sha != "" {
-        HEAD_CACHE[ref] = ShaCache(sha=sha, at=now);
-    }
-    return sha;
+    return "https://github.com/" + GH_REPO + ".git";
 }
 
-impl fetch_bundle(ref: str, label: str) -> DocBundle {
-    blob = download_tarball(GH_REPO, ref, USER_AGENT);
-    if blob is None {
-        raise RuntimeError("could not download " + label + " (" + ref + ")");
+impl git_out(args: list[str], timeout_s: int = 120) -> tuple[int, bytes] {
+    try {
+        done = subprocess.run(
+            ["git", "-C", CLONE_DIR] + args, capture_output=True, timeout=timeout_s
+        );
+    } except Exception {
+        return (1, bytes());
     }
-    log.info("docs sync: downloaded " + label + " · " + mb_of(len(blob)));
-    members = untar(
-        blob, prefixes=[CORPUS_DIR + "/", LEGACY_DIR + "/"], names=["docs/mkdocs.yml"]
+    return (done.returncode as int, done.stdout as bytes);
+}
+
+impl git_text(args: list[str], timeout_s: int = 120) -> tuple[int, str] {
+    (rc, out) = git_out(args, timeout_s);
+    return (rc, out.decode("utf-8", errors="replace").strip());
+}
+
+impl self_heal{
+    log.warning("docs sync: resetting clone at " + CLONE_DIR);
+    shutil.rmtree(CLONE_DIR, ignore_errors=True);
+}
+
+impl ensure_repo -> bool {
+    if os.path.isdir(os.path.join(CLONE_DIR, ".git")) {
+        return True;
+    }
+    shutil.rmtree(CLONE_DIR, ignore_errors=True);
+    os.makedirs(os.path.dirname(CLONE_DIR), exist_ok=True);
+    log.info("docs sync: cloning " + clone_url());
+    try {
+        done = subprocess.run(
+            [
+                "git",
+                "clone",
+                "--filter=tree:0",
+                "--no-checkout",
+                "--single-branch",
+                "--branch",
+                "main",
+                clone_url(),
+                CLONE_DIR
+            ],
+            capture_output=True,
+            timeout=600
+        );
+    } except Exception as e {
+        log.error("docs sync: clone failed — " + str(e));
+        shutil.rmtree(CLONE_DIR, ignore_errors=True);
+        return False;
+    }
+    if done.returncode != 0 {
+        tail = (done.stderr as bytes).decode("utf-8", errors="replace")[-400:];
+        log.error("docs sync: clone failed — " + tail);
+        shutil.rmtree(CLONE_DIR, ignore_errors=True);
+        return False;
+    }
+    (rc, _) = git_text(["fetch", "--tags", "--force", "origin", "main"], 300);
+    if rc != 0 {
+        self_heal();
+        return False;
+    }
+    GIT_STATE["fetched_at"] = time.time();
+    return True;
+}
+
+impl fetch_repo{
+    now = time.time();
+    if (now - GIT_STATE.get("fetched_at", 0.0)) < FETCH_GATE_S {
+        return;
+    }
+    (rc, _) = git_text(
+        ["fetch", "--tags", "--force", "--prune", "origin", "main"], 300
     );
+    if rc != 0 {
+        self_heal();
+        raise RuntimeError("git fetch failed — clone reset for next tick");
+    }
+    GIT_STATE["fetched_at"] = now;
+}
+
+impl sync_ref(ref: str) -> str {
+    return "origin/main" if ref == "main" else ref;
+}
+
+impl head_sha_of(ref: str) -> str {
+    (rc, out) = git_text(["rev-parse", sync_ref(ref) + "^{commit}"]);
+    return out if rc == 0 else "";
+}
+
+impl pick_releases(tags: list[str]) -> list[VersionSpec] {
+    best: dict[tuple[int, int], tuple[int, str]] = {};
+    for t in tags {
+        m = re.match(r"^v(\d+)\.(\d+)\.(\d+)$", t.strip());
+        if not m {
+            continue;
+        }
+        mm = (int(m.group(1)), int(m.group(2)));
+        patch = int(m.group(3));
+        if mm < RELEASE_FLOOR or mm >= RELEASE_CEIL {
+            continue;
+        }
+        cur = best.get(mm);
+        if cur is None or patch > cur[0] {
+            best[mm] = (patch, t.strip());
+        }
+    }
+    series = sorted(best.keys(), reverse=True);
+    return [
+        VersionSpec(label="v" + str(mm[0]) + "." + str(mm[1]), git_ref=best[mm][1])
+        for mm in series
+    ];
+}
+
+impl release_specs -> list[VersionSpec] {
+    if not os.path.isdir(os.path.join(CLONE_DIR, ".git")) {
+        return [];
+    }
+    (rc, out) = git_text(["tag", "--list"]);
+    if rc != 0 {
+        return [];
+    }
+    return pick_releases(out.split("\n"));
+}
+
+impl untar_members(data: bytes) -> dict[str, bytes] {
+    out: dict[str, bytes] = {};
+    with tarfile.open(fileobj=io.BytesIO(data), mode="r:") as tf {
+        for member in tf.getmembers() {
+            if not member.isfile() {
+                continue;
+            }
+            fh = tf.extractfile(member);
+            if fh is None {
+                continue;
+            }
+            rel = member.name;
+            if rel.startswith("./") {
+                rel = rel[2:];
+            }
+            out[rel] = fh.read();
+        }
+    }
+    return out;
+}
+
+impl archive_members(ref: str) -> dict[str, bytes] {
+    members: dict[str, bytes] = {};
+    for path in [CORPUS_DIR, LEGACY_DIR, MKDOCS_FILE] {
+        (rc, blob) = git_out(["archive", "--format=tar", sync_ref(ref), path], 300);
+        if rc == 0 and blob {
+            members.update(untar_members(blob));
+        }
+    }
+    return members;
+}
+
+impl git_bundle(ref: str, label: str) -> DocBundle {
+    members = archive_members(ref);
+    if not members {
+        raise RuntimeError("could not read docs for " + label + " (" + ref + ")");
+    }
+    log.info("docs sync: archived " + label + " · " + str(len(members)) + " files");
     bundle = DocBundle();
     corpus = CORPUS_DIR + "/";
     legacy = LEGACY_DIR + "/";
@@ -39,7 +185,7 @@ impl fetch_bundle(ref: str, label: str) -> DocBundle {
             } elif sub.startswith("assets/") {
                 bundle.assets[sub[len("assets/"):]] = members[rel];
             }
-        } elif rel == "docs/mkdocs.yml" {
+        } elif rel == MKDOCS_FILE {
             bundle.nav_text = text_of(members[rel]);
         } elif rel.startswith(legacy) {
             sub = rel[len(legacy):];
@@ -76,7 +222,7 @@ impl local_bundle(src_root: str, label: str) -> DocBundle {
         }
     }
     nj = os.path.join(docs_root, "nav.json");
-    mk = os.path.join(src_root, "docs", "mkdocs.yml");
+    mk = os.path.join(src_root, *MKDOCS_FILE.split("/"));
     if os.path.exists(nj) {
         with open(nj, encoding="utf-8") as fn {
             bundle.nav_json = fn.read();
@@ -224,10 +370,10 @@ impl write_assets(assets: dict[str, bytes]) {
 }
 
 impl build_version(label: str, ref: str) -> tuple[DocVersion, DocBundle] {
-    sha = cached_head_sha(ref) if ref == "main" and DOCS_LOCAL == "" else "";
+    sha = "" if DOCS_LOCAL != "" else head_sha_of(ref);
     bundle = local_bundle(DOCS_LOCAL, label)
         if DOCS_LOCAL != ""
-        else fetch_bundle(sha if sha != "" else ref, label);
+        else git_bundle(ref, label);
     files = bundle.pages;
     nav = parse_nav_manifest(bundle.nav_json)
         if bundle.nav_json != ""
@@ -269,9 +415,10 @@ impl build_version(label: str, ref: str) -> tuple[DocVersion, DocBundle] {
 }
 
 impl effective_specs -> list[VersionSpec] {
-    return [VersionSpec(label="latest", git_ref="local")]
-        if DOCS_LOCAL != ""
-        else DOC_VERSIONS;
+    if DOCS_LOCAL != "" {
+        return [VersionSpec(label="dev", git_ref="local")];
+    }
+    return [VersionSpec(label="dev", git_ref="main")] + release_specs();
 }
 
 impl specs_drifted -> bool {
@@ -291,53 +438,68 @@ impl ingest_all{
     specs = effective_specs();
     log.info(
         "docs sync: full ingest from "
-            + (("local tree " + DOCS_LOCAL) if DOCS_LOCAL != "" else GH_REPO)
+            + (("local tree " + DOCS_LOCAL) if DOCS_LOCAL != "" else clone_url())
+            + " · "
+            + str(len(specs))
+            + " versions"
     );
     hub = DocsHub(built_at=now_iso());
-    latest_assets: dict[str, bytes] = {};
+    dev_assets: dict[str, bytes] = {};
+    release_assets: dict[str, bytes] = {};
     for spec in specs {
         (ver, b) = build_version(spec.label, spec.git_ref);
         hub +>:HasVersion():+> ver;
-        if spec.label == "latest" {
-            latest_assets = b.assets;
+        if spec.label == "dev" {
+            dev_assets = b.assets;
+        } elif not release_assets {
+            release_assets = b.assets;
         }
     }
-    if latest_assets {
-        write_assets(latest_assets);
+    if release_assets {
+        write_assets(release_assets);
+    }
+    if dev_assets {
+        write_assets(dev_assets);
     }
     root.shared +>:HasHub():+> hub;
     _sweep_stale(hub);
     log.info("docs sync: graph ready");
 }
 
-impl latest_stale -> bool {
-    vers = _version("latest");
+impl dev_stale -> bool {
+    vers = _version("dev");
     if not vers {
         return True;
     }
     if DOCS_LOCAL != "" {
         return False;
     }
-    head = cached_head_sha("main");
+    head = head_sha_of("main");
     return head != "" and head != vers[0].sha;
 }
 
-impl refresh_latest(hub: DocsHub) {
-    log.info("docs sync: main moved — refreshing latest");
-    (ver, b) = build_version("latest", "main");
+impl refresh_dev(hub: DocsHub) {
+    log.info("docs sync: main moved — refreshing dev");
+    (ver, b) = build_version("dev", "main");
     hub +>:HasVersion():+> ver;
     write_assets(b.assets);
     _sweep_stale(hub);
-    log.info("docs sync: latest refreshed");
+    log.info("docs sync: dev refreshed");
 }
 
 impl docs_sync_tick{
     try {
+        if DOCS_LOCAL == "" {
+            if not ensure_repo() {
+                return;
+            }
+            fetch_repo();
+        }
         hub = _get_hub();
         if hub is None or specs_drifted() {
             ingest_all();
-        } elif latest_stale() {
-            refresh_latest(hub);
+        } elif dev_stale() {
+            refresh_dev(hub);
         }
     } except Exception as e {
         log.error("docs sync: failed — " + str(e));

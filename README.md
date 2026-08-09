@@ -21,12 +21,19 @@ jac start --dev    # hot-reload dev loop
 ```
 
 Docs content syncs in the background: a scheduled in-server job
-(`docs/sync.jac`) ingests the documentation graph shortly after first boot
-and keeps `latest` fresh by watching main's head sha. Requests never trigger
-a sync — they only read whatever the job last committed, and the graph
-persists across restarts. Set `JAC_DOCS_LOCAL=<monorepo-root>` to feed the
-job from a local docs tree instead of GitHub (no network), and `GITHUB_TOKEN`
-in deploys to lift the anonymous API rate limit.
+(`docs/sync.jac`) keeps a blobless clone of the monorepo under
+`.jac/data/docs-repo` and serves every release series from it — newest
+patch per minor from v0.31 up, one menu entry each — plus main as `dev`.
+A rate-gated `git fetch --tags` drives freshness: `dev` re-ingests when
+main's head moves, and a full re-ingest picks up new release tags with no
+redeploy. `/docs/latest` is a resolve-time alias for the newest release,
+which is also where `/docs` lands. Requests never trigger a sync — they
+only read whatever the job last committed, and the graph persists across
+restarts. The clone is a disposable cache: any git failure resets it and
+the next tick re-clones. Set `JAC_DOCS_LOCAL=<monorepo-root>` to feed the
+job from a local docs tree instead (no git, no network), and
+`JAC_DOCS_CLONE_DIR` to move the clone. The docs job needs no GitHub API
+token; `GITHUB_TOKEN` only matters to the leaderboard's repo analysis.
 
 ## Checks
 
@@ -139,9 +146,10 @@ in `DocPageView.toc`; the client renders them and never re-derives a slug.
 `jac test` covers the pure logic on both sides of the wire: the URL parser,
 repo analyzer and scoring rubric (`leaderboard/board.test.jac`), the docs
 slugifier, route rewriter, TOC builder and swap-commit protocol
-(`docs/graph.test.jac`), the nav parsers and drift check
-(`docs/sync.test.jac`), the progress protocol (`shared/progress.test.jac`),
-and the Jac syntax highlighter (`shared/jac_tokenizer.test.jac`) — 46 tests.
+(`docs/graph.test.jac`), the nav parsers, release-tag
+picker and drift check (`docs/sync.test.jac`), the progress protocol
+(`shared/progress.test.jac`), and the Jac syntax highlighter
+(`shared/jac_tokenizer.test.jac`) — 49 tests.
 
 ## The centerpiece diagrams
 

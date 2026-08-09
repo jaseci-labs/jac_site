@@ -11,6 +11,7 @@ impl DocsShell.load(want_version: str, want_path: str) -> None {
         }
         waiting = False;
         versions = st.versions;
+        latest_label = st.latest_label;
     }
     if tree_version != want_version {
         branch = await doc_tree(version=want_version);

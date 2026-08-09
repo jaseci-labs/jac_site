@@ -39,6 +39,7 @@ obj VersionInfo {
 obj DocsStatus {
     has ready: bool = False,
         built_at: str = "",
+        latest_label: str = "",
         versions: list[VersionInfo] = [];
 }
 
@@ -137,8 +138,23 @@ def _teardown_hub(hub: DocsHub);
 
 def _sweep_stale(keep: DocsHub);
 
+def _series_of(label: str) -> tuple[int, int] | None;
+
+def _latest_label(labels: list[str]) -> str;
+
 def _version(wanted: str) -> list[DocVersion] {
-    vers = [root.shared-->[?:DocsHub]->:HasVersion:->[?:DocVersion, label==wanted]];
+    all_vers = [root.shared-->[?:DocsHub]->:HasVersion:->[?:DocVersion]];
+    if wanted == "latest" {
+        lab = _latest_label([v.label for v in all_vers]);
+        if lab != "" {
+            wanted = lab;
+        }
+    }
+    vers = [
+        v
+        for v in all_vers
+        if v.label == wanted
+    ];
     if not vers {
         return [];
     }
@@ -199,7 +215,13 @@ def:pub docs_status -> DocsStatus {
     if hub is None {
         return DocsStatus();
     }
-    return DocsStatus(ready=True, built_at=hub.built_at, versions=_version_list());
+    infos = _version_list();
+    return DocsStatus(
+        ready=True,
+        built_at=hub.built_at,
+        latest_label=_latest_label([v.label for v in infos]),
+        versions=infos
+    );
 }
 
 def:pub doc_tree(version: str = "latest") -> DocTree | None;
