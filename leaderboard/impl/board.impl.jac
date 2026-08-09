@@ -4,7 +4,7 @@ impl _ensure_hub -> BoardHub {
         return hubs[0];
     }
     fresh = (root.shared ++> BoardHub(created_at=now_iso())) as BoardHub;
-    grant(fresh, level=ConnectPerm);
+    grant(fresh, level=AccessLevel.CONNECT);
     return fresh;
 }
 
@@ -120,7 +120,7 @@ impl Scorer.score_repo(hub: BoardHub, owner: str, name: str) -> SubmitResult {
         entry = (
             hub +>:OnBoard():+> RepoEntry(full=full, submitted_at=now_iso())
         ) as RepoEntry;
-        grant(entry, level=ReadPerm);
+        grant(entry, level=AccessLevel.READ);
     }
     entry.owner = meta.owner or owner;
     entry.name = meta.name or name;
