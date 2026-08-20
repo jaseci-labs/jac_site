@@ -34,7 +34,7 @@ obj SubmitResult {
     has ok: bool = False,
         error: str = "",
         cooldown: bool = False,
-        entry: BoardEntry | None = None,
+        `entry: BoardEntry | None = None,
         board: list[BoardEntry] = [];
 }
 

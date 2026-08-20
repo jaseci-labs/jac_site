@@ -74,7 +74,7 @@ impl rewrite_href(href: str, version: str, cur_dir: str) -> str {
         href = href[:pos];
     }
     if href.startswith("http://") or href.startswith("https://") {
-        m = re.match(r"https?://docs\.jaseci\.org/?(.*)", href);
+        m = re.`match(r"https?://docs\.jaseci\.org/?(.*)", href);
         if m {
             tail = (m.group(1) as str).strip("/");
             return ("/docs/" + version + "/" + tail).rstrip("/") + anchor;
@@ -172,7 +172,7 @@ impl _get_hub -> DocsHub | None {
 }
 
 impl _series_of(label: str) -> tuple[int, int] | None {
-    m = re.match(r"^v(\d+)\.(\d+)$", label);
+    m = re.`match(r"^v(\d+)\.(\d+)$", label);
     if not m {
         return None;
     }

@@ -10,11 +10,11 @@ impl _ensure_hub -> BoardHub {
 
 impl parse_repo_url(url: str) -> tuple[str, str] | None {
     u = url.strip().rstrip("/");
-    m = re.match(
+    m = re.`match(
         r"^(?:https?://)?(?:www\.)?github\.com/([\w.\-]+)/([\w.\-]+?)(?:\.git)?$", u
     );
     if m is None {
-        m = re.match(r"^([\w.\-]+)/([\w.\-]+)$", u);
+        m = re.`match(r"^([\w.\-]+)/([\w.\-]+)$", u);
     }
     if m is None {
         return None;
@@ -115,44 +115,44 @@ impl Scorer.score_repo(hub: BoardHub, owner: str, name: str) -> SubmitResult {
             + full
             + " — writing it to the board"
     );
-    entry = _find_entry(full);
-    if entry is None {
-        entry = (
+    `entry = _find_entry(full);
+    if `entry is None {
+        `entry = (
             hub +>:OnBoard():+> RepoEntry(full=full, submitted_at=now_iso())
         ) as RepoEntry;
-        grant(entry, level=AccessLevel.READ);
+        grant(`entry, level=AccessLevel.READ);
     }
-    entry.owner = meta.owner or owner;
-    entry.name = meta.name or name;
-    entry.description = meta.description;
-    entry.avatar_url = meta.avatar_url;
-    entry.html_url = meta.html_url or ("https://github.com/" + full);
-    entry.stars = meta.stars;
-    entry.forks = meta.forks;
-    entry.topics = meta.topics;
-    entry.pushed_at = meta.pushed_at;
-    entry.created_at = meta.created_at;
-    entry.jac_files = an.jac_files;
-    entry.jac_lines = an.jac_lines;
-    entry.jac_pct = an.jac_pct();
-    entry.features = an.features;
-    entry.score = sc.total;
-    entry.breakdown = sc;
-    entry.belt = sc.belt;
-    entry.scored_sha = p.sha;
-    entry.scored_by_pid = p.service_pid;
-    entry.scored_at = now_iso();
+    `entry.owner = meta.owner or owner;
+    `entry.name = meta.name or name;
+    `entry.description = meta.description;
+    `entry.avatar_url = meta.avatar_url;
+    `entry.html_url = meta.html_url or ("https://github.com/" + full);
+    `entry.stars = meta.stars;
+    `entry.forks = meta.forks;
+    `entry.topics = meta.topics;
+    `entry.pushed_at = meta.pushed_at;
+    `entry.created_at = meta.created_at;
+    `entry.jac_files = an.jac_files;
+    `entry.jac_lines = an.jac_lines;
+    `entry.jac_pct = an.jac_pct();
+    `entry.features = an.features;
+    `entry.score = sc.total;
+    `entry.breakdown = sc;
+    `entry.belt = sc.belt;
+    `entry.scored_sha = p.sha;
+    `entry.scored_by_pid = p.service_pid;
+    `entry.scored_at = now_iso();
     self.job.note(
         full
             + " scored "
-            + str(entry.score)
+            + str(`entry.score)
             + " — "
-            + entry.belt
+            + `entry.belt
             + " belt (service pid "
             + str(p.service_pid)
             + ")"
     );
-    return SubmitResult(ok=True, entry=entry.view());
+    return SubmitResult(ok=True, `entry=`entry.view());
 }
 
 impl Scorer.submit(url: str) -> SubmitResult {
@@ -169,7 +169,7 @@ impl Scorer.submit(url: str) -> SubmitResult {
     waited = seconds_since(existing.scored_at) if existing is not None else -1.0;
     if existing is not None and waited >= 0.0 and waited < RESCORE_TTL_S {
         return SubmitResult(
-            ok=True, cooldown=True, entry=existing.view(), board=_board_list()
+            ok=True, cooldown=True, `entry=existing.view(), board=_board_list()
         );
     }
     self.scoring = True;

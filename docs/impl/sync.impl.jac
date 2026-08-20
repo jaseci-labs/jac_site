@@ -96,7 +96,7 @@ impl head_sha_of(ref: str) -> str {
 impl pick_releases(tags: list[str]) -> list[VersionSpec] {
     best: dict[tuple[int, int], tuple[int, str]] = {};
     for t in tags {
-        m = re.match(r"^v(\d+)\.(\d+)\.(\d+)$", t.strip());
+        m = re.`match(r"^v(\d+)\.(\d+)\.(\d+)$", t.strip());
         if not m {
             continue;
         }
@@ -237,14 +237,14 @@ impl local_bundle(src_root: str, label: str) -> DocBundle {
 
 impl _manifest_pages(items: list) -> list[dict] {
     out: list[dict] = [];
-    for entry in items {
-        if not isinstance(entry, dict) {
+    for `entry in items {
+        if not isinstance(`entry, dict) {
             continue;
         }
-        if "page" in entry {
-            out.append(entry);
-        } elif "items" in entry {
-            out.extend(_manifest_pages(entry["items"] as list));
+        if "page" in `entry {
+            out.append(`entry);
+        } elif "items" in `entry {
+            out.extend(_manifest_pages(`entry["items"] as list));
         }
     }
     return out;
@@ -261,9 +261,9 @@ impl parse_nav_manifest(text: str) -> dict[str, NavEntry] {
         return nav;
     }
     order = 0;
-    for entry in _manifest_pages(manifest.get("nav", []) as list) {
-        path = str(entry.get("page", ""));
-        title = str(entry.get("title", "")).strip();
+    for `entry in _manifest_pages(manifest.get("nav", []) as list) {
+        path = str(`entry.get("page", ""));
+        title = str(`entry.get("title", "")).strip();
         if path {
             nav[path] = NavEntry(title=title, order=order);
             order += 1;
@@ -285,7 +285,7 @@ impl parse_nav(text: str) -> dict[str, NavEntry] {
             if line.strip() and not line.startswith(" ") {
                 break;
             }
-            m = re.match(
+            m = re.`match(
                 r"\s*-\s+(?:\"?([^\":]+?)\"?\s*:\s*)?\"?([\w\-/\.]+\.md)\"?\s*$", line
             );
             if m {

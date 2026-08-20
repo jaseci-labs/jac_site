@@ -472,12 +472,12 @@ impl process_events(w: &mut Game) {
     bi = 0;
     while bi < w.events.boom_n {
         bx = w.events.boom_x[bi];
-        by = w.events.boom_y[bi];
+        `by = w.events.boom_y[bi];
         bz = w.events.boom_z[bi];
         for ei in range(MAX_ENEMIES) {
             if w.enemies.alive[ei] == 1 {
                 ddx = w.enemies.x[ei] - bx;
-                ddy = w.enemies.y[ei] - by;
+                ddy = w.enemies.y[ei] - `by;
                 ddz = w.enemies.z[ei] - bz;
                 if ddx * ddx + ddy * ddy + ddz * ddz < BLAST_R2 {
                     push_kill(
@@ -491,9 +491,9 @@ impl process_events(w: &mut Game) {
                 }
             }
         }
-        spark_burst(w, bx, by, bz, 10, 6.0, 255, 150, 60);
-        spark_burst(w, bx, by, bz, 6, 3.5, 255, 220, 120);
-        spawn_spark(w, bx, by, bz, 0.0, 0.6, 0.0, 0.28, 0.9, -0.5, 255, 235, 160);
+        spark_burst(w, bx, `by, bz, 10, 6.0, 255, 150, 60);
+        spark_burst(w, bx, `by, bz, 6, 3.5, 255, 220, 120);
+        spawn_spark(w, bx, `by, bz, 0.0, 0.6, 0.0, 0.28, 0.9, -0.5, 255, 235, 160);
         bi += 1;
     }
     w.events.boom_n = 0;

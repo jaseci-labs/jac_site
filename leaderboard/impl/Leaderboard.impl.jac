@@ -37,7 +37,7 @@ impl Leaderboard.do_submit -> None {
         return;
     }
     entries = res.board;
-    got = res.entry;
+    got = res.`entry;
     if got is None {
         return;
     }

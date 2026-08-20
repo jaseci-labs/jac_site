@@ -149,9 +149,9 @@ def:pub FloatingSource(
             sx = e.clientX;
             sy = e.clientY;
             bx = (offX.current or 0) as float;
-            by = (offY.current or 0) as float;
+            `by = (offY.current or 0) as float;
             move = lambda (ev: any) { apply_offset(
-                bx + ((ev.clientX as float) - sx), by + ((ev.clientY as float) - sy)
+                bx + ((ev.clientX as float) - sx), `by + ((ev.clientY as float) - sy)
             ); };
             up = lambda (ev: any) {
                 document.removeEventListener("mousemove", move);
