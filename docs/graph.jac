@@ -2,8 +2,6 @@ import os;
 import re;
 import from http { HTTPMethod }
 
-import from jaclang.jac0core.archetype { AccessLevel }
-
 obj TocEntry {
     has level: int = 2,
         text: str = "",
