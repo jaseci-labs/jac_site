@@ -1,4 +1,5 @@
-import from mermaid { default as mermaid, Mermaid }
+import from mermaid { default as mermaid }
+import type from mermaid { Mermaid }
 import from ..shared.CodeBlock { CodeLines }
 
 glob _mm: Mermaid = mermaid as Mermaid,
